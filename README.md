@@ -10,7 +10,7 @@ Guiding principles:
 ## Installation
 
 ```bash
-# TODO
+pip install git+https://github.com/austin-bowen/easymesh.git
 ```
 
 ## Quick example
