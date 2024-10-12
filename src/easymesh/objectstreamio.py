@@ -1,14 +1,17 @@
 import pickle
 from abc import abstractmethod
 from asyncio import Lock, StreamReader, StreamWriter
-from collections.abc import AsyncIterable, Callable
+from collections.abc import AsyncIterable
 from typing import Any, Generic, Literal, TypeVar
 
+from easymesh.codec import Codec, PickleCodec
 from easymesh.types import Message
 
 ByteOrder = Literal['big', 'little']
 DEFAULT_BYTE_ORDER: ByteOrder = 'little'
 T = TypeVar('T')
+
+pickle_codec = PickleCodec()
 
 
 def default_bytes_to_obj(data: bytes) -> T:
@@ -92,15 +95,13 @@ class AnyObjectStreamIO(ObjectStreamIO[Any]):
             self,
             reader: StreamReader,
             writer: StreamWriter,
-            bytes_to_obj: Callable[[bytes], T] = default_bytes_to_obj,
-            obj_to_bytes: Callable[[T], bytes] = default_obj_to_bytes,
+            codec: Codec[Any] = pickle_codec,
             header_len: int = 4,
             header_byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
     ):
         super().__init__(reader, writer)
 
-        self.bytes_to_obj = bytes_to_obj
-        self.obj_to_bytes = obj_to_bytes
+        self.codec = codec
         self.header_len = header_len
         self.header_byte_order = header_byte_order
 
@@ -110,10 +111,10 @@ class AnyObjectStreamIO(ObjectStreamIO[Any]):
             self.header_byte_order,
         )
 
-        return self.bytes_to_obj(data)
+        return self.codec.decode(data)
 
     async def _write_object(self, obj: T) -> None:
-        data = self.obj_to_bytes(obj)
+        data = self.codec.encode(obj)
 
         self._write_data_with_len_header(
             data,
@@ -129,8 +130,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             self,
             reader: StreamReader,
             writer: StreamWriter,
-            bytes_to_obj: Callable[[bytes], T] = default_bytes_to_obj,
-            obj_to_bytes: Callable[[T], bytes] = default_obj_to_bytes,
+            codec: Codec[Any] = pickle_codec,
             topic_header_len: int = 1,
             topic_encoding: str = 'utf-8',
             body_header_len: int = 4,
@@ -138,8 +138,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
     ):
         super().__init__(reader, writer)
 
-        self.bytes_to_obj = bytes_to_obj
-        self.obj_to_bytes = obj_to_bytes
+        self.codec = codec
         self.topic_header_len = topic_header_len
         self.topic_encoding = topic_encoding
         self.body_header_len = body_header_len
@@ -156,7 +155,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             self.body_header_len,
             self.header_byte_order,
         )
-        body = self.bytes_to_obj(body) if body else None
+        body = self.codec.decode(body) if body else None
 
         return Message(topic, body)
 
@@ -171,7 +170,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             self.header_byte_order,
         )
 
-        data = self.obj_to_bytes(obj.body) if obj.body is not None else b''
+        data = self.codec.encode(obj.body) if obj.body is not None else b''
         self._write_data_with_len_header(
             data,
             self.body_header_len,
