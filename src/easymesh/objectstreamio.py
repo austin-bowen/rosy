@@ -167,9 +167,9 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             self.header_byte_order,
         )
 
-        data = self.codec.encode(message.body) if message.body is not None else b''
+        body = self.codec.encode(message.body) if message.body is not None else b''
         self._write_data_with_len_header(
-            data,
+            body,
             self.body_header_len,
             self.header_byte_order,
         )

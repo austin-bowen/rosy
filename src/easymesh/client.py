@@ -16,7 +16,6 @@ from easymesh.coordinator import MeshCoordinatorClient, RPCMeshCoordinatorClient
 from easymesh.objectstreamio import AnyObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.rpc import ObjectStreamRPC
-from easymesh.server import AUTHENTICATED_RESPONSE
 from easymesh.specs import (
     ConnectionSpec,
     IpConnectionSpec,
@@ -367,63 +366,6 @@ class TopicSender:
         return await self.node.topic_has_listeners(self.topic)
 
 
-class TestClient:
-    def __init__(
-            self,
-            reader: StreamReader,
-            writer: StreamWriter,
-            auth_key: bytes = b'hellothere',
-    ):
-        self.reader = reader
-        self.writer = writer
-        self.auth_key = auth_key
-
-        self.obj_io = AnyObjectStreamIO(reader, writer)
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.writer.close()
-        await self.writer.wait_closed()
-
-    async def run(self) -> None:
-        print('Authenticating...')
-        await self.authenticate()
-        print('Done!')
-
-        await asyncio.gather(
-            self._send_heartbeat(),
-            self._receive_objects(),
-        )
-
-    async def authenticate(self) -> None:
-        await self.obj_io.write_object(self.auth_key)
-
-        response = await self.obj_io.read_object()
-
-        if response != AUTHENTICATED_RESPONSE:
-            raise response
-
-    async def _send_heartbeat(self) -> None:
-        while True:
-            await self.obj_io.write_object(b'heartbeat')
-            await asyncio.sleep(1.)
-
-    async def _receive_objects(self) -> None:
-        while True:
-            print('Received from server:', await self.obj_io.read_object())
-
-
-async def test_client():
-    # reader, writer = await open_connection(host='localhost', port=8888)
-    reader, writer = await open_unix_connection('./mesh.sock')
-    # print(f'Connected to {reader.getpeername()}')
-
-    async with TestClient(reader, writer) as client:
-        await client.run()
-
-
 class SpeedTester:
     def __init__(self, node: MeshNode):
         self.node = node
@@ -503,6 +445,7 @@ async def test_mesh_node() -> None:
         topic = 'test'
         body = None
         # body = b'helloworld' * 100000
+        # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
 
         while not await node.topic_has_listeners(topic):
             print('Waiting for listeners...')
@@ -539,7 +482,6 @@ async def test_mesh_node() -> None:
 
 
 async def main():
-    # await test_client()
     await test_mesh_node()
 
 
