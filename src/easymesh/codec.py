@@ -44,6 +44,9 @@ if msgpack:
             return msgpack.unpackb(data)
 
 
+    msgpack_codec = MsgpackCodec()
+
+
 class ZlibCompressedCodec(Codec[T]):
     def __init__(self, codec: Codec[T], level: int = -1):
         self.codec = codec

@@ -11,8 +11,9 @@ from dataclasses import dataclass
 from typing import Optional, TypeVar
 
 from easymesh.asyncio import noop
+from easymesh.codec import Codec
 from easymesh.coordinator import MeshCoordinatorClient, RPCMeshCoordinatorClient
-from easymesh.objectstreamio import AnyObjectStreamIO, MessageStreamIO, ObjectStreamIO
+from easymesh.objectstreamio import AnyObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.rpc import ObjectStreamRPC
 from easymesh.server import AUTHENTICATED_RESPONSE
@@ -24,8 +25,8 @@ from easymesh.specs import (
     NodeName,
     UnixConnectionSpec,
 )
-from easymesh.utils import ephemeral_port_range
 from easymesh.types import Body, Message, Topic
+from easymesh.utils import ephemeral_port_range
 
 T = TypeVar('T')
 
@@ -45,6 +46,9 @@ class ObjectStreamPeerConnection(PeerConnection):
 
 
 class PeerConnectionBuilder:
+    def __init__(self, codec: Codec[Body]):
+        self.codec = codec
+
     async def build(self, conn_spec: ConnectionSpec) -> PeerConnection:
         if isinstance(conn_spec, IpConnectionSpec):
             reader, writer = await open_connection(
@@ -57,7 +61,7 @@ class PeerConnectionBuilder:
             raise ValueError(f'Invalid connection spec: {conn_spec}')
 
         return ObjectStreamPeerConnection(
-            obj_io=MessageStreamIO(reader, writer),
+            obj_io=MessageStreamIO(reader, writer, codec=self.codec),
         )
 
 
@@ -112,9 +116,9 @@ class MeshPeer:
 
 
 class PeerManager:
-    def __init__(self):
+    def __init__(self, codec: Codec[Body]):
         self._connection_pool = PeerConnectionPool(
-            connection_builder=PeerConnectionBuilder(),
+            connection_builder=PeerConnectionBuilder(codec),
         )
         self._mesh_topology = MeshTopologySpec(nodes={})
 
@@ -213,11 +217,13 @@ class MeshNode:
             mesh_coordinator_client: MeshCoordinatorClient,
             server_provider: ServerProvider,
             peer_manager: PeerManager,
+            message_codec: Codec[Body],
     ):
         self.name = name
         self.mesh_coordinator_client = mesh_coordinator_client
         self.server_provider = server_provider
         self.peer_manager = peer_manager
+        self.message_codec = message_codec
 
         self._connection_spec = None
 
@@ -247,7 +253,7 @@ class MeshNode:
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         print('New connection')
-        obj_io = MessageStreamIO(reader, writer)
+        obj_io = MessageStreamIO(reader, writer, codec=self.message_codec)
 
         async for message in obj_io.read_objects():
             if isinstance(message, Message):
@@ -463,13 +469,15 @@ async def test_mesh_node() -> None:
     # server_provider = EphemeralPortTcpServerProvider(host='austin-laptop')
     server_provider = TmpUnixServerProvider()
 
-    peer_manager = PeerManager()
+    message_codec = pickle_codec
+    peer_manager = PeerManager(message_codec)
 
     node = MeshNode(
         f'test-{os.getpid()}',
         mesh_coordinator_client,
         server_provider,
         peer_manager,
+        message_codec
     )
 
     await node.start()
