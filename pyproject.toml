@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "easymesh"
+version = "0.1.0"
+description = "A simple and efficient async mesh network library"
+authors = [
+    { name="Austin Bowen", email="austin.bowen.314@example.com" }
+]
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/austin-bowen/easymesh"
+Source = "https://github.com/austin-bowen/easymesh"
+Tracker = "https://github.com/austin-bowen/easymesh/issues"
+
+[project.dependencies]
+# None
