@@ -23,5 +23,4 @@ Homepage = "https://github.com/austin-bowen/easymesh"
 Source = "https://github.com/austin-bowen/easymesh"
 Tracker = "https://github.com/austin-bowen/easymesh/issues"
 
-[project.dependencies]
-# None
+#[project.dependencies]
