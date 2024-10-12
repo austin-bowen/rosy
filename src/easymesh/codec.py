@@ -1,4 +1,5 @@
 import pickle
+import zlib
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar, Union
 
@@ -41,3 +42,15 @@ if msgpack:
 
         def decode(self, data: bytes) -> MsgpackTypes:
             return msgpack.unpackb(data)
+
+
+class ZlibCompressedCodec(Codec[T]):
+    def __init__(self, codec: Codec[T], level: int = -1):
+        self.codec = codec
+        self.level = level
+
+    def encode(self, obj: T) -> bytes:
+        return zlib.compress(self.codec.encode(obj), level=self.level)
+
+    def decode(self, data: bytes) -> T:
+        return self.codec.decode(zlib.decompress(data))

@@ -5,7 +5,7 @@ from collections.abc import AsyncIterable
 from typing import Any, Generic, Literal, TypeVar
 
 from easymesh.codec import Codec, PickleCodec
-from easymesh.types import Message
+from easymesh.types import Body, Message
 
 ByteOrder = Literal['big', 'little']
 DEFAULT_BYTE_ORDER: ByteOrder = 'little'
@@ -130,7 +130,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             self,
             reader: StreamReader,
             writer: StreamWriter,
-            codec: Codec[Any] = pickle_codec,
+            codec: Codec[Body] = pickle_codec,
             topic_header_len: int = 1,
             topic_encoding: str = 'utf-8',
             body_header_len: int = 4,
@@ -144,7 +144,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
         self.body_header_len = body_header_len
         self.header_byte_order = header_byte_order
 
-    async def _read_object(self) -> T:
+    async def _read_object(self) -> Message:
         topic = await self._read_data_with_len_header(
             self.topic_header_len,
             self.header_byte_order,
@@ -159,18 +159,15 @@ class MessageStreamIO(ObjectStreamIO[Message]):
 
         return Message(topic, body)
 
-    async def _write_object(self, obj: T) -> None:
-        if not isinstance(obj, Message):
-            raise TypeError(f'Expected Message, got {type(obj)}')
-
-        topic = obj.topic.encode(self.topic_encoding)
+    async def _write_object(self, message: Message) -> None:
+        topic = message.topic.encode(self.topic_encoding)
         self._write_data_with_len_header(
             topic,
             self.topic_header_len,
             self.header_byte_order,
         )
 
-        data = self.codec.encode(obj.body) if obj.body is not None else b''
+        data = self.codec.encode(message.body) if message.body is not None else b''
         self._write_data_with_len_header(
             data,
             self.body_header_len,
