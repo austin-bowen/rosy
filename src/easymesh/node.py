@@ -25,6 +25,7 @@ from easymesh.specs import (
     UnixConnectionSpec,
 )
 from easymesh.types import Body, Message, Topic
+from easymesh.utils import require
 
 T = TypeVar('T')
 
@@ -154,6 +155,9 @@ class PortScanTcpServerProvider(ServerProvider):
             start_port: int = 49152,
             max_ports: int = 1024,
     ):
+        require(1 <= start_port <= 65535, 'start_port must be in range 1-65535')
+        require(1 <= max_ports <= 65534, 'max_ports must be in range 1-65534')
+
         self.host = host
         self.start_port = start_port
         self.max_ports = max_ports
