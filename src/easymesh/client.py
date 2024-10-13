@@ -400,7 +400,7 @@ class SpeedTester:
         return message_count / true_duration
 
 
-async def test_mesh_node() -> None:
+async def test_mesh_node(role: str = None) -> None:
     print('Connecting to mesh coordinator...')
     reader, writer = await open_unix_connection('./mesh.sock')
     obj_io = AnyObjectStreamIO(reader, writer)
@@ -426,7 +426,7 @@ async def test_mesh_node() -> None:
 
     speed_tester = SpeedTester(node)
 
-    role = sys.argv[1]
+    role = role or sys.argv[1]
     assert role in {'send', 'recv', 'speed-test'}
 
     if role == 'send':
@@ -446,6 +446,8 @@ async def test_mesh_node() -> None:
         body = None
         # body = b'helloworld' * 100000
         # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
+        # body = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
+        # body = torch.tensor(body)
 
         while not await node.topic_has_listeners(topic):
             print('Waiting for listeners...')
