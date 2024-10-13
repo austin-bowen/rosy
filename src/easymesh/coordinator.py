@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from typing import Optional
 
 from easymesh.asyncio import forever
-from easymesh.objectstreamio import AnyObjectStreamIO
+from easymesh.objectstreamio import CodecObjectStreamIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectStreamRPC, RPC
 from easymesh.specs import MeshNodeSpec, MeshTopologySpec, NodeName
@@ -143,7 +143,7 @@ class RPCMeshCoordinatorClient(MeshCoordinatorClient):
 
 async def main() -> None:
     def build_rpc(reader, writer):
-        return ObjectStreamRPC(AnyObjectStreamIO(reader, writer))
+        return ObjectStreamRPC(CodecObjectStreamIO(reader, writer))
 
     server = RPCMeshCoordinatorServer(
         # start_stream_server=lambda cb: asyncio.start_unix_server(cb, path='./mesh.sock'),

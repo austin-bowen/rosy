@@ -101,12 +101,12 @@ class ObjectStreamIO(Generic[T]):
             await self.writer.drain()
 
 
-class AnyObjectStreamIO(ObjectStreamIO[Any]):
+class CodecObjectStreamIO(ObjectStreamIO[T]):
     def __init__(
             self,
             reader: StreamReader,
             writer: StreamWriter,
-            codec: Codec[Any] = pickle_codec,
+            codec: Codec[T] = pickle_codec,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
     ):
         super().__init__(reader, writer, byte_order)

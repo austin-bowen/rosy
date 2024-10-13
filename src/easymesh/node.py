@@ -13,7 +13,7 @@ from typing import Optional, TypeVar
 from easymesh.asyncio import noop
 from easymesh.codec import Codec
 from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, RPCMeshCoordinatorClient
-from easymesh.objectstreamio import AnyObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
+from easymesh.objectstreamio import CodecObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.rpc import ObjectStreamRPC
 from easymesh.specs import (
@@ -420,7 +420,7 @@ async def test_mesh_node(role: str = None) -> None:
     print('Connecting to mesh coordinator...')
     # reader, writer = await open_unix_connection('./mesh.sock')
     reader, writer = await open_connection('austin-laptop.local', DEFAULT_COORDINATOR_PORT)
-    obj_io = AnyObjectStreamIO(reader, writer)
+    obj_io = CodecObjectStreamIO(reader, writer)
     rpc = ObjectStreamRPC(obj_io)
     mesh_coordinator_client = RPCMeshCoordinatorClient(rpc)
     await rpc.start()
