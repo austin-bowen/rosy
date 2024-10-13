@@ -25,7 +25,6 @@ from easymesh.specs import (
     UnixConnectionSpec,
 )
 from easymesh.types import Body, Message, Topic
-from easymesh.utils import ephemeral_port_range
 
 T = TypeVar('T')
 
@@ -146,11 +145,22 @@ class ServerProvider:
         ...
 
 
-class EphemeralPortTcpServerProvider(ServerProvider):
-    """Starts a TCP server on the first available ephemeral port."""
+class PortScanTcpServerProvider(ServerProvider):
+    """Starts a TCP server on the first available port."""
 
-    def __init__(self, host: str = 'localhost'):
+    def __init__(
+            self,
+            host: str = 'localhost',
+            start_port: int = 49152,
+            max_ports: int = 1024,
+    ):
         self.host = host
+        self.start_port = start_port
+        self.max_ports = max_ports
+
+    @property
+    def end_port(self) -> int:
+        return self.start_port + self.max_ports - 1
 
     async def start_server(
             self,
@@ -158,21 +168,23 @@ class EphemeralPortTcpServerProvider(ServerProvider):
     ) -> tuple[Server, ConnectionSpec]:
         last_error = None
 
-        for port in ephemeral_port_range():
+        for port in range(self.start_port, self.end_port + 1):
             try:
                 server = await asyncio.start_server(
                     client_connected_cb,
                     host=self.host,
                     port=port,
                 )
-            except OSError as last_error:
-                pass
+            except OSError as e:
+                last_error = e
             else:
                 conn_spec = IpConnectionSpec(self.host, port)
                 return server, conn_spec
 
         raise OSError(
-            f'Unable to start a server on any ephemeral ports. Last error: {last_error}'
+            f'Unable to start a server on any port in range '
+            f'{self.start_port}-{self.end_port}. '
+            f'Last error: {last_error}'
         )
 
 
