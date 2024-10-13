@@ -2,7 +2,7 @@ import pickle
 from abc import abstractmethod
 from asyncio import Lock, StreamReader, StreamWriter
 from collections.abc import AsyncIterable
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from easymesh.codec import Codec, PickleCodec
 from easymesh.types import Body, Message
