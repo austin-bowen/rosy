@@ -35,3 +35,4 @@ When a node needs to send a message, it uses the mesh topology to find all curre
 
 - Load balancing
   - When multiple nodes with the same name are on the mesh, messages should be automatically distributed among them
+- Multiple node connection options for e.g. local vs remote nodes

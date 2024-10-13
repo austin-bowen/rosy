@@ -12,7 +12,7 @@ from typing import Optional, TypeVar
 
 from easymesh.asyncio import noop
 from easymesh.codec import Codec
-from easymesh.coordinator import MeshCoordinatorClient, RPCMeshCoordinatorClient
+from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, RPCMeshCoordinatorClient
 from easymesh.objectstreamio import AnyObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.rpc import ObjectStreamRPC
@@ -418,20 +418,24 @@ class SpeedTester:
 
 async def test_mesh_node(role: str = None) -> None:
     print('Connecting to mesh coordinator...')
-    reader, writer = await open_unix_connection('./mesh.sock')
+    # reader, writer = await open_unix_connection('./mesh.sock')
+    reader, writer = await open_connection('austin-laptop.local', DEFAULT_COORDINATOR_PORT)
     obj_io = AnyObjectStreamIO(reader, writer)
     rpc = ObjectStreamRPC(obj_io)
     mesh_coordinator_client = RPCMeshCoordinatorClient(rpc)
     await rpc.start()
 
-    # server_provider = EphemeralPortTcpServerProvider(host='austin-laptop')
+    # server_provider = PortScanTcpServerProvider(host='austin-laptop.local')
     server_provider = TmpUnixServerProvider()
 
     message_codec = pickle_codec
     peer_manager = PeerManager(message_codec)
 
+    role = role or sys.argv[1]
+    assert role in {'send', 'recv', 'speed-test'}
+
     node = MeshNode(
-        f'test-{os.getpid()}',
+        f'{role}-{os.getpid()}',
         mesh_coordinator_client,
         server_provider,
         peer_manager,
@@ -441,9 +445,6 @@ async def test_mesh_node(role: str = None) -> None:
     await node.start()
 
     speed_tester = SpeedTester(node)
-
-    role = role or sys.argv[1]
-    assert role in {'send', 'recv', 'speed-test'}
 
     if role == 'send':
         async def expensive_task():
@@ -460,7 +461,7 @@ async def test_mesh_node(role: str = None) -> None:
     elif role == 'speed-test':
         topic = 'test'
         body = None
-        # body = b'helloworld' * 100000
+        body = b'helloworld' * 100000
         # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
         # body = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
         # body = torch.tensor(body)

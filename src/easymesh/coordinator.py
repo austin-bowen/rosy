@@ -11,6 +11,8 @@ from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, Register
 from easymesh.rpc import ObjectStreamRPC, RPC
 from easymesh.specs import MeshNodeSpec, MeshTopologySpec, NodeName
 
+DEFAULT_COORDINATOR_PORT = 6353
+
 
 class MeshCoordinatorServer:
     @abstractmethod
@@ -144,7 +146,8 @@ async def main() -> None:
         return ObjectStreamRPC(AnyObjectStreamIO(reader, writer))
 
     server = RPCMeshCoordinatorServer(
-        start_stream_server=lambda cb: asyncio.start_unix_server(cb, path='./mesh.sock'),
+        # start_stream_server=lambda cb: asyncio.start_unix_server(cb, path='./mesh.sock'),
+        start_stream_server=lambda cb: asyncio.start_server(cb, host='', port=DEFAULT_COORDINATOR_PORT),
         build_rpc=build_rpc,
     )
 
