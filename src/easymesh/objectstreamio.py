@@ -26,9 +26,15 @@ class ObjectStreamIO(Generic[T]):
     lock: Lock
     """For users to lock the whole object."""
 
-    def __init__(self, reader: StreamReader, writer: StreamWriter):
+    def __init__(
+            self,
+            reader: StreamReader,
+            writer: StreamWriter,
+            byte_order: ByteOrder,
+    ):
         self.reader = reader
         self.writer = writer
+        self.byte_order = byte_order
 
         self.lock = Lock()
         self._read_lock = Lock()
@@ -43,15 +49,16 @@ class ObjectStreamIO(Generic[T]):
     async def _read_object(self) -> T:
         ...
 
-    async def _read_data_with_len_header(
-            self,
-            header_len: int,
-            byte_order: ByteOrder,
-    ) -> bytes:
+    async def _read_data_with_len_header(self) -> bytes:
+        header_len = (await self.reader.readexactly(1))[0]
+
+        if not header_len:
+            return b''
+
         header = await self.reader.readexactly(header_len)
         data_len = int.from_bytes(
             header,
-            byteorder=byte_order,
+            byteorder=self.byte_order,
             signed=False,
         )
 
@@ -71,17 +78,21 @@ class ObjectStreamIO(Generic[T]):
     async def _write_object(self, obj: T) -> None:
         ...
 
-    def _write_data_with_len_header(
-            self,
-            data: bytes,
-            header_len: int,
-            header_byte_order: ByteOrder,
-    ) -> None:
-        header = len(data).to_bytes(
+    def _write_data_with_len_header(self, data: bytes) -> None:
+        data_len = len(data)
+
+        header_len = (data_len.bit_length() + 7) // 8
+        self.writer.write(header_len.to_bytes())
+
+        if not data_len:
+            return
+
+        header = data_len.to_bytes(
             length=header_len,
-            byteorder=header_byte_order,
+            byteorder=self.byte_order,
             signed=False,
         )
+
         self.writer.write(header)
         self.writer.write(data)
 
@@ -96,31 +107,19 @@ class AnyObjectStreamIO(ObjectStreamIO[Any]):
             reader: StreamReader,
             writer: StreamWriter,
             codec: Codec[Any] = pickle_codec,
-            header_len: int = 4,
-            header_byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
     ):
-        super().__init__(reader, writer)
+        super().__init__(reader, writer, byte_order)
 
         self.codec = codec
-        self.header_len = header_len
-        self.header_byte_order = header_byte_order
 
     async def _read_object(self) -> T:
-        data = await self._read_data_with_len_header(
-            self.header_len,
-            self.header_byte_order,
-        )
-
+        data = await self._read_data_with_len_header()
         return self.codec.decode(data)
 
     async def _write_object(self, obj: T) -> None:
         data = self.codec.encode(obj)
-
-        self._write_data_with_len_header(
-            data,
-            self.header_len,
-            self.header_byte_order,
-        )
+        self._write_data_with_len_header(data)
 
 
 class MessageStreamIO(ObjectStreamIO[Message]):
@@ -131,45 +130,26 @@ class MessageStreamIO(ObjectStreamIO[Message]):
             reader: StreamReader,
             writer: StreamWriter,
             codec: Codec[Body] = pickle_codec,
-            topic_header_len: int = 1,
             topic_encoding: str = 'utf-8',
-            body_header_len: int = 4,
-            header_byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
     ):
-        super().__init__(reader, writer)
+        super().__init__(reader, writer, byte_order)
 
         self.codec = codec
-        self.topic_header_len = topic_header_len
         self.topic_encoding = topic_encoding
-        self.body_header_len = body_header_len
-        self.header_byte_order = header_byte_order
 
     async def _read_object(self) -> Message:
-        topic = await self._read_data_with_len_header(
-            self.topic_header_len,
-            self.header_byte_order,
-        )
+        topic = await self._read_data_with_len_header()
         topic = topic.decode(self.topic_encoding)
 
-        body = await self._read_data_with_len_header(
-            self.body_header_len,
-            self.header_byte_order,
-        )
+        body = await self._read_data_with_len_header()
         body = self.codec.decode(body) if body else None
 
         return Message(topic, body)
 
     async def _write_object(self, message: Message) -> None:
         topic = message.topic.encode(self.topic_encoding)
-        self._write_data_with_len_header(
-            topic,
-            self.topic_header_len,
-            self.header_byte_order,
-        )
+        self._write_data_with_len_header(topic)
 
         body = self.codec.encode(message.body) if message.body is not None else b''
-        self._write_data_with_len_header(
-            body,
-            self.body_header_len,
-            self.header_byte_order,
-        )
+        self._write_data_with_len_header(body)

@@ -461,7 +461,7 @@ async def test_mesh_node(role: str = None) -> None:
     elif role == 'speed-test':
         topic = 'test'
         body = None
-        body = b'helloworld' * 100000
+        # body = b'helloworld' * 100000
         # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
         # body = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
         # body = torch.tensor(body)
