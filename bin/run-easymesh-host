@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+sudo docker run -it --rm -v .:/easymesh --name easymesh-host easymesh-host

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+tag=easymesh-host
+sudo docker rmi $tag
+sudo docker build --pull --progress=plain -t $tag -f test/$tag/Dockerfile .
