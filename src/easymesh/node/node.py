@@ -204,6 +204,7 @@ async def build_mesh_node(
         allow_unix_connections: bool = True,
         allow_tcp_connections: bool = True,
         node_host: str = 'localhost',
+        node_host_interface: str = None,
         message_codec: Codec[Body] = pickle_codec,
         start: bool = True,
 ) -> MeshNode:
@@ -216,6 +217,9 @@ async def build_mesh_node(
     if allow_unix_connections:
         server_providers.append(TmpUnixServerProvider())
     if allow_tcp_connections:
+        if node_host_interface:
+            node_host = get_interface_ip_address(node_host_interface)
+
         server_providers.append(PortScanTcpServerProvider(host=node_host))
     if not server_providers:
         raise ValueError('Must allow at least one type of connection')
