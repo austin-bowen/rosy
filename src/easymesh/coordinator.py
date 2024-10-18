@@ -11,7 +11,8 @@ from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, Register
 from easymesh.rpc import ObjectStreamRPC, RPC
 from easymesh.specs import MeshNodeSpec, MeshTopologySpec, NodeName
 
-DEFAULT_COORDINATOR_PORT = 6353
+DEFAULT_COORDINATOR_PORT: int = 6374
+"""Default coordinator port is 6374, which spells "MESH" on a telephone keypad :)"""
 
 
 class MeshCoordinatorServer:
