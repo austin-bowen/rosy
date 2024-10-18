@@ -60,11 +60,9 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             print('Received heartbeat')
             return b'pong'
         elif isinstance(request, RegisterNodeRequest):
-            handler = self._handle_register_node
+            return await self._handle_register_node(request, rpc)
         else:
             raise Exception(f'Received invalid request object of type={type(request)}')
-
-        return await handler(request, rpc)
 
     async def _handle_register_node(
             self,
