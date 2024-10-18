@@ -490,6 +490,7 @@ async def build_mesh_node(
         allow_tcp_connections: bool = True,
         node_host: str = 'localhost',
         message_codec: Codec[Body] = pickle_codec,
+        start: bool = True,
 ) -> MeshNode:
     mesh_coordinator_client = await build_coordinator_client(
         coordinator_host,
@@ -506,13 +507,18 @@ async def build_mesh_node(
 
     peer_manager = PeerManager(message_codec)
 
-    return MeshNode(
+    node = MeshNode(
         name,
         mesh_coordinator_client,
         server_providers,
         peer_manager,
         message_codec
     )
+
+    if start:
+        await node.start()
+
+    return node
 
 
 async def test_mesh_node(role: str = None) -> None:
@@ -526,8 +532,6 @@ async def test_mesh_node(role: str = None) -> None:
         coordinator_host='192.168.0.172',
         node_host=get_interface_ip_address(interface),
     )
-
-    await node.start()
 
     speed_tester = SpeedTester(node)
 
