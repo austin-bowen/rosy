@@ -14,7 +14,6 @@ from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient
 from easymesh.network import get_interface_ip_address
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import PortScanTcpServerProvider, ServerProvider, TmpUnixServerProvider
-from easymesh.node.speedtest import SpeedTester
 from easymesh.objectstreamio import MessageStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec
@@ -225,7 +224,7 @@ async def build_mesh_node(
 
 async def test_mesh_node(role: str = None) -> None:
     role = role or sys.argv[1]
-    assert role in {'send', 'recv', 'speed-test'}
+    assert role in {'send', 'recv'}
 
     interface = 'wlp0s20f3' if socket.gethostname() == 'austin-laptop' else 'eth0'
 
@@ -234,8 +233,6 @@ async def test_mesh_node(role: str = None) -> None:
         coordinator_host='192.168.0.172',
         node_host=get_interface_ip_address(interface),
     )
-
-    speed_tester = SpeedTester(node)
 
     if role == 'send':
         async def expensive_task():
@@ -249,21 +246,6 @@ async def test_mesh_node(role: str = None) -> None:
             )
             print(result)
             await asyncio.sleep(0.5)
-    elif role == 'speed-test':
-        topic = 'test'
-        body = None
-        # body = b'helloworld' * 100000
-        # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
-        # body = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
-        # body = torch.tensor(body)
-
-        while not await node.topic_has_listeners(topic):
-            print('Waiting for listeners...')
-            await asyncio.sleep(0.1)
-
-        print('Running speed test...')
-        mps = await speed_tester.measure_mps(topic, body=body)
-        print(f'mps={mps}')
     elif role == 'recv':
         reqs = 0
         last_reqs = -1
