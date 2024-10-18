@@ -1,9 +1,8 @@
 # easymesh
 
 Guiding principles:
-- Easy to use
-- Easy to understand
-- Simple -- no fancy bells and whistles
+- Easy to use and understand
+- Simple; no fancy bells and whistles
 - Fast & efficient
 - Async
 
@@ -13,11 +12,24 @@ Guiding principles:
 pip install git+https://github.com/austin-bowen/easymesh.git
 ```
 
-## Quick example
+## Simple demo
 
-```python
-# TODO
+### Terminal 1: Start the mesh coordinator
+```bash
+python -m easymesh.coordinator
 ```
+
+### Terminal 2: Start a node to receive messages on a topic
+```bash
+python -m easymesh.demo.receiver_node
+```
+See [receiver_node.py](src/easymesh/demo/receiver_node.py) for source code.
+
+### Terminal 3: Start a node to send messages to the receiver node
+```bash
+python -m easymesh.demo.sender_node
+```
+See [sender_node.py](src/easymesh/demo/sender_node.py) for source code.
 
 ## What is a mesh?
 
@@ -35,4 +47,8 @@ When a node needs to send a message, it uses the mesh topology to find all curre
 
 - Load balancing
   - When multiple nodes with the same name are on the mesh, messages should be automatically distributed among them
-- Multiple node connection options for e.g. local vs remote nodes
+- Robustness to failure
+  - Nodes should automatically reconnect to coordinator if they lose connection
+  - Nodes should automatically reconnect to other nodes if they lose connection
+- Security
+  - Simple authentication via authkey
