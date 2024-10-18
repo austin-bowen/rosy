@@ -1,4 +1,3 @@
-import pickle
 from abc import abstractmethod
 from asyncio import Lock, StreamReader, StreamWriter
 from collections.abc import AsyncIterable
@@ -12,14 +11,6 @@ DEFAULT_BYTE_ORDER: ByteOrder = 'little'
 T = TypeVar('T')
 
 pickle_codec = PickleCodec()
-
-
-def default_bytes_to_obj(data: bytes) -> T:
-    return pickle.loads(data)
-
-
-def default_obj_to_bytes(obj: T) -> bytes:
-    return pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 class ObjectStreamIO(Generic[T]):
