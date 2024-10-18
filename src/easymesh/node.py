@@ -13,11 +13,10 @@ from typing import Optional, TypeVar
 
 from easymesh.asyncio import noop
 from easymesh.codec import Codec
-from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, RPCMeshCoordinatorClient
+from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, build_coordinator_client
 from easymesh.network import get_interface_ip_address
-from easymesh.objectstreamio import CodecObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
+from easymesh.objectstreamio import MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
-from easymesh.rpc import ObjectStreamRPC
 from easymesh.specs import (
     ConnectionSpec,
     IpConnectionSpec,
@@ -483,33 +482,49 @@ class SpeedTester:
         return message_count / true_duration
 
 
-async def test_mesh_node(role: str = None) -> None:
-    print('Connecting to mesh coordinator...')
-    # reader, writer = await open_connection('austin-laptop.local', DEFAULT_COORDINATOR_PORT)
-    reader, writer = await open_connection('192.168.0.172', DEFAULT_COORDINATOR_PORT)
-    obj_io = CodecObjectStreamIO(reader, writer)
-    rpc = ObjectStreamRPC(obj_io)
-    mesh_coordinator_client = RPCMeshCoordinatorClient(rpc)
-    await rpc.start()
+async def build_mesh_node(
+        name: str,
+        coordinator_host: str = 'localhost',
+        coordinator_port: int = DEFAULT_COORDINATOR_PORT,
+        allow_unix_connections: bool = True,
+        allow_tcp_connections: bool = True,
+        node_host: str = 'localhost',
+        message_codec: Codec[Body] = pickle_codec,
+) -> MeshNode:
+    mesh_coordinator_client = await build_coordinator_client(
+        coordinator_host,
+        coordinator_port,
+    )
 
-    interface = 'wlp0s20f3' if socket.gethostname() == 'austin-laptop' else 'eth0'
-    server_providers = [
-        TmpUnixServerProvider(),
-        PortScanTcpServerProvider(host=get_interface_ip_address(interface)),
-    ]
+    server_providers = []
+    if allow_unix_connections:
+        server_providers.append(TmpUnixServerProvider())
+    if allow_tcp_connections:
+        server_providers.append(PortScanTcpServerProvider(host=node_host))
+    if not server_providers:
+        raise ValueError('Must allow at least one type of connection')
 
-    message_codec = pickle_codec
     peer_manager = PeerManager(message_codec)
 
-    role = role or sys.argv[1]
-    assert role in {'send', 'recv', 'speed-test'}
-
-    node = MeshNode(
-        f'{role}-{os.getpid()}',
+    return MeshNode(
+        name,
         mesh_coordinator_client,
         server_providers,
         peer_manager,
         message_codec
+    )
+
+
+async def test_mesh_node(role: str = None) -> None:
+    role = role or sys.argv[1]
+    assert role in {'send', 'recv', 'speed-test'}
+
+    interface = 'wlp0s20f3' if socket.gethostname() == 'austin-laptop' else 'eth0'
+
+    node = await build_mesh_node(
+        name=f'{role}-{os.getpid()}',
+        coordinator_host='192.168.0.172',
+        node_host=get_interface_ip_address(interface),
     )
 
     await node.start()

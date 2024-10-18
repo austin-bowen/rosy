@@ -1,6 +1,6 @@
 import asyncio
 from abc import abstractmethod
-from asyncio import StreamReader
+from asyncio import StreamReader, open_connection
 from codecs import StreamWriter
 from collections.abc import Awaitable, Callable
 from typing import Optional
@@ -139,6 +139,19 @@ class RPCMeshCoordinatorClient(MeshCoordinatorClient):
             await self.mesh_topology_broadcast_handler(data)
         else:
             print(f'Received unknown message={data}')
+
+
+async def build_coordinator_client(
+        host: str = 'localhost',
+        port: int = DEFAULT_COORDINATOR_PORT,
+) -> MeshCoordinatorClient:
+    reader, writer = await open_connection(host, port)
+    obj_io = CodecObjectStreamIO(reader, writer)
+    rpc = ObjectStreamRPC(obj_io)
+    client = RPCMeshCoordinatorClient(rpc)
+    await rpc.start()
+
+    return client
 
 
 async def main() -> None:
