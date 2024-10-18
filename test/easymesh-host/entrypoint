@@ -3,5 +3,6 @@
 source /venv/bin/activate
 
 pip install --editable .
+rm -r src/easymesh.egg-info
 
 exec /bin/bash
