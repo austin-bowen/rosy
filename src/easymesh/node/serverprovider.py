@@ -14,6 +14,7 @@ class ServerProvider:
             self,
             client_connected_cb,
     ) -> tuple[Server, ConnectionSpec]:
+        """Raises ``UnsupportedProviderError`` if not supported on the system."""
         ...
 
 
@@ -87,7 +88,20 @@ class TmpUnixServerProvider(ServerProvider):
         ) as file:
             path = file.name
 
-        server = await asyncio.start_unix_server(client_connected_cb, path=path)
+        try:
+            server = await asyncio.start_unix_server(client_connected_cb, path=path)
+        except NotImplementedError as e:
+            raise UnsupportedProviderError(self, repr(e))
+
         conn_spec = UnixConnectionSpec(path=path)
 
         return server, conn_spec
+
+
+class UnsupportedProviderError(Exception):
+    """Raised when trying to start a server from an unsupported server provider."""
+
+    def __init__(self, provider: ServerProvider, message: str):
+        super().__init__(
+            f'Unsupported server provider {provider.__class__}: {message}'
+        )

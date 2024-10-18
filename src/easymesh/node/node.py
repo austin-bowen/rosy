@@ -14,7 +14,12 @@ from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_interface_ip_address
 from easymesh.node.peer import MeshPeer, PeerManager
-from easymesh.node.serverprovider import PortScanTcpServerProvider, ServerProvider, TmpUnixServerProvider
+from easymesh.node.serverprovider import (
+    PortScanTcpServerProvider,
+    ServerProvider,
+    TmpUnixServerProvider,
+    UnsupportedProviderError,
+)
 from easymesh.objectstreamio import MessageStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec
@@ -48,12 +53,20 @@ class MeshNode:
 
     async def start(self) -> None:
         print('Starting node servers...')
+        self._connection_specs = []
         for server_provider in self.server_providers:
-            server, connection_spec = await server_provider.start_server(
-                self._handle_connection
-            )
-            print(f'Started node server with connection_spec={connection_spec}')
-            self._connection_specs.append(connection_spec)
+            try:
+                server, connection_spec = await server_provider.start_server(
+                    self._handle_connection
+                )
+            except UnsupportedProviderError as e:
+                print(e)
+            else:
+                print(f'Started node server with connection_spec={connection_spec}')
+                self._connection_specs.append(connection_spec)
+
+        if not self._connection_specs:
+            raise RuntimeError('Unable to start any node servers')
 
         await self._register_node()
 
