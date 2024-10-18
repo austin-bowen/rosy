@@ -1,18 +1,20 @@
 import asyncio
 import os
+import socket
 import sys
 import tempfile
 import time
 from abc import abstractmethod
 from asyncio import Server, StreamReader, StreamWriter, open_connection, open_unix_connection
 from collections import defaultdict
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Optional, TypeVar
 
 from easymesh.asyncio import noop
 from easymesh.codec import Codec
 from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, RPCMeshCoordinatorClient
+from easymesh.network import get_interface_ip_address
 from easymesh.objectstreamio import CodecObjectStreamIO, MessageStreamIO, ObjectStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.rpc import ObjectStreamRPC
@@ -35,6 +37,10 @@ class PeerConnection:
     async def send(self, message: Message) -> None:
         ...
 
+    @abstractmethod
+    async def close(self) -> None:
+        ...
+
 
 class ObjectStreamPeerConnection(PeerConnection):
     def __init__(self, obj_io: ObjectStreamIO[Message]):
@@ -43,25 +49,54 @@ class ObjectStreamPeerConnection(PeerConnection):
     async def send(self, message: Message) -> None:
         await self.obj_io.write_object(message)
 
+    async def close(self) -> None:
+        self.obj_io.writer.close()
+        await self.obj_io.writer.wait_closed()
+
 
 class PeerConnectionBuilder:
-    def __init__(self, codec: Codec[Body]):
+    def __init__(
+            self,
+            codec: Codec[Body],
+            host: str = socket.gethostname(),
+    ):
         self.codec = codec
+        self.host = host
 
-    async def build(self, conn_spec: ConnectionSpec) -> PeerConnection:
-        if isinstance(conn_spec, IpConnectionSpec):
-            reader, writer = await open_connection(
-                host=conn_spec.host,
-                port=conn_spec.port,
-            )
-        elif isinstance(conn_spec, UnixConnectionSpec):
-            reader, writer = await open_unix_connection(path=conn_spec.path)
-        else:
-            raise ValueError(f'Invalid connection spec: {conn_spec}')
+    async def build(self, conn_specs: Iterable[ConnectionSpec]) -> PeerConnection:
+        reader, writer = None, None
+        for conn_spec in conn_specs:
+            try:
+                reader, writer = await self._get_connection(conn_spec)
+            except ConnectionError as e:
+                print(f'Error connecting to {conn_spec}: {e}')
+                continue
+            else:
+                break
+
+        if not reader:
+            raise ConnectionError('Could not connect to any connection spec')
 
         return ObjectStreamPeerConnection(
             obj_io=MessageStreamIO(reader, writer, codec=self.codec),
         )
+
+    async def _get_connection(self, conn_spec: ConnectionSpec):
+        if isinstance(conn_spec, IpConnectionSpec):
+            return await open_connection(
+                host=conn_spec.host,
+                port=conn_spec.port,
+            )
+        elif isinstance(conn_spec, UnixConnectionSpec):
+            if conn_spec.host != self.host:
+                raise ConnectionError(
+                    f'Unix connection host={conn_spec.host} '
+                    f'does not match local host={self.host}'
+                )
+
+            return await open_unix_connection(path=conn_spec.path)
+        else:
+            raise ValueError(f'Invalid connection spec: {conn_spec}')
 
 
 class PeerConnectionPool:
@@ -76,10 +111,16 @@ class PeerConnectionPool:
         conn = self._connections.get(peer_spec.name, None)
 
         if conn is None:
-            conn = await self.connection_builder.build(peer_spec.connection)
+            conn = await self.connection_builder.build(peer_spec.connections)
             self._connections[peer_spec.name] = conn
 
         return conn
+
+    def get_node_names_with_connections(self) -> set[NodeName]:
+        return set(self._connections.keys())
+
+    def remove_connection_for(self, node_name: NodeName) -> Optional[PeerConnection]:
+        return self._connections.pop(node_name, None)
 
 
 class LazyPeerConnection(PeerConnection):
@@ -93,7 +134,17 @@ class LazyPeerConnection(PeerConnection):
 
     async def send(self, message: Message) -> None:
         connection = await self.connection_pool.get_connection_for(self.peer_spec)
-        return await connection.send(message)
+
+        try:
+            return await connection.send(message)
+        except ConnectionError:
+            await self.close()
+            raise
+
+    async def close(self) -> None:
+        connection = self.connection_pool.remove_connection_for(self.peer_spec.name)
+        if connection is not None:
+            await connection.close()
 
 
 class MeshPeer:
@@ -133,8 +184,21 @@ class PeerManager:
             ) for node in self._mesh_topology.nodes.values()
         ]
 
-    def set_mesh_topology(self, mesh_topo: MeshTopologySpec) -> None:
+    async def set_mesh_topology(self, mesh_topo: MeshTopologySpec) -> None:
         self._mesh_topology = mesh_topo
+
+        old_node_names_with_conns = self._connection_pool.get_node_names_with_connections()
+        new_node_names = set(mesh_topo.nodes.keys())
+        nodes_to_remove = old_node_names_with_conns - new_node_names
+
+        connections_to_close = (
+            self._connection_pool.remove_connection_for(node_name)
+            for node_name in nodes_to_remove
+        )
+
+        await asyncio.gather(*(
+            conn.close() for conn in connections_to_close
+        ))
 
 
 class ServerProvider:
@@ -230,35 +294,37 @@ class MeshNode:
             self,
             name: str,
             mesh_coordinator_client: MeshCoordinatorClient,
-            server_provider: ServerProvider,
+            server_providers: Iterable[ServerProvider],
             peer_manager: PeerManager,
             message_codec: Codec[Body],
     ):
         self.name = name
         self.mesh_coordinator_client = mesh_coordinator_client
-        self.server_provider = server_provider
+        self.server_providers = server_providers
         self.peer_manager = peer_manager
         self.message_codec = message_codec
 
-        self._connection_spec = None
+        self._connection_specs = []
 
         self._listeners: dict[Topic, set[ListenerCallback]] = defaultdict(set)
 
         mesh_coordinator_client.mesh_topology_broadcast_handler = self._handle_topology_broadcast
 
     async def start(self) -> None:
-        print('Starting node server...')
-        server, self._connection_spec = await self.server_provider.start_server(
-            self._handle_connection
-        )
-        print(f'Started node server with connection_spec={self._connection_spec}')
+        print('Starting node servers...')
+        for server_provider in self.server_providers:
+            server, connection_spec = await server_provider.start_server(
+                self._handle_connection
+            )
+            print(f'Started node server with connection_spec={connection_spec}')
+            self._connection_specs.append(connection_spec)
 
         await self._register_node()
 
     async def _register_node(self) -> None:
         node_spec = MeshNodeSpec(
             name=self.name,
-            connection=self._connection_spec,
+            connections=self._connection_specs,
             listening_to_topics=set(self._listeners.keys()),
         )
 
@@ -301,7 +367,7 @@ class MeshNode:
             if isinstance(result, BaseException):
                 print(
                     f'Error sending message with topic={message.topic} '
-                    f'to {peer.name}: {result}'
+                    f'to {peer.name}: {result!r}'
                 )
 
     async def send_result(
@@ -359,7 +425,7 @@ class MeshNode:
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
         print(f'Received mesh topology broadcast: {broadcast}')
         topology = broadcast.mesh_topology
-        self.peer_manager.set_mesh_topology(topology)
+        await self.peer_manager.set_mesh_topology(topology)
 
 
 @dataclass
@@ -407,7 +473,8 @@ class SpeedTester:
         start_time = time.monotonic()
 
         while (end_time := time.monotonic()) - start_time < duration:
-            await topic_sender.send(body)
+            message = (time.time(), body)
+            await topic_sender.send(message)
             await noop()  # Yield to other tasks since this runs as fast as possible and can block other tasks
             message_count += 1
 
@@ -418,15 +485,18 @@ class SpeedTester:
 
 async def test_mesh_node(role: str = None) -> None:
     print('Connecting to mesh coordinator...')
-    # reader, writer = await open_unix_connection('./mesh.sock')
-    reader, writer = await open_connection('austin-laptop.local', DEFAULT_COORDINATOR_PORT)
+    # reader, writer = await open_connection('austin-laptop.local', DEFAULT_COORDINATOR_PORT)
+    reader, writer = await open_connection('192.168.0.172', DEFAULT_COORDINATOR_PORT)
     obj_io = CodecObjectStreamIO(reader, writer)
     rpc = ObjectStreamRPC(obj_io)
     mesh_coordinator_client = RPCMeshCoordinatorClient(rpc)
     await rpc.start()
 
-    # server_provider = PortScanTcpServerProvider(host='austin-laptop.local')
-    server_provider = TmpUnixServerProvider()
+    interface = 'wlp0s20f3' if socket.gethostname() == 'austin-laptop' else 'eth0'
+    server_providers = [
+        TmpUnixServerProvider(),
+        PortScanTcpServerProvider(host=get_interface_ip_address(interface)),
+    ]
 
     message_codec = pickle_codec
     peer_manager = PeerManager(message_codec)
@@ -437,7 +507,7 @@ async def test_mesh_node(role: str = None) -> None:
     node = MeshNode(
         f'{role}-{os.getpid()}',
         mesh_coordinator_client,
-        server_provider,
+        server_providers,
         peer_manager,
         message_codec
     )
@@ -449,7 +519,7 @@ async def test_mesh_node(role: str = None) -> None:
     if role == 'send':
         async def expensive_task():
             await asyncio.sleep(1.)
-            return 'expensive task ran'
+            return time.time(), 'expensive task ran'
 
         test_topic = node.get_topic_sender('test')
         while True:
@@ -477,11 +547,13 @@ async def test_mesh_node(role: str = None) -> None:
         reqs = 0
         last_reqs = -1
         t00 = None
+        latencies = []
 
         async def handle_test(message: Message) -> None:
             nonlocal reqs, t00
             if t00 is None:
                 t00 = time.monotonic()
+            latencies.append(time.time() - message.body[0])
             reqs += 1
             # print(f'Received test message: {message}')
             # print('Received test message')
@@ -498,6 +570,9 @@ async def test_mesh_node(role: str = None) -> None:
             if reqs != last_reqs:
                 print(f'reqs={reqs}')
                 last_reqs = reqs
+
+                if latencies:
+                    print('avg latency:', sum(latencies) / len(latencies))
 
 
 async def main():

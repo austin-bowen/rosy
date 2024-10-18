@@ -1,3 +1,4 @@
+import socket
 from dataclasses import dataclass
 from typing import Union
 
@@ -13,6 +14,7 @@ class IpConnectionSpec:
 @dataclass
 class UnixConnectionSpec:
     path: str
+    host: str = socket.gethostname()
 
 
 ConnectionSpec = Union[IpConnectionSpec, UnixConnectionSpec]
@@ -23,7 +25,7 @@ NodeName = str
 @dataclass
 class MeshNodeSpec:
     name: NodeName
-    connection: ConnectionSpec
+    connections: list[ConnectionSpec]
     listening_to_topics: set[Topic]
 
 
