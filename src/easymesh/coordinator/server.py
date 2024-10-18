@@ -1,18 +1,13 @@
 import asyncio
 from abc import abstractmethod
-from asyncio import StreamReader, open_connection
+from asyncio import StreamReader
 from codecs import StreamWriter
-from collections.abc import Awaitable, Callable
 from typing import Optional
 
-from easymesh.asyncio import forever
 from easymesh.objectstreamio import CodecObjectStreamIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectStreamRPC, RPC
-from easymesh.specs import MeshNodeSpec, MeshTopologySpec, NodeName
-
-DEFAULT_COORDINATOR_PORT: int = 6374
-"""Default coordinator port is 6374, which spells "MESH" on a telephone keypad :)"""
+from easymesh.specs import MeshTopologySpec, NodeName
 
 
 class MeshCoordinatorServer:
@@ -99,76 +94,14 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         ))
 
 
-MeshTopologyBroadcastHandler = Callable[[MeshTopologyBroadcast], Awaitable[None]]
+def build_mesh_coordinator_server(
+        host: str,
+        port: int,
+) -> MeshCoordinatorServer:
+    async def start_stream_server(cb):
+        return await asyncio.start_server(cb, host=host, port=port)
 
-
-class MeshCoordinatorClient:
-    mesh_topology_broadcast_handler: MeshTopologyBroadcastHandler
-
-    @abstractmethod
-    async def send_heartbeat(self) -> None:
-        ...
-
-    @abstractmethod
-    async def register_node(self, node_spec: MeshNodeSpec) -> None:
-        ...
-
-
-class RPCMeshCoordinatorClient(MeshCoordinatorClient):
-    def __init__(self, rpc: RPC):
-        self.rpc = rpc
-
-        rpc.message_handler = self._handle_rpc_message
-
-    async def send_heartbeat(self) -> None:
-        response = await self.rpc.send_request(b'ping')
-        if response != b'pong':
-            raise Exception(f'Got unexpected response={response} from heartbeat.')
-
-    async def register_node(self, node_spec: MeshNodeSpec) -> None:
-        request = RegisterNodeRequest(node_spec)
-
-        response = await self.rpc.send_request(request)
-
-        if not isinstance(response, RegisterNodeResponse):
-            raise Exception(f'Failed to register node; got response={response}')
-
-    async def _handle_rpc_message(self, data) -> None:
-        if isinstance(data, MeshTopologyBroadcast):
-            await self.mesh_topology_broadcast_handler(data)
-        else:
-            print(f'Received unknown message={data}')
-
-
-async def build_coordinator_client(
-        host: str = 'localhost',
-        port: int = DEFAULT_COORDINATOR_PORT,
-) -> MeshCoordinatorClient:
-    reader, writer = await open_connection(host, port)
-    obj_io = CodecObjectStreamIO(reader, writer)
-    rpc = ObjectStreamRPC(obj_io)
-    client = RPCMeshCoordinatorClient(rpc)
-    await rpc.start()
-
-    return client
-
-
-async def main() -> None:
     def build_rpc(reader, writer):
         return ObjectStreamRPC(CodecObjectStreamIO(reader, writer))
 
-    server = RPCMeshCoordinatorServer(
-        # start_stream_server=lambda cb: asyncio.start_unix_server(cb, path='./mesh.sock'),
-        start_stream_server=lambda cb: asyncio.start_server(cb, host='', port=DEFAULT_COORDINATOR_PORT),
-        build_rpc=build_rpc,
-    )
-
-    print('Starting server...')
-    await server.start()
-    print('Server started.')
-
-    await forever()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
+    return RPCMeshCoordinatorServer(start_stream_server, build_rpc)

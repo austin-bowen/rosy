@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from easymesh.codec import Codec
-from easymesh.coordinator import DEFAULT_COORDINATOR_PORT, MeshCoordinatorClient, build_coordinator_client
+from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
+from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_interface_ip_address
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import PortScanTcpServerProvider, ServerProvider, TmpUnixServerProvider
