@@ -1,3 +1,4 @@
+from collections.abc import Container
 from socket import AddressFamily
 
 import psutil
@@ -6,15 +7,25 @@ from psutil._common import snicaddr
 
 def get_interface_ip_address(
         interface_name: str,
-        family: AddressFamily = AddressFamily.AF_INET,
+        families: Container[AddressFamily] = None,
 ) -> str:
+    """
+    Get the IP address of the given interface.
+
+    If ``families`` is not provided, then it defaults to {AF_INET, AF_INET6},
+    returning the first IPv4 or IPv6 address found.
+    """
+
     addresses = get_interface_addresses(interface_name)
 
+    if not families:
+        families = {AddressFamily.AF_INET, AddressFamily.AF_INET6}
+
     try:
-        address = next(a for a in addresses if a.family == family)
+        address = next(a for a in addresses if a.family in families)
     except StopIteration:
         raise ValueError(
-            f'No address of family={family} found for interface={interface_name}. '
+            f'No address of family={families} found for interface={interface_name}. '
             f'Addresses found: {addresses}'
         )
 
