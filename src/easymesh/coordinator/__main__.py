@@ -2,7 +2,7 @@ import asyncio
 from argparse import ArgumentParser, Namespace
 
 from easymesh.asyncio import forever
-from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
+from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.coordinator.server import build_mesh_coordinator_server
 
 
@@ -26,7 +26,7 @@ def _parse_args() -> Namespace:
     parser = ArgumentParser()
 
     parser.add_argument(
-        '--host', default='',
+        '--host', default=DEFAULT_COORDINATOR_HOST,
         help='Host to bind to. Default is empty string, which means all available interfaces.',
     )
 
