@@ -1,10 +1,10 @@
 import asyncio
 
-from easymesh.node import build_mesh_node
+import easymesh
 
 
 async def main():
-    node = await build_mesh_node(name='sender')
+    node = await easymesh.build_mesh_node(name='sender')
 
     while True:
         await node.send('some-topic', 'Hello, world!')
