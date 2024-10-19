@@ -47,13 +47,12 @@ class ObjectStreamIO(Generic[T]):
             return b''
 
         header = await self.reader.readexactly(header_len)
-        data_len = int.from_bytes(
-            header,
-            byteorder=self.byte_order,
-            signed=False,
-        )
+        data_len = self._bytes_to_int(header)
 
         return await self.reader.readexactly(data_len)
+
+    def _bytes_to_int(self, data: bytes) -> int:
+        return int.from_bytes(data, byteorder=self.byte_order, signed=False)
 
     async def read_objects(self) -> AsyncIterable[T]:
         while True:
@@ -73,19 +72,18 @@ class ObjectStreamIO(Generic[T]):
         data_len = len(data)
 
         header_len = (data_len.bit_length() + 7) // 8
-        self.writer.write(header_len.to_bytes())
+        self.writer.write(self._int_to_bytes(header_len, length=1))
 
         if not data_len:
             return
 
-        header = data_len.to_bytes(
-            length=header_len,
-            byteorder=self.byte_order,
-            signed=False,
-        )
+        header = self._int_to_bytes(data_len, length=header_len)
 
         self.writer.write(header)
         self.writer.write(data)
+
+    def _int_to_bytes(self, value: int, length: int) -> bytes:
+        return value.to_bytes(length, byteorder=self.byte_order, signed=False)
 
     async def drain(self) -> None:
         async with self._drain_lock:
