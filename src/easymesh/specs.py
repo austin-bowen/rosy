@@ -2,19 +2,19 @@ import socket
 from dataclasses import dataclass
 from typing import Union
 
-from easymesh.types import Topic
+from easymesh.types import Host, Port, Topic
 
 
 @dataclass
 class IpConnectionSpec:
-    host: str
-    port: int
+    host: Host
+    port: Port
 
 
 @dataclass
 class UnixConnectionSpec:
     path: str
-    host: str = socket.gethostname()
+    host: Host = socket.gethostname()
 
 
 ConnectionSpec = Union[IpConnectionSpec, UnixConnectionSpec]

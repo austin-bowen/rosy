@@ -12,7 +12,7 @@ from typing import TypeVar
 from easymesh.codec import Codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.network import get_interface_ip_address
+from easymesh.network import get_interface_ip_address, get_lan_hostname
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import (
     PortScanTcpServerProvider,
@@ -23,7 +23,7 @@ from easymesh.node.serverprovider import (
 from easymesh.objectstreamio import MessageStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec
-from easymesh.types import Body, Message, Topic
+from easymesh.types import Body, Host, Message, Port, ServerHost, Topic
 
 T = TypeVar('T')
 
@@ -199,11 +199,12 @@ class TopicSender:
 
 async def build_mesh_node(
         name: str,
-        coordinator_host: str = 'localhost',
-        coordinator_port: int = DEFAULT_COORDINATOR_PORT,
+        coordinator_host: Host = 'localhost',
+        coordinator_port: Port = DEFAULT_COORDINATOR_PORT,
         allow_unix_connections: bool = True,
         allow_tcp_connections: bool = True,
-        node_host: str = 'localhost',
+        node_server_host: ServerHost = None,
+        node_client_host: Host = get_lan_hostname(),
         node_host_interface: str = None,
         message_codec: Codec[Body] = pickle_codec,
         start: bool = True,
@@ -218,9 +219,12 @@ async def build_mesh_node(
         server_providers.append(TmpUnixServerProvider())
     if allow_tcp_connections:
         if node_host_interface:
-            node_host = get_interface_ip_address(node_host_interface)
+            node_server_host = node_client_host = \
+                get_interface_ip_address(node_host_interface)
 
-        server_providers.append(PortScanTcpServerProvider(host=node_host))
+        provider = PortScanTcpServerProvider(node_server_host, node_client_host)
+
+        server_providers.append(provider)
     if not server_providers:
         raise ValueError('Must allow at least one type of connection')
 
@@ -248,8 +252,8 @@ async def test_mesh_node(role: str = None) -> None:
 
     node = await build_mesh_node(
         name=f'{role}-{os.getpid()}',
-        coordinator_host='192.168.0.172',
-        node_host=get_interface_ip_address(interface),
+        coordinator_host='austin-laptop.local',
+        node_host_interface=interface,
     )
 
     if role == 'send':

@@ -5,7 +5,7 @@ from asyncio import Server
 from typing import Optional
 
 from easymesh.specs import ConnectionSpec, IpConnectionSpec, UnixConnectionSpec
-from easymesh.utils import require
+from easymesh.types import Host, Port, ServerHost
 
 
 class ServerProvider:
@@ -23,14 +23,25 @@ class PortScanTcpServerProvider(ServerProvider):
 
     def __init__(
             self,
-            host: str = 'localhost',
-            start_port: int = 49152,
-            max_ports: int = 1024,
+            server_host: ServerHost,
+            client_host: Host,
+            start_port: Port = 49152,
+            max_ports: Port = 1024,
     ):
-        require(1 <= start_port <= 65535, 'start_port must be in range 1-65535')
-        require(1 <= max_ports <= 65534, 'max_ports must be in range 1-65534')
+        """
+        Args:
+            server_host:
+                The interface(s) that the server will listen on.
+            client_host:
+                The host that clients will use to connect to the server.
+            start_port:
+                The port to start scanning for an open port.
+            max_ports:
+                Maximum number of ports to scan.
+        """
 
-        self.host = host
+        self.server_host = server_host
+        self.client_host = client_host
         self.start_port = start_port
         self.max_ports = max_ports
 
@@ -48,19 +59,19 @@ class PortScanTcpServerProvider(ServerProvider):
             try:
                 server = await asyncio.start_server(
                     client_connected_cb,
-                    host=self.host,
+                    host=self.server_host,
                     port=port,
                 )
             except OSError as e:
                 last_error = e
             else:
-                conn_spec = IpConnectionSpec(self.host, port)
+                conn_spec = IpConnectionSpec(self.client_host, port)
                 return server, conn_spec
 
         raise OSError(
             f'Unable to start a server on any port in range '
             f'{self.start_port}-{self.end_port}. '
-            f'Last error: {last_error}'
+            f'Last error: {last_error!r}'
         )
 
 

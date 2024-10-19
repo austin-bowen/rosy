@@ -1,12 +1,13 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
+
+Host = str
+ServerHost = Union[Host, Sequence[Host], None]
+Port = int
 
 Topic = str
-TopicPattern = Topic
-
 Body = Any
-
 TopicCallback = Callable[[Topic, Body], None]
 
 

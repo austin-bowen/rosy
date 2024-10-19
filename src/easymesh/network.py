@@ -1,8 +1,24 @@
+import socket
 from collections.abc import Container
 from socket import AddressFamily
 
 import psutil
 from psutil._common import snicaddr
+
+from easymesh.types import Host
+
+
+def get_hostname() -> Host:
+    """Return the current host name."""
+    return socket.gethostname()
+
+
+def get_lan_hostname(suffix: str = '.local') -> Host:
+    """
+    Return the mDNS hostname of this machine as seen on the local network,
+    e.g. "<hostname>.local".
+    """
+    return get_hostname() + suffix
 
 
 def get_interface_ip_address(
