@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import time
 
 import easymesh
 
@@ -13,7 +14,8 @@ async def main():
     )
 
     while True:
-        await node.send('some-topic', f'Hello from node {node}!')
+        data = (time.time(), f'Hello from node {node}!')
+        await node.send('some-topic', data)
         await asyncio.sleep(1)
 
 
