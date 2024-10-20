@@ -1,5 +1,5 @@
 import socket
-from collections.abc import Sequence
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import Union
 from uuid import UUID, uuid4
@@ -26,7 +26,7 @@ NodeName = str
 NodeUUID = UUID
 
 
-@dataclass(frozen=True)
+@dataclass(order=True, frozen=True)
 class NodeId:
     name: NodeName
     hostname: Host = field(default_factory=get_hostname)
@@ -46,4 +46,4 @@ class MeshNodeSpec:
 
 @dataclass
 class MeshTopologySpec:
-    nodes: Sequence[MeshNodeSpec]
+    nodes: Collection[MeshNodeSpec]

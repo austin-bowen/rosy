@@ -85,11 +85,14 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         asyncio.create_task(self._broadcast_topology())
 
     async def _broadcast_topology(self) -> None:
-        print(f'Broadcasting topology to {len(self._nodes)} nodes...')
+        print(f'\nBroadcasting topology to {len(self._nodes)} nodes...')
 
-        mesh_topology = MeshTopologySpec(list(self._nodes.values()))
-        print(f'mesh_topology={mesh_topology}')
+        nodes = sorted(self._nodes.values(), key=lambda n: n.id)
+        print('Mesh nodes:')
+        for node in nodes:
+            print(f'- {node.id}: {node}')
 
+        mesh_topology = MeshTopologySpec(nodes=nodes)
         message = MeshTopologyBroadcast(mesh_topology)
 
         await asyncio.gather(*(

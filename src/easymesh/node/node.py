@@ -172,7 +172,7 @@ class MeshNode:
         await self._register_node()
 
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
-        print(f'Received mesh topology broadcast: {broadcast}')
+        print('Received mesh topology broadcast')
         topology = broadcast.mesh_topology
         await self.peer_manager.set_mesh_topology(topology)
 
