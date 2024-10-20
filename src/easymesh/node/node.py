@@ -38,11 +38,11 @@ class MeshNode:
             peer_manager: PeerManager,
             message_codec: Codec[Body],
     ):
-        self.id = id
-        self.mesh_coordinator_client = mesh_coordinator_client
-        self.server_providers = server_providers
-        self.peer_manager = peer_manager
-        self.message_codec = message_codec
+        self._id = id
+        self._mesh_coordinator_client = mesh_coordinator_client
+        self._server_providers = server_providers
+        self._peer_manager = peer_manager
+        self._message_codec = message_codec
 
         self._connection_specs = []
 
@@ -50,10 +50,17 @@ class MeshNode:
 
         mesh_coordinator_client.mesh_topology_broadcast_handler = self._handle_topology_broadcast
 
+    @property
+    def id(self) -> NodeId:
+        return self._id
+
+    def __str__(self) -> str:
+        return str(self.id)
+
     async def start(self) -> None:
         print('Starting node servers...')
         self._connection_specs = []
-        for server_provider in self.server_providers:
+        for server_provider in self._server_providers:
             try:
                 server, connection_spec = await server_provider.start_server(
                     self._handle_connection
@@ -78,14 +85,14 @@ class MeshNode:
 
         print(f'node_spec={node_spec}')
         print('Registering node with server...')
-        await self.mesh_coordinator_client.register_node(node_spec)
+        await self._mesh_coordinator_client.register_node(node_spec)
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         peer_name = writer.get_extra_info('peername')
         sock_name = writer.get_extra_info('sockname')
         print(f'New connection from: {peer_name or sock_name}')
 
-        obj_io = MessageStreamIO(reader, writer, codec=self.message_codec)
+        obj_io = MessageStreamIO(reader, writer, codec=self._message_codec)
 
         async for message in obj_io.read_objects():
             if isinstance(message, Message):
@@ -155,7 +162,7 @@ class MeshNode:
         return bool(peers)
 
     async def _get_peers_for_topic(self, topic: Topic) -> list[MeshPeer]:
-        peers = await self.peer_manager.get_peers()
+        peers = await self._peer_manager.get_peers()
 
         all_is_listening = await asyncio.gather(
             *(peer.is_listening_to(topic) for peer in peers)
@@ -176,7 +183,7 @@ class MeshNode:
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
         print('Received mesh topology broadcast')
         topology = broadcast.mesh_topology
-        await self.peer_manager.set_mesh_topology(topology)
+        await self._peer_manager.set_mesh_topology(topology)
 
 
 @dataclass
