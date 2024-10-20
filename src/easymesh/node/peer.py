@@ -151,7 +151,7 @@ class PeerManager:
         self._connection_pool = PeerConnectionPool(
             connection_builder=PeerConnectionBuilder(codec),
         )
-        self._mesh_topology = MeshTopologySpec(nodes={})
+        self._mesh_topology = MeshTopologySpec(nodes=[])
 
     async def get_peers(self) -> list[MeshPeer]:
         return [
@@ -162,14 +162,14 @@ class PeerManager:
                     peer_spec=node,
                     peer_connection_pool=self._connection_pool,
                 ),
-            ) for node in self._mesh_topology.nodes.values()
+            ) for node in self._mesh_topology.nodes
         ]
 
     async def set_mesh_topology(self, mesh_topology: MeshTopologySpec) -> None:
         self._mesh_topology = mesh_topology
 
         old_nodes_with_conns = self._connection_pool.get_node_ids_with_connections()
-        new_nodes = set(mesh_topology.nodes.keys())
+        new_nodes = set(node.id for node in mesh_topology.nodes)
         nodes_to_remove = old_nodes_with_conns - new_nodes
 
         connections_to_close = (

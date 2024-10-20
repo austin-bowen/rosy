@@ -1,4 +1,5 @@
 import socket
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Union
 from uuid import UUID, uuid4
@@ -45,10 +46,4 @@ class MeshNodeSpec:
 
 @dataclass
 class MeshTopologySpec:
-    nodes: dict[NodeId, MeshNodeSpec]
-
-    def put_node(self, node: MeshNodeSpec) -> None:
-        self.nodes[node.id] = node
-
-    def remove_node(self, node_id: NodeId) -> None:
-        self.nodes.pop(node_id, None)
+    nodes: Sequence[MeshNodeSpec]

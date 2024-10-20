@@ -8,7 +8,7 @@ from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COO
 from easymesh.objectstreamio import CodecObjectStreamIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectStreamRPC, RPC
-from easymesh.specs import MeshTopologySpec, NodeId
+from easymesh.specs import MeshNodeSpec, MeshTopologySpec, NodeId
 from easymesh.types import Port, ServerHost
 
 
@@ -27,8 +27,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         self.start_stream_server = start_stream_server
         self.build_rpc = build_rpc
 
-        self.node_clients: dict[RPC, Optional[NodeId]] = {}
-        self.mesh_topology = MeshTopologySpec(nodes={})
+        self._node_clients: dict[RPC, Optional[NodeId]] = {}
+        self._nodes: dict[NodeId, MeshNodeSpec] = {}
 
     async def start(self) -> None:
         server = await self.start_stream_server(self._handle_connection)
@@ -40,7 +40,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 
         rpc = self.build_rpc(reader, writer)
         rpc.request_handler = lambda r: self._handle_request(r, rpc)
-        self.node_clients[rpc] = None
+        self._node_clients[rpc] = None
 
         try:
             await rpc.run_forever()
@@ -69,8 +69,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         print(f'Got register node request: {request}')
 
         node_spec = request.node_spec
-        self.node_clients[rpc] = node_spec.id
-        self.mesh_topology.put_node(node_spec)
+        self._node_clients[rpc] = node_spec.id
+        self._nodes[node_spec.id] = node_spec
 
         # noinspection PyAsyncCall
         asyncio.create_task(self._broadcast_topology())
@@ -78,21 +78,23 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         return RegisterNodeResponse()
 
     async def _remove_node(self, rpc: RPC) -> None:
-        node_id = self.node_clients.pop(rpc)
-        self.mesh_topology.remove_node(node_id)
+        node_id = self._node_clients.pop(rpc)
+        self._nodes.pop(node_id, None)
 
         # noinspection PyAsyncCall
         asyncio.create_task(self._broadcast_topology())
 
     async def _broadcast_topology(self) -> None:
-        print(f'Broadcasting topology to {len(self.node_clients)} nodes...')
-        print(f'mesh_topology={self.mesh_topology}')
+        print(f'Broadcasting topology to {len(self._nodes)} nodes...')
 
-        message = MeshTopologyBroadcast(self.mesh_topology)
+        mesh_topology = MeshTopologySpec(list(self._nodes.values()))
+        print(f'mesh_topology={mesh_topology}')
+
+        message = MeshTopologyBroadcast(mesh_topology)
 
         await asyncio.gather(*(
             node_client.send_message(message)
-            for node_client in self.node_clients.keys()
+            for node_client in self._node_clients.keys()
         ))
 
 
