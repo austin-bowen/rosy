@@ -12,6 +12,8 @@ from easymesh.codec import Codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_hostname, get_interface_ip_address, get_lan_hostname
+from easymesh.node.loadbalancing import GroupingLoadBalancer, LoadBalancer, RoundRobinLoadBalancer, \
+    node_name_group_key
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import (
     PortScanTcpServerProvider,
@@ -37,12 +39,14 @@ class MeshNode:
             server_providers: Iterable[ServerProvider],
             peer_manager: PeerManager,
             message_codec: Codec[Data],
+            load_balancer: LoadBalancer,
     ):
         self._id = id
         self._mesh_coordinator_client = mesh_coordinator_client
         self._server_providers = server_providers
         self._peer_manager = peer_manager
         self._message_codec = message_codec
+        self._load_balancer = load_balancer
 
         self._connection_specs = []
 
@@ -168,10 +172,12 @@ class MeshNode:
             *(peer.is_listening_to(topic) for peer in peers)
         )
 
-        return [
+        peers = [
             peer for peer, is_listening in zip(peers, all_is_listening)
             if is_listening
         ]
+
+        return self._load_balancer.choose_nodes(peers, topic)
 
     def get_topic_sender(self, topic: Topic) -> 'TopicSender':
         return TopicSender(self, topic)
@@ -216,6 +222,7 @@ async def build_mesh_node(
         node_client_host: Host = None,
         node_host_interface: str = None,
         message_codec: Codec[Data] = pickle_codec,
+        load_balancer: LoadBalancer = None,
         start: bool = True,
 ) -> MeshNode:
     mesh_coordinator_client = await build_coordinator_client(
@@ -247,7 +254,8 @@ async def build_mesh_node(
         mesh_coordinator_client,
         server_providers,
         peer_manager,
-        message_codec
+        message_codec,
+        load_balancer=load_balancer or GroupingLoadBalancer(node_name_group_key, RoundRobinLoadBalancer()),
     )
 
     if start:
