@@ -21,6 +21,27 @@ class LoadBalancer:
         ...
 
 
+class NoopLoadBalancer(LoadBalancer):
+    def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
+        return nodes
+
+
+class LoadBalancerByTopic(LoadBalancer):
+    """Applies load balancer by topic."""
+
+    def __init__(
+            self,
+            load_balancers: dict[Topic, LoadBalancer],
+            default_load_balancer: LoadBalancer = NoopLoadBalancer(),
+    ):
+        self.load_balancers = load_balancers
+        self.default_load_balancer = default_load_balancer
+
+    def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
+        load_balancer = self.load_balancers.get(topic, self.default_load_balancer)
+        return load_balancer.choose_nodes(nodes, topic)
+
+
 def node_name_group_key(peer: MeshPeer) -> str:
     return peer.id.name
 
@@ -50,11 +71,6 @@ class GroupingLoadBalancer(LoadBalancer):
             self.load_balancer.choose_nodes(group, topic)
             for group in grouped_nodes
         ))
-
-
-class NoopLoadBalancer(LoadBalancer):
-    def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
-        return nodes
 
 
 class RandomLoadBalancer(LoadBalancer):
