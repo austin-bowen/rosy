@@ -1,6 +1,5 @@
 import asyncio
 import os
-import socket
 import sys
 import time
 from asyncio import StreamReader, StreamWriter
@@ -12,7 +11,7 @@ from typing import TypeVar
 from easymesh.codec import Codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.network import get_interface_ip_address, get_lan_hostname
+from easymesh.network import get_hostname, get_interface_ip_address, get_lan_hostname
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import (
     PortScanTcpServerProvider,
@@ -204,7 +203,7 @@ async def build_mesh_node(
         allow_unix_connections: bool = True,
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
-        node_client_host: Host = get_lan_hostname(),
+        node_client_host: Host = None,
         node_host_interface: str = None,
         message_codec: Codec[Body] = pickle_codec,
         start: bool = True,
@@ -218,6 +217,9 @@ async def build_mesh_node(
     if allow_unix_connections:
         server_providers.append(TmpUnixServerProvider())
     if allow_tcp_connections:
+        if not node_client_host:
+            node_client_host = get_lan_hostname()
+
         if node_host_interface:
             node_server_host = node_client_host = \
                 get_interface_ip_address(node_host_interface)
@@ -248,7 +250,7 @@ async def test_mesh_node(role: str = None) -> None:
     role = role or sys.argv[1]
     assert role in {'send', 'recv'}
 
-    interface = 'wlp0s20f3' if socket.gethostname() == 'austin-laptop' else 'eth0'
+    interface = 'wlp0s20f3' if get_hostname() == 'austin-laptop' else 'eth0'
 
     node = await build_mesh_node(
         name=f'{role}-{os.getpid()}',

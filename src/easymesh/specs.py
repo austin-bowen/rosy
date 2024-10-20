@@ -1,4 +1,3 @@
-import socket
 from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import Union
@@ -17,7 +16,7 @@ class IpConnectionSpec:
 @dataclass
 class UnixConnectionSpec:
     path: str
-    host: Host = socket.gethostname()
+    host: Host = field(default_factory=get_hostname)
 
 
 ConnectionSpec = Union[IpConnectionSpec, UnixConnectionSpec]

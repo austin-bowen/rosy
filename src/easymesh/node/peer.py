@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from easymesh.codec import Codec
+from easymesh.network import get_hostname
 from easymesh.objectstreamio import MessageStreamIO, ObjectStreamIO
 from easymesh.specs import (
     ConnectionSpec,
@@ -15,7 +16,7 @@ from easymesh.specs import (
     NodeId,
     UnixConnectionSpec,
 )
-from easymesh.types import Body, Message, Topic
+from easymesh.types import Body, Host, Message, Topic
 
 
 class PeerConnection:
@@ -44,10 +45,10 @@ class PeerConnectionBuilder:
     def __init__(
             self,
             codec: Codec[Body],
-            host: str = socket.gethostname(),
+            host: Host = None,
     ):
         self.codec = codec
-        self.host = host
+        self.host = host or get_hostname()
 
     async def build(self, conn_specs: Iterable[ConnectionSpec]) -> PeerConnection:
         reader, writer = None, None
