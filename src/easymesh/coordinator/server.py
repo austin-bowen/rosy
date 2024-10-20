@@ -8,7 +8,7 @@ from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COO
 from easymesh.objectstreamio import CodecObjectStreamIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectStreamRPC, RPC
-from easymesh.specs import MeshTopologySpec, NodeName
+from easymesh.specs import MeshTopologySpec, NodeId
 from easymesh.types import Port, ServerHost
 
 
@@ -27,7 +27,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         self.start_stream_server = start_stream_server
         self.build_rpc = build_rpc
 
-        self.node_clients: dict[RPC, Optional[NodeName]] = {}
+        self.node_clients: dict[RPC, Optional[NodeId]] = {}
         self.mesh_topology = MeshTopologySpec(nodes={})
 
     async def start(self) -> None:
@@ -69,7 +69,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         print(f'Got register node request: {request}')
 
         node_spec = request.node_spec
-        self.node_clients[rpc] = node_spec.name
+        self.node_clients[rpc] = node_spec.id
         self.mesh_topology.put_node(node_spec)
 
         # noinspection PyAsyncCall
@@ -78,8 +78,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         return RegisterNodeResponse()
 
     async def _remove_node(self, rpc: RPC) -> None:
-        node_name = self.node_clients.pop(rpc)
-        self.mesh_topology.nodes.pop(node_name, None)
+        node_id = self.node_clients.pop(rpc)
+        self.mesh_topology.remove_node(node_id)
 
         # noinspection PyAsyncCall
         asyncio.create_task(self._broadcast_topology())

@@ -2,6 +2,7 @@ import asyncio
 import socket
 from abc import abstractmethod
 from asyncio import open_connection, open_unix_connection
+from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from easymesh.codec import Codec
@@ -11,7 +12,7 @@ from easymesh.specs import (
     IpConnectionSpec,
     MeshNodeSpec,
     MeshTopologySpec,
-    NodeName,
+    NodeId,
     UnixConnectionSpec,
 )
 from easymesh.types import Body, Message, Topic
@@ -87,25 +88,25 @@ class PeerConnectionBuilder:
 class PeerConnectionPool:
     def __init__(self, connection_builder: PeerConnectionBuilder):
         self.connection_builder = connection_builder
-        self._connections: dict[str, PeerConnection] = {}
+        self._connections: dict[NodeId, PeerConnection] = {}
 
     def clear(self) -> None:
         self._connections = {}
 
     async def get_connection_for(self, peer_spec: MeshNodeSpec) -> PeerConnection:
-        conn = self._connections.get(peer_spec.name, None)
+        conn = self._connections.get(peer_spec.id, None)
 
         if conn is None:
             conn = await self.connection_builder.build(peer_spec.connections)
-            self._connections[peer_spec.name] = conn
+            self._connections[peer_spec.id] = conn
 
         return conn
 
-    def get_node_names_with_connections(self) -> set[NodeName]:
+    def get_node_ids_with_connections(self) -> set[NodeId]:
         return set(self._connections.keys())
 
-    def remove_connection_for(self, node_name: NodeName) -> Optional[PeerConnection]:
-        return self._connections.pop(node_name, None)
+    def remove_connection_for(self, node_id: NodeId) -> Optional[PeerConnection]:
+        return self._connections.pop(node_id, None)
 
 
 class LazyPeerConnection(PeerConnection):
@@ -127,21 +128,16 @@ class LazyPeerConnection(PeerConnection):
             raise
 
     async def close(self) -> None:
-        connection = self.connection_pool.remove_connection_for(self.peer_spec.name)
+        connection = self.connection_pool.remove_connection_for(self.peer_spec.id)
         if connection is not None:
             await connection.close()
 
 
+@dataclass
 class MeshPeer:
-    def __init__(
-            self,
-            name: NodeName,
-            topics: set[Topic],
-            connection: PeerConnection,
-    ):
-        self.name = name
-        self.topics = topics
-        self.connection = connection
+    id: NodeId
+    topics: set[Topic]
+    connection: PeerConnection
 
     async def send(self, message: Message) -> None:
         await self.connection.send(message)
@@ -160,7 +156,7 @@ class PeerManager:
     async def get_peers(self) -> list[MeshPeer]:
         return [
             MeshPeer(
-                name=node.name,
+                id=node.id,
                 topics=node.listening_to_topics,
                 connection=LazyPeerConnection(
                     peer_spec=node,
@@ -169,16 +165,16 @@ class PeerManager:
             ) for node in self._mesh_topology.nodes.values()
         ]
 
-    async def set_mesh_topology(self, mesh_topo: MeshTopologySpec) -> None:
-        self._mesh_topology = mesh_topo
+    async def set_mesh_topology(self, mesh_topology: MeshTopologySpec) -> None:
+        self._mesh_topology = mesh_topology
 
-        old_node_names_with_conns = self._connection_pool.get_node_names_with_connections()
-        new_node_names = set(mesh_topo.nodes.keys())
-        nodes_to_remove = old_node_names_with_conns - new_node_names
+        old_nodes_with_conns = self._connection_pool.get_node_ids_with_connections()
+        new_nodes = set(mesh_topology.nodes.keys())
+        nodes_to_remove = old_nodes_with_conns - new_nodes
 
         connections_to_close = (
-            self._connection_pool.remove_connection_for(node_name)
-            for node_name in nodes_to_remove
+            self._connection_pool.remove_connection_for(node_id)
+            for node_id in nodes_to_remove
         )
 
         await asyncio.gather(*(

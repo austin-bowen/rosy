@@ -22,7 +22,7 @@ from easymesh.node.serverprovider import (
 )
 from easymesh.objectstreamio import MessageStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
-from easymesh.specs import MeshNodeSpec
+from easymesh.specs import MeshNodeSpec, NodeId
 from easymesh.types import Body, Host, Message, Port, ServerHost, Topic
 
 T = TypeVar('T')
@@ -33,13 +33,13 @@ ListenerCallback = Callable[[Message], Awaitable[None]]
 class MeshNode:
     def __init__(
             self,
-            name: str,
+            id: NodeId,
             mesh_coordinator_client: MeshCoordinatorClient,
             server_providers: Iterable[ServerProvider],
             peer_manager: PeerManager,
             message_codec: Codec[Body],
     ):
-        self.name = name
+        self.id = id
         self.mesh_coordinator_client = mesh_coordinator_client
         self.server_providers = server_providers
         self.peer_manager = peer_manager
@@ -72,7 +72,7 @@ class MeshNode:
 
     async def _register_node(self) -> None:
         node_spec = MeshNodeSpec(
-            name=self.name,
+            id=self.id,
             connections=self._connection_specs,
             listening_to_topics=set(self._listeners.keys()),
         )
@@ -101,7 +101,7 @@ class MeshNode:
         message = Message(topic, body)
         peers = await self._get_peers_for_topic(topic)
 
-        self_peer = next(filter(lambda p: p.name == self.name, peers), None)
+        self_peer = next(filter(lambda p: p.id == self.id, peers), None)
 
         results = await asyncio.gather(
             *(
@@ -116,7 +116,7 @@ class MeshNode:
             if isinstance(result, BaseException):
                 print(
                     f'Error sending message with topic={message.topic} '
-                    f'to {peer.name}: {result!r}'
+                    f'to node {peer.id}: {result!r}'
                 )
 
     async def send_result(
@@ -231,7 +231,7 @@ async def build_mesh_node(
     peer_manager = PeerManager(message_codec)
 
     node = MeshNode(
-        name,
+        NodeId(name),
         mesh_coordinator_client,
         server_providers,
         peer_manager,
