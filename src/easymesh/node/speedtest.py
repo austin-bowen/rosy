@@ -4,7 +4,7 @@ from typing import Optional
 
 from easymesh.asyncio import noop
 from easymesh.node.node import MeshNode, build_mesh_node
-from easymesh.types import Body, Topic
+from easymesh.types import Data, Topic
 
 
 class SpeedTest:
@@ -14,14 +14,14 @@ class SpeedTest:
     async def measure_mps(
             self,
             topic: Topic,
-            body: Body = None,
+            data: Data = None,
             duration: float = 10.,
             warmup: Optional[float] = 1.,
     ) -> float:
         """Measure messages per second."""
 
         if warmup is not None and warmup > 0.:
-            await self.measure_mps(topic, body=body, duration=warmup, warmup=None)
+            await self.measure_mps(topic, data=data, duration=warmup, warmup=None)
 
         topic_sender = self.node.get_topic_sender(topic)
 
@@ -32,7 +32,7 @@ class SpeedTest:
         start_time = time.monotonic()
 
         while (end_time := time.monotonic()) - start_time < duration:
-            message = (time.time(), body)
+            message = (time.time(), data)
             await topic_sender.send(message)
             await noop()  # Yield to other tasks since this runs as fast as possible and can block other tasks
             message_count += 1
@@ -48,18 +48,18 @@ async def main() -> None:
     speed_tester = SpeedTest(node)
 
     topic = 'test'
-    body = None
-    # body = b'helloworld' * 100000
-    # body = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
-    # body = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
-    # body = torch.tensor(body)
+    data = None
+    # data = b'helloworld' * 100000
+    # data = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
+    # data = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
+    # data = torch.tensor(data)
 
     while not await node.topic_has_listeners(topic):
         print('Waiting for listeners...')
         await asyncio.sleep(0.1)
 
     print('Running speed test...')
-    mps = await speed_tester.measure_mps(topic, body=body)
+    mps = await speed_tester.measure_mps(topic, data=data)
     print(f'mps={mps}')
 
 

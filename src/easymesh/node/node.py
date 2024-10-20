@@ -22,11 +22,11 @@ from easymesh.node.serverprovider import (
 from easymesh.objectstreamio import MessageStreamIO, pickle_codec
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec, NodeId
-from easymesh.types import Body, Host, Message, Port, ServerHost, Topic
+from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
 
 T = TypeVar('T')
 
-ListenerCallback = Callable[[Message], Awaitable[None]]
+ListenerCallback = Callable[[Topic, Data], Awaitable[None]]
 
 
 class MeshNode:
@@ -36,7 +36,7 @@ class MeshNode:
             mesh_coordinator_client: MeshCoordinatorClient,
             server_providers: Iterable[ServerProvider],
             peer_manager: PeerManager,
-            message_codec: Codec[Body],
+            message_codec: Codec[Data],
     ):
         self._id = id
         self._mesh_coordinator_client = mesh_coordinator_client
@@ -102,12 +102,12 @@ class MeshNode:
 
     async def _handle_message(self, message: Message) -> None:
         await asyncio.gather(*(
-            listener(message)
+            listener(message.topic, message.data)
             for listener in self._listeners[message.topic]
         ))
 
-    async def send(self, topic: Topic, body: Body = None):
-        message = Message(topic, body)
+    async def send(self, topic: Topic, data: Data = None):
+        message = Message(topic, data)
         peers = await self._get_peers_for_topic(topic)
 
         self_peer = next(filter(lambda p: p.id == self.id, peers), None)
@@ -191,8 +191,8 @@ class TopicSender:
     node: MeshNode
     topic: Topic
 
-    async def send(self, body: Body = None) -> None:
-        await self.node.send(self.topic, body)
+    async def send(self, data: Data = None) -> None:
+        await self.node.send(self.topic, data)
 
     async def send_result(
             self,
@@ -215,7 +215,7 @@ async def build_mesh_node(
         node_server_host: ServerHost = None,
         node_client_host: Host = None,
         node_host_interface: str = None,
-        message_codec: Codec[Body] = pickle_codec,
+        message_codec: Codec[Data] = pickle_codec,
         start: bool = True,
 ) -> MeshNode:
     mesh_coordinator_client = await build_coordinator_client(
@@ -286,11 +286,11 @@ async def test_mesh_node(role: str = None) -> None:
         t00 = None
         latencies = []
 
-        async def handle_test(message: Message) -> None:
+        async def handle_test(topic_, data_) -> None:
             nonlocal reqs, t00
             if t00 is None:
                 t00 = time.monotonic()
-            latencies.append(time.time() - message.body[0])
+            latencies.append(time.time() - data_[0])
             reqs += 1
             # print(f'Received test message: {message}')
             # print('Received test message')

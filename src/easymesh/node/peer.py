@@ -16,7 +16,7 @@ from easymesh.specs import (
     NodeId,
     UnixConnectionSpec,
 )
-from easymesh.types import Body, Host, Message, Topic
+from easymesh.types import Data, Host, Message, Topic
 
 
 class PeerConnection:
@@ -44,7 +44,7 @@ class ObjectStreamPeerConnection(PeerConnection):
 class PeerConnectionBuilder:
     def __init__(
             self,
-            codec: Codec[Body],
+            codec: Codec[Data],
             host: Host = None,
     ):
         self.codec = codec
@@ -154,7 +154,7 @@ class MeshPeer:
 
 
 class PeerManager:
-    def __init__(self, codec: Codec[Body]):
+    def __init__(self, codec: Codec[Data]):
         self._connection_pool = PeerConnectionPool(
             connection_builder=PeerConnectionBuilder(codec),
         )

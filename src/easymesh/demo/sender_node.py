@@ -7,7 +7,7 @@ async def main():
     node = await easymesh.build_mesh_node(name='sender')
 
     while True:
-        await node.send('some-topic', f'Hello from {node}!')
+        await node.send('some-topic', f'Hello from node {node}!')
         await asyncio.sleep(1)
 
 
