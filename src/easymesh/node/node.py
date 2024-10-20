@@ -81,7 +81,10 @@ class MeshNode:
         await self.mesh_coordinator_client.register_node(node_spec)
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
-        print('New connection')
+        peer_name = writer.get_extra_info('peername')
+        sock_name = writer.get_extra_info('sockname')
+        print(f'New connection from: {peer_name or sock_name}')
+
         obj_io = MessageStreamIO(reader, writer, codec=self.message_codec)
 
         async for message in obj_io.read_objects():
