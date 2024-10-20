@@ -6,6 +6,13 @@ Host = str
 ServerHost = Union[Host, Sequence[Host], None]
 Port = int
 
+
+@dataclass
+class Endpoint:
+    host: Host
+    port: Port
+
+
 Topic = str
 Data = Any
 TopicCallback = Callable[[Topic, Data], None]

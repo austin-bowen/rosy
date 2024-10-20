@@ -1,29 +1,23 @@
-import argparse
 import asyncio
 import time
 
 import easymesh
+from easymesh.demo.argparse import parse_args
 
 
 async def main():
-    args = _parse_args()
+    args = parse_args(default_node_name='sender')
 
     node = await easymesh.build_mesh_node(
         name=args.name,
-        coordinator_host=args.coordinator_host,
+        coordinator_host=args.coordinator.host,
+        coordinator_port=args.coordinator.port,
     )
 
     while True:
         data = (time.time(), f'Hello from node {node}!')
         await node.send('some-topic', data)
         await asyncio.sleep(1)
-
-
-def _parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--name', default='sender')
-    parser.add_argument('--coordinator-host', default='localhost')
-    return parser.parse_args()
 
 
 if __name__ == '__main__':
