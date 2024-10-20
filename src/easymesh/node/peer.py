@@ -95,10 +95,16 @@ class PeerConnectionPool:
 
     async def get_connection_for(self, peer_spec: MeshNodeSpec) -> PeerConnection:
         conn = self._connections.get(peer_spec.id, None)
+        if conn is not None:
+            return conn
 
-        if conn is None:
+        try:
             conn = await self.connection_builder.build(peer_spec.connections)
-            self._connections[peer_spec.id] = conn
+        except Exception as e:
+            raise ConnectionError(f'Error connecting to {peer_spec.id}: {e!r}')
+
+        print(f'Connected to {peer_spec.id}')
+        self._connections[peer_spec.id] = conn
 
         return conn
 
