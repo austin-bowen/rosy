@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import TypeVar
 
+from easymesh.asyncio import MultiWriter, many
 from easymesh.codec import Codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -105,32 +106,38 @@ class MeshNode:
                 print(f'Received unknown message={message}')
 
     async def _handle_message(self, message: Message) -> None:
-        await asyncio.gather(*(
+        await many([
             listener(message.topic, message.data)
             for listener in self._listeners[message.topic]
-        ))
+        ])
 
     async def send(self, topic: Topic, data: Data = None):
-        message = Message(topic, data)
         peers = await self._get_peers_for_topic(topic)
 
+        # TODO use this
         self_peer = next(filter(lambda p: p.id == self.id, peers), None)
 
-        results = await asyncio.gather(
-            *(
-                peer.send(message) if peer is not self_peer
-                else self._handle_message(message)
-                for peer in peers
-            ),
-            return_exceptions=True,
-        )
+        # TODO lock the writers
+        writers = [await peer.connection.get_writer() for peer in peers]
+        multi_writer = MultiWriter(writers)
 
-        for peer, result in zip(peers, results):
-            if isinstance(result, BaseException):
+        obj_io = MessageStreamIO(None, multi_writer, codec=self._message_codec)
+        await obj_io.write_object(Message(topic, data), drain=False)
+
+        to_close = []
+        for peer, writer in zip(peers, writers):
+            try:
+                await writer.drain()
+            except Exception as e:
                 print(
-                    f'Error sending message with topic={message.topic} '
-                    f'to node {peer.id}: {result!r}'
+                    f'Error sending message with topic={topic} '
+                    f'to node {peer.id}: {e!r}'
                 )
+
+                to_close.append(peer.connection)
+
+        for connection in to_close:
+            await connection.close()
 
     async def send_result(
             self,
@@ -168,9 +175,7 @@ class MeshNode:
     async def _get_peers_for_topic(self, topic: Topic) -> list[MeshPeer]:
         peers = await self._peer_manager.get_peers()
 
-        all_is_listening = await asyncio.gather(
-            *(peer.is_listening_to(topic) for peer in peers)
-        )
+        all_is_listening = [await peer.is_listening_to(topic) for peer in peers]
 
         peers = [
             peer for peer, is_listening in zip(peers, all_is_listening)
@@ -247,7 +252,7 @@ async def build_mesh_node(
     if not server_providers:
         raise ValueError('Must allow at least one type of connection')
 
-    peer_manager = PeerManager(message_codec)
+    peer_manager = PeerManager()
 
     node = MeshNode(
         NodeId(name),

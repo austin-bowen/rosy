@@ -1,10 +1,11 @@
 from abc import abstractmethod
-from asyncio import Lock, StreamReader, StreamWriter
+from asyncio import Lock, StreamReader
 from collections.abc import AsyncIterable
 from typing import Generic, Literal, TypeVar
 
 from easymesh.codec import Codec, PickleCodec
 from easymesh.types import Data, Message
+from easymesh.asyncio import Writer
 
 ByteOrder = Literal['big', 'little']
 DEFAULT_BYTE_ORDER: ByteOrder = 'little'
@@ -20,7 +21,7 @@ class ObjectStreamIO(Generic[T]):
     def __init__(
             self,
             reader: StreamReader,
-            writer: StreamWriter,
+            writer: Writer,
             byte_order: ByteOrder,
     ):
         self.reader = reader
@@ -94,7 +95,7 @@ class CodecObjectStreamIO(ObjectStreamIO[T]):
     def __init__(
             self,
             reader: StreamReader,
-            writer: StreamWriter,
+            writer: Writer,
             codec: Codec[T] = pickle_codec,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
     ):
@@ -117,7 +118,7 @@ class MessageStreamIO(ObjectStreamIO[Message]):
     def __init__(
             self,
             reader: StreamReader,
-            writer: StreamWriter,
+            writer: Writer,
             codec: Codec[Data] = pickle_codec,
             topic_encoding: str = 'utf-8',
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,

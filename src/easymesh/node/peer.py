@@ -1,13 +1,10 @@
-import asyncio
-import socket
 from abc import abstractmethod
 from asyncio import open_connection, open_unix_connection
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from easymesh.codec import Codec
+from easymesh.asyncio import Writer, many
 from easymesh.network import get_hostname
-from easymesh.objectstreamio import MessageStreamIO, ObjectStreamIO
 from easymesh.specs import (
     ConnectionSpec,
     IpConnectionSpec,
@@ -16,57 +13,28 @@ from easymesh.specs import (
     NodeId,
     UnixConnectionSpec,
 )
-from easymesh.types import Data, Host, Message, Topic
+from easymesh.types import Host, Topic
 
 
-class PeerConnection:
-    @abstractmethod
-    async def send(self, message: Message) -> None:
-        ...
-
-    @abstractmethod
-    async def close(self) -> None:
-        ...
-
-
-class ObjectStreamPeerConnection(PeerConnection):
-    def __init__(self, obj_io: ObjectStreamIO[Message]):
-        self.obj_io = obj_io
-
-    async def send(self, message: Message) -> None:
-        await self.obj_io.write_object(message)
-
-    async def close(self) -> None:
-        self.obj_io.writer.close()
-        await self.obj_io.writer.wait_closed()
-
-
-class PeerConnectionBuilder:
-    def __init__(
-            self,
-            codec: Codec[Data],
-            host: Host = None,
-    ):
-        self.codec = codec
+class PeerWriterBuilder:
+    def __init__(self, host: Host = None):
         self.host = host or get_hostname()
 
-    async def build(self, conn_specs: Iterable[ConnectionSpec]) -> PeerConnection:
-        reader, writer = None, None
+    async def build(self, conn_specs: Iterable[ConnectionSpec]) -> Writer:
+        writer = None
         for conn_spec in conn_specs:
             try:
-                reader, writer = await self._get_connection(conn_spec)
+                _, writer = await self._get_connection(conn_spec)
             except ConnectionError as e:
                 print(f'Error connecting to {conn_spec}: {e}')
                 continue
             else:
                 break
 
-        if not reader:
+        if not writer:
             raise ConnectionError('Could not connect to any connection spec')
 
-        return ObjectStreamPeerConnection(
-            obj_io=MessageStreamIO(reader, writer, codec=self.codec),
-        )
+        return writer
 
     async def _get_connection(self, conn_spec: ConnectionSpec):
         if isinstance(conn_spec, IpConnectionSpec):
@@ -86,58 +54,63 @@ class PeerConnectionBuilder:
             raise ValueError(f'Invalid connection spec: {conn_spec}')
 
 
-class PeerConnectionPool:
-    def __init__(self, connection_builder: PeerConnectionBuilder):
-        self.connection_builder = connection_builder
-        self._connections: dict[NodeId, PeerConnection] = {}
+class PeerWriterPool:
+    def __init__(self, writer_builder: PeerWriterBuilder):
+        self.writer_builder = writer_builder
+        self._writers: dict[NodeId, Writer] = {}
 
     def clear(self) -> None:
-        self._connections = {}
+        self._writers = {}
 
-    async def get_connection_for(self, peer_spec: MeshNodeSpec) -> PeerConnection:
-        conn = self._connections.get(peer_spec.id, None)
-        if conn is not None:
-            return conn
+    async def get_writer_for(self, peer_spec: MeshNodeSpec) -> Writer:
+        writer = self._writers.get(peer_spec.id, None)
+        if writer is not None:
+            return writer
 
         try:
-            conn = await self.connection_builder.build(peer_spec.connections)
+            writer = await self.writer_builder.build(peer_spec.connections)
         except Exception as e:
             raise ConnectionError(f'Error connecting to {peer_spec.id}: {e!r}')
 
         print(f'Connected to {peer_spec.id}')
-        self._connections[peer_spec.id] = conn
+        self._writers[peer_spec.id] = writer
 
-        return conn
+        return writer
 
-    def get_node_ids_with_connections(self) -> set[NodeId]:
-        return set(self._connections.keys())
+    def get_node_ids_with_writers(self) -> set[NodeId]:
+        return set(self._writers.keys())
 
-    def remove_connection_for(self, node_id: NodeId) -> Optional[PeerConnection]:
-        return self._connections.pop(node_id, None)
+    def remove_writer_for(self, node_id: NodeId) -> Optional[Writer]:
+        return self._writers.pop(node_id, None)
+
+
+class PeerConnection:
+    @abstractmethod
+    async def get_writer(self) -> Writer:
+        ...
+
+    @abstractmethod
+    async def close(self) -> None:
+        ...
 
 
 class LazyPeerConnection(PeerConnection):
     def __init__(
             self,
             peer_spec: MeshNodeSpec,
-            peer_connection_pool: PeerConnectionPool,
+            peer_connection_pool: PeerWriterPool,
     ):
         self.peer_spec = peer_spec
         self.connection_pool = peer_connection_pool
 
-    async def send(self, message: Message) -> None:
-        connection = await self.connection_pool.get_connection_for(self.peer_spec)
-
-        try:
-            return await connection.send(message)
-        except ConnectionError:
-            await self.close()
-            raise
+    async def get_writer(self) -> Writer:
+        return await self.connection_pool.get_writer_for(self.peer_spec)
 
     async def close(self) -> None:
-        connection = self.connection_pool.remove_connection_for(self.peer_spec.id)
-        if connection is not None:
-            await connection.close()
+        # TODO use this
+        writer = self.connection_pool.remove_writer_for(self.peer_spec.id)
+        if writer is not None:
+            await writer.close()
 
 
 @dataclass
@@ -146,17 +119,14 @@ class MeshPeer:
     topics: set[Topic]
     connection: PeerConnection
 
-    async def send(self, message: Message) -> None:
-        await self.connection.send(message)
-
     async def is_listening_to(self, topic: Topic) -> bool:
         return topic in self.topics
 
 
 class PeerManager:
-    def __init__(self, codec: Codec[Data]):
-        self._connection_pool = PeerConnectionPool(
-            connection_builder=PeerConnectionBuilder(codec),
+    def __init__(self):
+        self._connection_pool = PeerWriterPool(
+            writer_builder=PeerWriterBuilder(),
         )
         self._mesh_topology = MeshTopologySpec(nodes=[])
 
@@ -175,15 +145,13 @@ class PeerManager:
     async def set_mesh_topology(self, mesh_topology: MeshTopologySpec) -> None:
         self._mesh_topology = mesh_topology
 
-        old_nodes_with_conns = self._connection_pool.get_node_ids_with_connections()
+        old_nodes_with_conns = self._connection_pool.get_node_ids_with_writers()
         new_nodes = set(node.id for node in mesh_topology.nodes)
         nodes_to_remove = old_nodes_with_conns - new_nodes
 
         connections_to_close = (
-            self._connection_pool.remove_connection_for(node_id)
+            self._connection_pool.remove_writer_for(node_id)
             for node_id in nodes_to_remove
         )
 
-        await asyncio.gather(*(
-            conn.close() for conn in connections_to_close
-        ))
+        await many([conn.close() for conn in connections_to_close])
