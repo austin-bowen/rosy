@@ -27,6 +27,7 @@ class PortScanTcpServerProvider(ServerProvider):
             client_host: Host,
             start_port: Port = 49152,
             max_ports: Port = 1024,
+            **kwargs,
     ):
         """
         Args:
@@ -38,12 +39,16 @@ class PortScanTcpServerProvider(ServerProvider):
                 The port to start scanning for an open port.
             max_ports:
                 Maximum number of ports to scan.
+            kwargs:
+                Additional keyword arguments will be passed to the
+                ``asyncio.start_server`` call.
         """
 
         self.server_host = server_host
         self.client_host = client_host
         self.start_port = start_port
         self.max_ports = max_ports
+        self.kwargs = kwargs
 
     @property
     def end_port(self) -> int:
@@ -61,6 +66,7 @@ class PortScanTcpServerProvider(ServerProvider):
                     client_connected_cb,
                     host=self.server_host,
                     port=port,
+                    **self.kwargs,
                 )
             except OSError as e:
                 last_error = e
@@ -83,10 +89,26 @@ class TmpUnixServerProvider(ServerProvider):
             prefix: Optional[str] = 'mesh-node-server.',
             suffix: Optional[str] = '.sock',
             dir=None,
+            **kwargs,
     ):
+        """
+        Args:
+            prefix:
+                The prefix for the temporary Unix socket file.
+            suffix:
+                The suffix for the temporary Unix socket file.
+            dir:
+                The directory to create the temporary Unix socket file in.
+                If not set, the system's default temporary directory will be used.
+            kwargs:
+                Additional keyword arguments will be passed to the
+                ``asyncio.start_unix_server`` call.
+        """
+
         self.prefix = prefix
         self.suffix = suffix
         self.dir = dir
+        self.kwargs = kwargs
 
     async def start_server(
             self,
@@ -100,7 +122,7 @@ class TmpUnixServerProvider(ServerProvider):
             path = file.name
 
         try:
-            server = await asyncio.start_unix_server(client_connected_cb, path=path)
+            server = await asyncio.start_unix_server(client_connected_cb, path=path, **self.kwargs)
         except NotImplementedError as e:
             raise UnsupportedProviderError(self, repr(e))
 
