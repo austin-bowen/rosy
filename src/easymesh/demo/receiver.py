@@ -1,12 +1,10 @@
-import asyncio
-
 import easymesh
 from easymesh.asyncio import forever
 from easymesh.demo.argparse import parse_args
 
 
 async def handle_message(topic, data):
-    print(f'Received: topic={topic!r} data={data!r}')
+    print(f'receiver got: topic={topic!r} data={data!r}')
 
 
 async def main():
@@ -23,4 +21,5 @@ async def main():
 
 
 if __name__ == '__main__':
+    import asyncio
     asyncio.run(main())

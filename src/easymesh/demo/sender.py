@@ -1,6 +1,3 @@
-import asyncio
-import time
-
 import easymesh
 from easymesh.demo.argparse import parse_args
 
@@ -14,11 +11,11 @@ async def main():
         coordinator_port=args.coordinator.port,
     )
 
-    while True:
-        data = (time.time(), f'Hello from node {node}!')
-        await node.send('some-topic', data)
-        await asyncio.sleep(1)
+    await node.wait_for_listener('some-topic')
+    await node.send('some-topic', {'hello': 'world'})
 
 
 if __name__ == '__main__':
+    import asyncio
+
     asyncio.run(main())
