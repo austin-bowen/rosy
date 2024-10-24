@@ -1,8 +1,10 @@
 import asyncio
 import time
+from argparse import ArgumentParser, Namespace
 from typing import Optional
 
-from easymesh.asyncio import noop
+from easymesh.asyncio import forever, noop
+from easymesh.node.loadbalancing import NoopLoadBalancer
 from easymesh.node.node import MeshNode, build_mesh_node
 from easymesh.types import Data, Topic
 
@@ -32,8 +34,7 @@ class SpeedTest:
         start_time = time.monotonic()
 
         while (end_time := time.monotonic()) - start_time < duration:
-            message = (time.time(), data)
-            await topic_sender.send(message)
+            await topic_sender.send(data)
             await noop()  # Yield to other tasks since this runs as fast as possible and can block other tasks
             message_count += 1
 
@@ -41,26 +42,49 @@ class SpeedTest:
 
         return message_count / true_duration
 
+    async def receive(self, topic: Topic) -> None:
+        async def handle_message(topic_, data):
+            pass
+
+        await self.node.add_listener(topic, handle_message)
+        await forever()
+
 
 async def main() -> None:
-    node = await build_mesh_node(name='speed-test')
+    args = _parse_args()
+
+    node = await build_mesh_node(name='speed-test', load_balancer=NoopLoadBalancer())
 
     speed_tester = SpeedTest(node)
 
-    topic = 'test'
-    data = None
-    # data = b'helloworld' * 100000
-    # data = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
-    # data = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
-    # data = torch.tensor(data)
+    topic = args.topic
 
-    while not await node.topic_has_listeners(topic):
+    if args.role == 'recv':
+        await speed_tester.receive(topic)
+    elif args.role == 'send':
+        data = None
+        # data = b'helloworld' * 100000
+        # data = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
+        # data = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
+        # data = torch.tensor(data)
+
         print('Waiting for listeners...')
-        await asyncio.sleep(0.1)
+        await node.wait_for_listener(topic)
 
-    print('Running speed test...')
-    mps = await speed_tester.measure_mps(topic, data=data)
-    print(f'mps={mps}')
+        print('Running speed test...')
+        mps = await speed_tester.measure_mps(topic, data=data)
+        print(f'mps={mps}')
+    else:
+        raise ValueError(f'Invalid role={args.role}')
+
+
+def _parse_args() -> Namespace:
+    parser = ArgumentParser()
+
+    parser.add_argument('role', choices=('send', 'recv'))
+    parser.add_argument('--topic', default='speed-test')
+
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
