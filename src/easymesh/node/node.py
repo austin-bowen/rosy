@@ -177,7 +177,7 @@ class MeshNode:
             await asyncio.sleep(poll_interval)
 
     async def _get_peers_for_topic(self, topic: Topic) -> list[MeshPeer]:
-        peers = await self._peer_manager.get_peers()
+        peers = self._peer_manager.get_peers()
 
         listening_peers = [p for p in peers if await p.is_listening_to(topic)]
 

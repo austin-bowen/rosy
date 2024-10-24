@@ -128,22 +128,13 @@ class PeerManager:
         self._connection_pool = PeerWriterPool(
             writer_builder=PeerWriterBuilder(),
         )
-        self._mesh_topology = MeshTopologySpec(nodes=[])
+        self._peers: list[MeshPeer] = []
 
-    async def get_peers(self) -> list[MeshPeer]:
-        return [
-            MeshPeer(
-                id=node.id,
-                topics=node.listening_to_topics,
-                connection=LazyPeerConnection(
-                    peer_spec=node,
-                    peer_connection_pool=self._connection_pool,
-                ),
-            ) for node in self._mesh_topology.nodes
-        ]
+    def get_peers(self) -> list[MeshPeer]:
+        return self._peers
 
     async def set_mesh_topology(self, mesh_topology: MeshTopologySpec) -> None:
-        self._mesh_topology = mesh_topology
+        self._set_peers(mesh_topology)
 
         old_nodes_with_conns = self._connection_pool.get_node_ids_with_writers()
         new_nodes = set(node.id for node in mesh_topology.nodes)
@@ -155,3 +146,15 @@ class PeerManager:
         )
 
         await many([conn.close() for conn in connections_to_close])
+
+    def _set_peers(self, mesh_topology: MeshTopologySpec) -> None:
+        self._peers = [
+            MeshPeer(
+                id=node.id,
+                topics=node.listening_to_topics,
+                connection=LazyPeerConnection(
+                    peer_spec=node,
+                    peer_connection_pool=self._connection_pool,
+                ),
+            ) for node in mesh_topology.nodes
+        ]
