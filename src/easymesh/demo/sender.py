@@ -12,10 +12,9 @@ async def main():
     )
 
     await node.wait_for_listener('some-topic')
-    await node.send('some-topic', {'hello': 'world'})
+    await node.send('some-topic', {'hello': 'world!'})
 
 
 if __name__ == '__main__':
     import asyncio
-
     asyncio.run(main())
