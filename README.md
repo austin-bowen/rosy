@@ -1,10 +1,55 @@
 # easymesh
 
-Guiding principles:
-- Easy to use and understand
-- Simple; no fancy bells and whistles
-- Fast & efficient
-- Async
+Simple, fast inter-process message passing for distributed Python processes.
+
+`easymesh` is inspired by [ROS (Robot Operating System)](https://www.ros.org/); it allows nodes to send messages on a "topic" to any other nodes listening to that topic. Messages can contain any Python data that is serializable by `pickle`, or whatever serde implementation you choose.
+
+Nodes can run on a single machine, or be distributed across multiple machines on a network. As long as they can talk to the coordinator node, they can figure out how to talk to each other.
+
+`easymesh` also has simple load balancing: if multiple nodes of the same name are listening to a topic, then messages will be sent to them in a round-robin fashion. (The load balancing strategy can be changed or disabled if desired.)
+
+## Show me the code!
+
+[easymesh/demo/**sender.py**](src/easymesh/demo/sender.py):
+```python
+import easymesh
+
+async def main():
+    node = await easymesh.build_mesh_node(name='sender')
+    await node.wait_for_listener('some-topic')
+    await node.send('some-topic', {'hello': 'world!'})
+
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
+```
+
+[easymesh/demo/**receiver.py**](src/easymesh/demo/receiver.py):
+```python
+import easymesh
+from easymesh.asyncio import forever
+
+async def callback(topic, data):
+    print(f'receiver got: topic={topic}; data={data}')
+
+async def main():
+    node = await easymesh.build_mesh_node(name='receiver')
+    await node.add_listener('some-topic', callback)
+    await forever()
+
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
+```
+
+**Terminal:**
+
+```bash
+$ python -m easymesh.coordinator &
+$ python -m easymesh.demo.receiver &
+$ python -m easymesh.demo.sender
+receiver got: topic=some-topic; data={'hello': 'world!'}
+```
 
 ## Installation
 
@@ -12,36 +57,15 @@ Guiding principles:
 pip install git+https://github.com/austin-bowen/easymesh.git
 ```
 
-## Simple demo
-
-### Terminal 1: Start the mesh coordinator
-```bash
-python -m easymesh.coordinator
-```
-
-### Terminal 2: Start a node to receive messages on a topic
-```bash
-python -m easymesh.demo.receiver_node
-```
-See [receiver_node.py](src/easymesh/demo/receiver_node.py) for source code.
-
-### Terminal 3: Start a node to send messages to the receiver node
-```bash
-python -m easymesh.demo.sender_node
-```
-See [sender_node.py](src/easymesh/demo/sender_node.py) for source code.
-
 ## What is a mesh?
 
 A mesh is a collection of "nodes" that can send messages to each other. A message can be any Python object. There is one node per Python process, with nodes potentially distributed across multiple machines. Each node listens to specific message "topics", and calls listener callbacks when messages are received on those topics. Each node can send messages to any topic, and the message will be sent to all listening nodes.
 
-A special "coordinator" node makes sure all nodes in the mesh know about each other.
-
 ### How does it work?
 
-The coordinator node maintains the mesh "topology" -- a list of all nodes in the mesh, with node connection details and topics that each node listens to. When a new node is created, it registers itself with the coordinator; when a node disconnects, it is removed from the mesh topology. When a change is made to the mesh topology, the coordinator node broadcasts the new mesh topology to all nodes on the mesh.
+A special "coordinator" node maintains the current mesh topology, and makes sure all nodes in the mesh know about each other. The mesh topology is a list of nodes in the mesh, their connection details, and topics they are listening to. When a new node is created, it registers itself with the coordinator, which then adds it to the mesh topology; when a node disconnects, it is removed from the mesh topology. When any change is made to the mesh topology, the coordinator node broadcasts the new mesh topology to all nodes on the mesh.
 
-When a node needs to send a message, it uses the mesh topology to find all currently listening nodes, connects to them if necessary, and sends the message.
+When a node needs to send a message, it uses the mesh topology to find all currently listening nodes, connects to them, and sends the message. Messages are sent in a fire-and-forget manner, with no receipt confirmations.
 
 ## Roadmap
 
@@ -49,6 +73,5 @@ When a node needs to send a message, it uses the mesh topology to find all curre
   - Nodes should automatically reconnect to coordinator if they lose connection
   - Nodes should automatically reconnect to other nodes if they lose connection
 - Security
-  - Simple authentication via authkey
-- Compute bytes to send to nodes once
-  - We're currently computing bytes for every node we're sending the message to
+  - Simple authentication via authkey. Plaintext to start, mutual HMAC later.
+- Use `poetry` for project management
