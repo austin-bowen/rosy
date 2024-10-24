@@ -172,17 +172,16 @@ class MeshNode:
         peers = await self._get_peers_for_topic(topic)
         return bool(peers)
 
+    async def wait_for_listener(self, topic: Topic, poll_interval: float = 1.) -> None:
+        while not await self.topic_has_listeners(topic):
+            await asyncio.sleep(poll_interval)
+
     async def _get_peers_for_topic(self, topic: Topic) -> list[MeshPeer]:
         peers = await self._peer_manager.get_peers()
 
-        all_is_listening = [await peer.is_listening_to(topic) for peer in peers]
+        listening_peers = [p for p in peers if await p.is_listening_to(topic)]
 
-        peers = [
-            peer for peer, is_listening in zip(peers, all_is_listening)
-            if is_listening
-        ]
-
-        return self._load_balancer.choose_nodes(peers, topic)
+        return self._load_balancer.choose_nodes(listening_peers, topic)
 
     def get_topic_sender(self, topic: Topic) -> 'TopicSender':
         return TopicSender(self, topic)
