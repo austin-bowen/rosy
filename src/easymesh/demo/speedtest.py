@@ -57,7 +57,9 @@ async def main() -> None:
         name=f'speed-test/{args.role}',
         coordinator_host=args.coordinator.host,
         coordinator_port=args.coordinator.port,
-        load_balancer=None,
+        allow_unix_connections=not args.disable_unix,
+        allow_tcp_connections=not args.disable_tcp,
+        load_balancer='default' if args.enable_load_balancer else None,
     )
 
     speed_tester = SpeedTest(node)
@@ -89,6 +91,9 @@ def _parse_args() -> Namespace:
     parser.add_argument('role', choices=('send', 'recv'))
     parser.add_argument('--topic', default='speed-test')
     add_coordinator_arg(parser)
+    parser.add_argument('--enable-load-balancer', action='store_true')
+    parser.add_argument('--disable-unix', action='store_true')
+    parser.add_argument('--disable-tcp', action='store_true')
 
     return parser.parse_args()
 
