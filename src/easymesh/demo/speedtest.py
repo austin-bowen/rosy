@@ -3,8 +3,8 @@ import time
 from argparse import ArgumentParser, Namespace
 from typing import Optional
 
+from easymesh.argparse import add_coordinator_arg
 from easymesh.asyncio import forever, noop
-from easymesh.node.loadbalancing import NoopLoadBalancer
 from easymesh.node.node import MeshNode, build_mesh_node
 from easymesh.types import Data, Topic
 
@@ -53,7 +53,12 @@ class SpeedTest:
 async def main() -> None:
     args = _parse_args()
 
-    node = await build_mesh_node(name='speed-test', load_balancer=NoopLoadBalancer())
+    node = await build_mesh_node(
+        name=f'speed-test/{args.role}',
+        coordinator_host=args.coordinator.host,
+        coordinator_port=args.coordinator.port,
+        load_balancer=None,
+    )
 
     speed_tester = SpeedTest(node)
 
@@ -83,6 +88,7 @@ def _parse_args() -> Namespace:
 
     parser.add_argument('role', choices=('send', 'recv'))
     parser.add_argument('--topic', default='speed-test')
+    add_coordinator_arg(parser)
 
     return parser.parse_args()
 
