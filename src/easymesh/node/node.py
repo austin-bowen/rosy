@@ -6,15 +6,20 @@ from asyncio import StreamReader, StreamWriter
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Literal, TypeVar, Union
 
 from easymesh.asyncio import MultiWriter, many
 from easymesh.codec import Codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_hostname, get_interface_ip_address, get_lan_hostname
-from easymesh.node.loadbalancing import GroupingLoadBalancer, LoadBalancer, RoundRobinLoadBalancer, \
-    node_name_group_key
+from easymesh.node.loadbalancing import (
+    GroupingLoadBalancer,
+    LoadBalancer,
+    NoopLoadBalancer,
+    RoundRobinLoadBalancer,
+    node_name_group_key,
+)
 from easymesh.node.peer import MeshPeer, PeerManager
 from easymesh.node.serverprovider import (
     PortScanTcpServerProvider,
@@ -226,7 +231,7 @@ async def build_mesh_node(
         node_client_host: Host = None,
         node_host_interface: str = None,
         message_codec: Codec[Data] = pickle_codec,
-        load_balancer: LoadBalancer = None,
+        load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
         start: bool = True,
 ) -> MeshNode:
     mesh_coordinator_client = await build_coordinator_client(
@@ -253,13 +258,18 @@ async def build_mesh_node(
 
     peer_manager = PeerManager()
 
+    if load_balancer == 'default':
+        load_balancer = GroupingLoadBalancer(node_name_group_key, RoundRobinLoadBalancer())
+    elif load_balancer is None:
+        load_balancer = NoopLoadBalancer()
+
     node = MeshNode(
         NodeId(name),
         mesh_coordinator_client,
         server_providers,
         peer_manager,
         message_codec,
-        load_balancer=load_balancer or GroupingLoadBalancer(node_name_group_key, RoundRobinLoadBalancer()),
+        load_balancer,
     )
 
     if start:
