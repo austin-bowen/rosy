@@ -9,7 +9,7 @@ from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.network import get_interface_ip_address, get_lan_hostname
+from easymesh.network import get_lan_hostname
 from easymesh.node.loadbalancing import (
     GroupingLoadBalancer,
     LoadBalancer,
@@ -241,7 +241,6 @@ async def build_mesh_node(
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
         node_client_host: Host = None,
-        node_host_interface: str = None,
         message_codec: Codec[Data] = pickle_codec,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
         start: bool = True,
@@ -257,10 +256,6 @@ async def build_mesh_node(
     if allow_tcp_connections:
         if not node_client_host:
             node_client_host = get_lan_hostname()
-
-        if node_host_interface:
-            node_server_host = node_client_host = \
-                get_interface_ip_address(node_host_interface)
 
         provider = PortScanTcpServerProvider(node_server_host, node_client_host)
 
