@@ -4,7 +4,7 @@ from argparse import ArgumentParser, Namespace
 from typing import Optional
 
 from easymesh.argparse import add_coordinator_arg
-from easymesh.asyncio import forever, noop
+from easymesh.asyncio import noop
 from easymesh.node.node import MeshNode, build_mesh_node
 from easymesh.types import Data, Topic
 
@@ -43,11 +43,23 @@ class SpeedTest:
         return message_count / true_duration
 
     async def receive(self, topic: Topic) -> None:
+        message_count = 0
+        last_count = None
+
         async def handle_message(topic_, data):
-            pass
+            nonlocal message_count
+            message_count += 1
 
         await self.node.add_listener(topic, handle_message)
-        await forever()
+
+        sleep_time = 1.
+        while True:
+            await asyncio.sleep(sleep_time)
+
+            if message_count != last_count:
+                mps = (message_count - (last_count or 0)) / sleep_time
+                print(f'Received message count: {message_count}; mps={round(mps)}')
+                last_count = message_count
 
 
 async def main() -> None:
@@ -78,9 +90,9 @@ async def main() -> None:
         print('Waiting for listeners...')
         await node.wait_for_listener(topic)
 
-        print('Running speed test...')
-        mps = await speed_tester.measure_mps(topic, data=data)
-        print(f'mps={mps}')
+        print(f'Running speed test for {args.seconds}s...')
+        mps = await speed_tester.measure_mps(topic, data=data, duration=args.seconds)
+        print(f'mps={round(mps)}')
     else:
         raise ValueError(f'Invalid role={args.role}')
 
@@ -88,12 +100,31 @@ async def main() -> None:
 def _parse_args() -> Namespace:
     parser = ArgumentParser()
 
-    parser.add_argument('role', choices=('send', 'recv'))
-    parser.add_argument('--topic', default='speed-test')
+    parser.add_argument(
+        'role', choices=('send', 'recv'),
+        help='Role of the node: sender or receiver.',
+    )
     add_coordinator_arg(parser)
-    parser.add_argument('--enable-load-balancer', action='store_true')
-    parser.add_argument('--disable-unix', action='store_true')
-    parser.add_argument('--disable-tcp', action='store_true')
+    parser.add_argument(
+        '--seconds', type=float, default=10.,
+        help='How long to run the speed test in seconds. Default: 10',
+    )
+    parser.add_argument(
+        '--topic', default='speed-test',
+        help='Topic to send/receive on. Default: speed-test',
+    )
+    parser.add_argument(
+        '--enable-load-balancer', action='store_true',
+        help='Enable the default load balancer. It is disabled for speed testing by default.',
+    )
+    parser.add_argument(
+        '--disable-unix', action='store_true',
+        help='Disable Unix domain sockets for inter-node connections.',
+    )
+    parser.add_argument(
+        '--disable-tcp', action='store_true',
+        help='Disable TCP sockets for inter-node connections.',
+    )
 
     return parser.parse_args()
 
