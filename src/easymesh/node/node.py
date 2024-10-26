@@ -1,7 +1,4 @@
 import asyncio
-import os
-import sys
-import time
 from asyncio import IncompleteReadError, StreamReader, StreamWriter
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
@@ -12,7 +9,7 @@ from easymesh.asyncio import MultiWriter, many
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.network import get_hostname, get_interface_ip_address, get_lan_hostname
+from easymesh.network import get_interface_ip_address, get_lan_hostname
 from easymesh.node.loadbalancing import (
     GroupingLoadBalancer,
     LoadBalancer,
@@ -289,67 +286,3 @@ async def build_mesh_node(
         await node.start()
 
     return node
-
-
-async def test_mesh_node(role: str = None) -> None:
-    role = role or sys.argv[1]
-    assert role in {'send', 'recv'}
-
-    interface = 'wlp0s20f3' if get_hostname() == 'austin-laptop' else 'eth0'
-
-    node = await build_mesh_node(
-        name=f'{role}-{os.getpid()}',
-        coordinator_host='austin-laptop.local',
-        node_host_interface=interface,
-    )
-
-    if role == 'send':
-        async def expensive_task():
-            await asyncio.sleep(1.)
-            return time.time(), 'expensive task ran'
-
-        test_topic = node.get_topic_sender('test')
-        while True:
-            result = await test_topic.send_result(
-                expensive_task,
-            )
-            print(result)
-            await asyncio.sleep(0.5)
-    elif role == 'recv':
-        reqs = 0
-        last_reqs = -1
-        t00 = None
-        latencies = []
-
-        async def handle_test(topic_, data_) -> None:
-            nonlocal reqs, t00
-            if t00 is None:
-                t00 = time.monotonic()
-            latencies.append(time.time() - data_[0])
-            reqs += 1
-            # print(f'Received test message: {message}')
-            # print('Received test message')
-            rps = reqs / (time.monotonic() - t00)
-            # print(f'rps={rps}')
-
-        await node.add_listener('', handle_test)
-        await node.add_listener('t', handle_test)
-        await node.add_listener('test', handle_test)
-
-        while True:
-            await asyncio.sleep(1.)
-
-            if reqs != last_reqs:
-                print(f'reqs={reqs}')
-                last_reqs = reqs
-
-                if latencies:
-                    print('avg latency:', sum(latencies) / len(latencies))
-
-
-async def main():
-    await test_mesh_node()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
