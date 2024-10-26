@@ -1,35 +1,13 @@
-# Template: https://github.com/pypa/sampleproject/blob/main/pyproject.toml
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "easymesh"
 version = "0.1.0"
-description = "A simple and efficient async mesh network library"
-authors = [
-    { name = "Austin Bowen", email = "austin.bowen.314@example.com" }
-]
+description = "Simple, fast inter-process message passing for distributed Python processes"
+authors = ["Austin Bowen <austin.bowen.314@gmail.com>"]
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.9"
-classifiers = [
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
-dependencies = []
 
-[project.optional-dependencies]
-test = []
+[tool.poetry.dependencies]
+python = "^3.9"
 
-[project.urls]
-"Homepage" = "https://github.com/austin-bowen/easymesh"
-"Source" = "https://github.com/austin-bowen/easymesh"
-"Bug Reports" = "https://github.com/austin-bowen/easymesh/issues"
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
