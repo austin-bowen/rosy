@@ -1,15 +1,15 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
-from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Literal, TypeVar, Union
 
-from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
+from easymesh.asyncio import MultiWriter, close_ignoring_errors
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_lan_hostname
+from easymesh.node.listenermanager import ListenerManager
 from easymesh.node.loadbalancing import (
     GroupingLoadBalancer,
     LoadBalancer,
@@ -40,6 +40,7 @@ class MeshNode:
             id: NodeId,
             mesh_coordinator_client: MeshCoordinatorClient,
             server_providers: Iterable[ServerProvider],
+            listener_manager: ListenerManager,
             peer_manager: PeerManager,
             message_codec: Codec[Data],
             load_balancer: LoadBalancer,
@@ -47,13 +48,12 @@ class MeshNode:
         self._id = id
         self._mesh_coordinator_client = mesh_coordinator_client
         self._server_providers = server_providers
+        self._listener_manager = listener_manager
         self._peer_manager = peer_manager
         self._message_codec = message_codec
         self._load_balancer = load_balancer
 
         self._connection_specs = []
-
-        self._listeners: dict[Topic, set[ListenerCallback]] = defaultdict(set)
 
         mesh_coordinator_client.mesh_topology_broadcast_handler = self._handle_topology_broadcast
 
@@ -87,7 +87,7 @@ class MeshNode:
         node_spec = MeshNodeSpec(
             id=self.id,
             connections=self._connection_specs,
-            listening_to_topics=set(self._listeners.keys()),
+            listening_to_topics=self._listener_manager.get_topics(),
         )
 
         print(f'node_spec={node_spec}')
@@ -105,17 +105,11 @@ class MeshNode:
 
         try:
             async for message in message_reader:
-                await self._handle_message(message)
+                await self._listener_manager.handle_message(message)
         except EOFError:
             print(f'Closed connection from: {peer_name}')
         finally:
             await close_ignoring_errors(writer)
-
-    async def _handle_message(self, message: Message) -> None:
-        await many(
-            listener(message.topic, message.data)
-            for listener in self._listeners[message.topic]
-        )
 
     async def send(self, topic: Topic, data: Data = None):
         peers = await self._get_peers_for_topic(topic)
@@ -134,7 +128,7 @@ class MeshNode:
         await message_writer.write(message, drain=False)
 
         send_to_self = (
-            asyncio.create_task(self._handle_message(message))
+            asyncio.create_task(self._listener_manager.handle_message(message))
             if self_peer is not None else None
         )
 
@@ -204,7 +198,11 @@ class MeshNode:
         return TopicSender(self, topic)
 
     async def add_listener(self, topic: Topic, callback: ListenerCallback) -> None:
-        self._listeners[topic].add(callback)
+        self._listener_manager.add_listener(topic, callback)
+        await self._register_node()
+
+    async def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
+        self._listener_manager.remove_listener(topic, callback)
         await self._register_node()
 
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
@@ -263,6 +261,7 @@ async def build_mesh_node(
     if not server_providers:
         raise ValueError('Must allow at least one type of connection')
 
+    listener_manager = ListenerManager()
     peer_manager = PeerManager()
 
     if load_balancer == 'default':
@@ -274,6 +273,7 @@ async def build_mesh_node(
         NodeId(name),
         mesh_coordinator_client,
         server_providers,
+        listener_manager,
         peer_manager,
         message_codec,
         load_balancer,
