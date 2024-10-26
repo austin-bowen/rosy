@@ -1,11 +1,11 @@
 import asyncio
-from asyncio import IncompleteReadError, StreamReader, StreamWriter
+from asyncio import StreamReader, StreamWriter
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Literal, TypeVar, Union
 
-from easymesh.asyncio import MultiWriter, many
+from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -106,8 +106,10 @@ class MeshNode:
         try:
             async for message in message_reader:
                 await self._handle_message(message)
-        except IncompleteReadError:
+        except EOFError:
             print(f'Closed connection from: {peer_name}')
+        finally:
+            await close_ignoring_errors(writer)
 
     async def _handle_message(self, message: Message) -> None:
         await many(

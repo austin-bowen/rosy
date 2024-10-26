@@ -4,6 +4,7 @@ from asyncio import StreamReader
 from codecs import StreamWriter
 from typing import Optional
 
+from easymesh.asyncio import close_ignoring_errors
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.objectio import (
     CodecObjectReader,
@@ -38,9 +39,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         server = await self.start_stream_server(self._handle_connection)
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
-        peer_name = writer.get_extra_info('peername')
-        sock_name = writer.get_extra_info('sockname')
-        print(f'New connection from: {peer_name or sock_name}')
+        peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
+        print(f'New connection from: {peer_name}')
 
         rpc = self.build_rpc(reader, writer)
         rpc.request_handler = lambda r: self._handle_request(r, rpc)
@@ -52,9 +52,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             print('Client disconnected')
         finally:
             await self._remove_node(rpc)
-
-            writer.close()
-            await writer.wait_closed()
+            await close_ignoring_errors(writer)
 
     async def _handle_request(self, request, rpc: RPC):
         if request == b'ping':

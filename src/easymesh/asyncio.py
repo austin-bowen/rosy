@@ -8,6 +8,15 @@ T = TypeVar('T')
 E = TypeVar('E', bound=BaseException)
 
 
+async def close_ignoring_errors(writer: 'Writer') -> None:
+    """Closes the writer ignoring any ConnectionErrors."""
+    try:
+        writer.close()
+        await writer.wait_closed()
+    except ConnectionError:
+        pass
+
+
 async def forever():
     """Never returns."""
     while True:
@@ -22,7 +31,7 @@ async def many(
     Await multiple awaitables in parallel and returns their results.
 
     Exceptions of type ``base_exception`` are caught and returned
-    in the results list.
+    in the results list. Traces are printed to stderr.
 
     This is a bit faster and nicer to use than ``asyncio.gather``.
     In the case there is only a single awaitable, it is awaited
@@ -67,7 +76,10 @@ class Writer(Protocol):
     async def drain(self) -> None:
         ...
 
-    async def close(self) -> None:
+    def close(self) -> None:
+        ...
+
+    async def wait_closed(self) -> None:
         ...
 
 
@@ -83,6 +95,10 @@ class MultiWriter(Writer):
         for writer in self.writers:
             await writer.drain()
 
-    async def close(self) -> None:
+    def close(self) -> None:
         for writer in self.writers:
-            await writer.close()
+            writer.close()
+
+    async def wait_closed(self) -> None:
+        for writer in self.writers:
+            await writer.wait_closed()

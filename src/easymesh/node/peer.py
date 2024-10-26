@@ -1,9 +1,9 @@
 from abc import abstractmethod
 from asyncio import open_connection, open_unix_connection
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable
 
-from easymesh.asyncio import Writer, many
+from easymesh.asyncio import Writer, close_ignoring_errors
 from easymesh.network import get_hostname
 from easymesh.specs import (
     ConnectionSpec,
@@ -80,8 +80,10 @@ class PeerWriterPool:
     def get_node_ids_with_writers(self) -> set[NodeId]:
         return set(self._writers.keys())
 
-    def remove_writer_for(self, node_id: NodeId) -> Optional[Writer]:
-        return self._writers.pop(node_id, None)
+    async def close_writer_for(self, node_id: NodeId) -> None:
+        writer = self._writers.pop(node_id, None)
+        if writer is not None:
+            await close_ignoring_errors(writer)
 
 
 class PeerConnection:
@@ -107,9 +109,7 @@ class LazyPeerConnection(PeerConnection):
         return await self.connection_pool.get_writer_for(self.peer_spec)
 
     async def close(self) -> None:
-        writer = self.connection_pool.remove_writer_for(self.peer_spec.id)
-        if writer is not None:
-            await writer.close()
+        await self.connection_pool.close_writer_for(self.peer_spec.id)
 
 
 @dataclass
@@ -139,12 +139,8 @@ class PeerManager:
         new_nodes = set(node.id for node in mesh_topology.nodes)
         nodes_to_remove = old_nodes_with_conns - new_nodes
 
-        connections_to_close = (
-            self._connection_pool.remove_writer_for(node_id)
-            for node_id in nodes_to_remove
-        )
-
-        await many(conn.close() for conn in connections_to_close)
+        for node_id in nodes_to_remove:
+            await self._connection_pool.close_writer_for(node_id)
 
     def _set_peers(self, mesh_topology: MeshTopologySpec) -> None:
         self._peers = [
