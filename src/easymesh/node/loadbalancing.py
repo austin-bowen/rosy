@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from collections import Counter
 from collections.abc import Callable
 from itertools import chain, groupby
 from random import Random
@@ -22,6 +21,8 @@ class LoadBalancer:
 
 
 class NoopLoadBalancer(LoadBalancer):
+    """No load balancing. Sends to all nodes."""
+
     def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
         return nodes
 
@@ -89,10 +90,15 @@ class RoundRobinLoadBalancer(LoadBalancer):
     the number of times a message is sent on the topic.
     """
 
-    def __init__(self):
-        self._topic_counter: Counter[Topic] = Counter()
+    def __init__(self, rng: Random = None):
+        self.rng = rng or Random()
+        self._topic_counter: dict[Topic, int] = {}
 
     def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
-        i = self._topic_counter[topic] % len(nodes)
+        if topic not in self._topic_counter:
+            i = self._topic_counter[topic] = self.rng.randint(0, len(nodes) - 1)
+        else:
+            i = self._topic_counter[topic] % len(nodes)
+
         self._topic_counter[topic] += 1
         return [nodes[i]]
