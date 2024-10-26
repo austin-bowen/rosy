@@ -3,9 +3,9 @@ from asyncio import open_connection
 from collections.abc import Awaitable, Callable
 
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.objectstreamio import CodecObjectStreamIO
+from easymesh.objectstreamio import CodecObjectStreamReader, CodecObjectStreamWriter, ObjectIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
-from easymesh.rpc import ObjectStreamRPC, RPC
+from easymesh.rpc import ObjectIORPC, RPC
 from easymesh.specs import MeshNodeSpec
 from easymesh.types import Host, Port
 
@@ -55,8 +55,10 @@ async def build_coordinator_client(
         port: Port = DEFAULT_COORDINATOR_PORT,
 ) -> MeshCoordinatorClient:
     reader, writer = await open_connection(host, port)
-    obj_io = CodecObjectStreamIO(reader, writer)
-    rpc = ObjectStreamRPC(obj_io)
+    rpc = ObjectIORPC(ObjectIO(
+        reader=CodecObjectStreamReader(reader),
+        writer=CodecObjectStreamWriter(writer),
+    ))
     client = RPCMeshCoordinatorClient(rpc)
     await rpc.start()
 

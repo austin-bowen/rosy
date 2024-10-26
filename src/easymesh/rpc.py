@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from easymesh.objectstreamio import ObjectStreamIO
+from easymesh.objectstreamio import ObjectIO
 
 RequestId = int
 Data = Any
@@ -67,15 +67,15 @@ class RPC:
             raise NotImplementedError()
 
 
-class ObjectStreamRPC(RPC):
-    def __init__(self, obj_io: ObjectStreamIO[Any]):
+class ObjectIORPC(RPC):
+    def __init__(self, obj_io: ObjectIO[Any]):
         self.obj_io = obj_io
 
         self._request_id_counter: RequestId = -1
         self._pending_responses: dict[RequestId, PendingResponse] = {}
 
     async def run_forever(self) -> None:
-        async for obj in self.obj_io.read_objects():
+        async for obj in self.obj_io.reader:
             if isinstance(obj, Request):
                 await self._handle_received_request(obj)
             elif isinstance(obj, Response):
@@ -88,7 +88,7 @@ class ObjectStreamRPC(RPC):
     async def _handle_received_request(self, request: Request) -> None:
         response_data = await self.handle_request(request.data)
         response = Response(id=request.id, data=response_data)
-        await self.obj_io.write_object(response)
+        await self.obj_io.writer.write(response)
 
     async def _handle_received_response(self, response: Response) -> None:
         pending_response = self._pending_responses.pop(response.id)
@@ -101,7 +101,7 @@ class ObjectStreamRPC(RPC):
         pending_response = PendingResponse()
         self._pending_responses[request.id] = pending_response
 
-        await self.obj_io.write_object(request)
+        await self.obj_io.writer.write(request)
         await pending_response.received.wait()
 
         return pending_response.data
@@ -111,4 +111,4 @@ class ObjectStreamRPC(RPC):
         return self._request_id_counter
 
     async def send_message(self, data: Data) -> None:
-        await self.obj_io.write_object(Message(data))
+        await self.obj_io.writer.write(Message(data))
