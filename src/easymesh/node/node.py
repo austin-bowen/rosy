@@ -113,10 +113,10 @@ class MeshNode:
             print(f'Closed connection from: {peer_name}')
 
     async def _handle_message(self, message: Message) -> None:
-        await many([
+        await many(
             listener(message.topic, message.data)
             for listener in self._listeners[message.topic]
-        ])
+        )
 
     async def send(self, topic: Topic, data: Data = None):
         peers = await self._get_peers_for_topic(topic)

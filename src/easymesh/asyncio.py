@@ -1,7 +1,11 @@
 import asyncio
 import traceback
-from collections.abc import Awaitable, Iterable, Sequence
-from typing import Protocol
+from asyncio import Task
+from collections.abc import Awaitable, Iterable, Sized
+from typing import Protocol, Type, TypeVar, Union
+
+T = TypeVar('T')
+E = TypeVar('E', bound=BaseException)
 
 
 async def forever():
@@ -10,16 +14,35 @@ async def forever():
         await asyncio.sleep(60)
 
 
-async def many(coros: Sequence[Awaitable], base_exception=Exception) -> list:
-    if len(coros) == 1:
+async def many(
+        awaitables: Iterable[Awaitable[T]],
+        base_exception: Type[E] = Exception,
+) -> list[Union[T, E]]:
+    """
+    Await multiple awaitables in parallel and returns their results.
+
+    Exceptions of type ``base_exception`` are caught and returned
+    in the results list.
+
+    This is a bit faster and nicer to use than ``asyncio.gather``.
+    In the case there is only a single awaitable, it is awaited
+    directly rather than creating and awaiting a new task.
+    """
+
+    if not isinstance(awaitables, Sized):
+        awaitables = list(awaitables)
+
+    if len(awaitables) == 1:
         try:
-            return [await coros[0]]
+            return [await awaitables[0]]
         except base_exception as e:
             traceback.print_exc()
             return [e]
 
-    # TODO handle if coros are already tasks
-    tasks = [asyncio.create_task(c) for c in coros]
+    tasks = [
+        a if isinstance(a, Task) else asyncio.create_task(a)
+        for a in awaitables
+    ]
 
     results = []
     for task in tasks:

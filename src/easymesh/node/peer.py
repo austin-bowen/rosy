@@ -107,7 +107,6 @@ class LazyPeerConnection(PeerConnection):
         return await self.connection_pool.get_writer_for(self.peer_spec)
 
     async def close(self) -> None:
-        # TODO use this
         writer = self.connection_pool.remove_writer_for(self.peer_spec.id)
         if writer is not None:
             await writer.close()
@@ -145,7 +144,7 @@ class PeerManager:
             for node_id in nodes_to_remove
         )
 
-        await many([conn.close() for conn in connections_to_close])
+        await many(conn.close() for conn in connections_to_close)
 
     def _set_peers(self, mesh_topology: MeshTopologySpec) -> None:
         self._peers = [
