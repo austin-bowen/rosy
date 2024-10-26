@@ -6,8 +6,8 @@ from typing import Optional
 
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.objectstreamio import (
-    CodecObjectStreamReader,
-    CodecObjectStreamWriter,
+    CodecObjectReader,
+    CodecObjectWriter,
     ObjectIO,
 )
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
@@ -114,8 +114,8 @@ def build_mesh_coordinator_server(
 
     def build_rpc(reader, writer):
         return ObjectIORPC(ObjectIO(
-            reader=CodecObjectStreamReader(reader),
-            writer=CodecObjectStreamWriter(writer),
+            reader=CodecObjectReader(reader),
+            writer=CodecObjectWriter(writer),
         ))
 
     return RPCMeshCoordinatorServer(start_stream_server, build_rpc)

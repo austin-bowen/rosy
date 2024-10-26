@@ -2,14 +2,14 @@ import asyncio
 import os
 import sys
 import time
-from asyncio import StreamReader, StreamWriter
+from asyncio import IncompleteReadError, StreamReader, StreamWriter
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Literal, TypeVar, Union
 
 from easymesh.asyncio import MultiWriter, many
-from easymesh.codec import Codec
+from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_hostname, get_interface_ip_address, get_lan_hostname
@@ -27,7 +27,7 @@ from easymesh.node.serverprovider import (
     TmpUnixServerProvider,
     UnsupportedProviderError,
 )
-from easymesh.objectstreamio import MessageStreamIO, pickle_codec
+from easymesh.objectstreamio import MessageReader, MessageWriter
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec, NodeId
 from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
@@ -98,17 +98,19 @@ class MeshNode:
         await self._mesh_coordinator_client.register_node(node_spec)
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
-        peer_name = writer.get_extra_info('peername')
-        sock_name = writer.get_extra_info('sockname')
-        print(f'New connection from: {peer_name or sock_name}')
+        peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
+        print(f'New connection from: {peer_name}')
 
-        obj_io = MessageStreamIO(reader, writer, codec=self._message_codec)
+        # Don't need the writer
+        writer.write_eof()
 
-        async for message in obj_io.read_objects():
-            if isinstance(message, Message):
+        message_reader = MessageReader(reader, codec=self._message_codec)
+
+        try:
+            async for message in message_reader:
                 await self._handle_message(message)
-            else:
-                print(f'Received unknown message={message}')
+        except IncompleteReadError:
+            print(f'Closed connection from: {peer_name}')
 
     async def _handle_message(self, message: Message) -> None:
         await many([
@@ -126,8 +128,8 @@ class MeshNode:
         writers = [await peer.connection.get_writer() for peer in peers]
         multi_writer = MultiWriter(writers)
 
-        obj_io = MessageStreamIO(None, multi_writer, codec=self._message_codec)
-        await obj_io.write_object(Message(topic, data), drain=False)
+        message_writer = MessageWriter(multi_writer, codec=self._message_codec)
+        await message_writer.write(Message(topic, data), drain=False)
 
         to_close = []
         for peer, writer in zip(peers, writers):

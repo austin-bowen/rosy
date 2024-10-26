@@ -31,6 +31,8 @@ class PickleCodec(Codec[Any]):
         return pickle.loads(data)
 
 
+pickle_codec = PickleCodec()
+
 if msgpack:
     MsgpackTypes = Union[None, bool, int, float, str, bytes, bytearray, list, tuple, dict]
 
