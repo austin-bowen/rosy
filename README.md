@@ -65,7 +65,13 @@ A mesh is a collection of "nodes" that can send messages to each other. A messag
 
 A special "coordinator" node maintains the current mesh topology, and makes sure all nodes in the mesh know about each other. The mesh topology is a list of nodes in the mesh, their connection details, and topics they are listening to. When a new node is created, it registers itself with the coordinator, which then adds it to the mesh topology; when a node disconnects, it is removed from the mesh topology. When any change is made to the mesh topology, the coordinator node broadcasts the new mesh topology to all nodes on the mesh.
 
-When a node needs to send a message, it uses the mesh topology to find all currently listening nodes, connects to them, and sends the message. Messages are sent in a fire-and-forget manner, with no receipt confirmations.
+When a node needs to send a message, it uses the mesh topology to find all currently listening nodes, connects to them, and sends the message.
+
+### Guarantees
+
+`easymesh` only guarantees that messages will be received in the order in which they were sent from a *single* node. It is possible for messages sent from different nodes to be received out of order.
+
+It does **not** guarantee message delivery; there are no delivery confirmations, and if a message fails to be sent to a node (e.g. due to network failure), it will not be retried.
 
 ## Roadmap
 
