@@ -71,7 +71,6 @@ When a node needs to send a message, it uses the mesh topology to find all curre
 
 - Robustness to failure
   - Nodes should automatically reconnect to coordinator if they lose connection
-  - Nodes should automatically reconnect to other nodes if they lose connection
 - Security
   - Simple authentication via authkey. Plaintext to start, mutual HMAC later.
 - Use `poetry` for project management
