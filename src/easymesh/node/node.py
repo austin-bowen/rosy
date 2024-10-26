@@ -1,6 +1,6 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Literal, TypeVar, Union
 
@@ -9,7 +9,7 @@ from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.network import get_lan_hostname
-from easymesh.node.listenermanager import ListenerManager
+from easymesh.node.listenermanager import ListenerCallback, ListenerManager, SerialTopicsListenerManager
 from easymesh.node.loadbalancing import (
     GroupingLoadBalancer,
     LoadBalancer,
@@ -30,8 +30,6 @@ from easymesh.specs import MeshNodeSpec, NodeId
 from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
 
 T = TypeVar('T')
-
-ListenerCallback = Callable[[Topic, Data], Awaitable[None]]
 
 
 class MeshNode:
@@ -239,6 +237,7 @@ async def build_mesh_node(
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
         node_client_host: Host = None,
+        message_queue_maxsize: int = 10,
         message_codec: Codec[Data] = pickle_codec,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
         start: bool = True,
@@ -261,7 +260,7 @@ async def build_mesh_node(
     if not server_providers:
         raise ValueError('Must allow at least one type of connection')
 
-    listener_manager = ListenerManager()
+    listener_manager = SerialTopicsListenerManager(message_queue_maxsize)
     peer_manager = PeerManager()
 
     if load_balancer == 'default':
