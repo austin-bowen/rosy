@@ -3,7 +3,7 @@ from asyncio import open_connection
 from collections.abc import Awaitable, Callable
 
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from easymesh.objectstreamio import CodecObjectReader, CodecObjectWriter, ObjectIO
+from easymesh.objectio import CodecObjectReader, CodecObjectWriter, ObjectIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectIORPC, RPC
 from easymesh.specs import MeshNodeSpec

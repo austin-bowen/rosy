@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from easymesh.objectstreamio import ObjectIO
+from easymesh.objectio import ObjectIO
 
 RequestId = int
 Data = Any

@@ -5,7 +5,7 @@ from codecs import StreamWriter
 from typing import Optional
 
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
-from easymesh.objectstreamio import (
+from easymesh.objectio import (
     CodecObjectReader,
     CodecObjectWriter,
     ObjectIO,

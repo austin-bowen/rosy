@@ -27,7 +27,7 @@ from easymesh.node.serverprovider import (
     TmpUnixServerProvider,
     UnsupportedProviderError,
 )
-from easymesh.objectstreamio import MessageReader, MessageWriter
+from easymesh.objectio import MessageReader, MessageWriter
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec, NodeId
 from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
