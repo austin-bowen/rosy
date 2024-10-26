@@ -121,15 +121,23 @@ class MeshNode:
     async def send(self, topic: Topic, data: Data = None):
         peers = await self._get_peers_for_topic(topic)
 
-        # TODO use this
         self_peer = next(filter(lambda p: p.id == self.id, peers), None)
 
         # TODO lock the writers
-        writers = [await peer.connection.get_writer() for peer in peers]
-        multi_writer = MultiWriter(writers)
+        writers = [
+            await peer.connection.get_writer() for peer in peers
+            if peer is not self_peer
+        ]
 
+        multi_writer = MultiWriter(writers)
         message_writer = MessageWriter(multi_writer, codec=self._message_codec)
-        await message_writer.write(Message(topic, data), drain=False)
+        message = Message(topic, data)
+        await message_writer.write(message, drain=False)
+
+        send_to_self = (
+            asyncio.create_task(self._handle_message(message))
+            if self_peer is not None else None
+        )
 
         to_close = []
         for peer, writer in zip(peers, writers):
@@ -145,6 +153,9 @@ class MeshNode:
 
         for connection in to_close:
             await connection.close()
+
+        if send_to_self is not None:
+            await send_to_self
 
     async def send_result(
             self,
