@@ -96,7 +96,7 @@ class RoundRobinLoadBalancer(LoadBalancer):
 
     def choose_nodes(self, nodes: list[MeshPeer], topic: Topic) -> list[MeshPeer]:
         if topic not in self._topic_counter:
-            i = self._topic_counter[topic] = self.rng.randint(0, len(nodes) - 1)
+            i = self._topic_counter[topic] = self.rng.randrange(len(nodes))
         else:
             i = self._topic_counter[topic] % len(nodes)
 
