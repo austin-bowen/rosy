@@ -46,14 +46,6 @@ class SerialTopicsListenerManager:
     def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
         self._listeners[topic].remove(callback)
 
-        if not self.has_listener(topic):
-            self._remove_topic_queue(topic)
-
-    def _remove_topic_queue(self, topic: Topic) -> None:
-        _, queue_task = self._topic_queues.pop(topic, (None, None))
-        if queue_task is not None:
-            queue_task.cancel()
-
     def has_listener(self, topic: Topic) -> bool:
         return bool(self._listeners[topic])
 
