@@ -3,7 +3,7 @@ from asyncio import open_connection, open_unix_connection
 from dataclasses import dataclass
 from typing import Iterable
 
-from easymesh.asyncio import Writer, close_ignoring_errors
+from easymesh.asyncio import LockableWriter, Writer, close_ignoring_errors
 from easymesh.network import get_hostname
 from easymesh.specs import (
     ConnectionSpec,
@@ -57,12 +57,12 @@ class PeerWriterBuilder:
 class PeerWriterPool:
     def __init__(self, writer_builder: PeerWriterBuilder):
         self.writer_builder = writer_builder
-        self._writers: dict[NodeId, Writer] = {}
+        self._writers: dict[NodeId, LockableWriter] = {}
 
     def clear(self) -> None:
         self._writers = {}
 
-    async def get_writer_for(self, peer_spec: MeshNodeSpec) -> Writer:
+    async def get_writer_for(self, peer_spec: MeshNodeSpec) -> LockableWriter:
         writer = self._writers.get(peer_spec.id, None)
         if writer is not None:
             return writer
@@ -71,8 +71,10 @@ class PeerWriterPool:
             writer = await self.writer_builder.build(peer_spec.connections)
         except Exception as e:
             raise ConnectionError(f'Error connecting to {peer_spec.id}: {e!r}')
+        else:
+            print(f'Connected to {peer_spec.id}')
 
-        print(f'Connected to {peer_spec.id}')
+        writer = LockableWriter(writer)
         self._writers[peer_spec.id] = writer
 
         return writer
@@ -88,7 +90,7 @@ class PeerWriterPool:
 
 class PeerConnection:
     @abstractmethod
-    async def get_writer(self) -> Writer:
+    async def get_writer(self) -> LockableWriter:
         ...
 
     @abstractmethod
@@ -105,7 +107,7 @@ class LazyPeerConnection(PeerConnection):
         self.peer_spec = peer_spec
         self.connection_pool = peer_connection_pool
 
-    async def get_writer(self) -> Writer:
+    async def get_writer(self) -> LockableWriter:
         return await self.connection_pool.get_writer_for(self.peer_spec)
 
     async def close(self) -> None:

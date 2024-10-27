@@ -123,24 +123,31 @@ class MeshNode:
         multi_writer = MultiWriter(writers)
         message_writer = MessageWriter(multi_writer, codec=self._message_codec)
         message = Message(topic, data)
-        await message_writer.write(message, drain=False)
 
-        send_to_self = (
-            asyncio.create_task(self._listener_manager.handle_message(message))
-            if self_peer is not None else None
-        )
+        [await writer.lock.acquire() for writer in writers]
 
-        to_close = []
-        for peer, writer in zip(peers, writers):
-            try:
-                await writer.drain()
-            except Exception as e:
-                print(
-                    f'Error sending message with topic={topic} '
-                    f'to node {peer.id}: {e!r}'
-                )
+        try:
+            await message_writer.write(message, drain=False)
 
-                to_close.append(peer.connection)
+            # TODO This doesn't guarantee self-messages are processed in order
+            send_to_self = (
+                asyncio.create_task(self._listener_manager.handle_message(message))
+                if self_peer is not None else None
+            )
+
+            to_close = []
+            for peer, writer in zip(peers, writers):
+                try:
+                    await writer.drain()
+                except Exception as e:
+                    print(
+                        f'Error sending message with topic={topic} '
+                        f'to node {peer.id}: {e!r}'
+                    )
+
+                    to_close.append(peer.connection)
+        finally:
+            [writer.lock.release() for writer in writers]
 
         for connection in to_close:
             await connection.close()

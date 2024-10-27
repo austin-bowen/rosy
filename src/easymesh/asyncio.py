@@ -1,6 +1,6 @@
 import asyncio
 import traceback
-from asyncio import Task
+from asyncio import Lock, Task
 from collections.abc import Awaitable, Iterable, Sized
 from typing import Protocol, Type, TypeVar, Union
 
@@ -81,6 +81,28 @@ class Writer(Protocol):
 
     async def wait_closed(self) -> None:
         ...
+
+
+class LockableWriter(Writer):
+    def __init__(self, writer: Writer):
+        self.writer = writer
+        self._lock = Lock()
+
+    @property
+    def lock(self) -> Lock:
+        return self._lock
+
+    def write(self, data: bytes) -> None:
+        self.writer.write(data)
+
+    async def drain(self) -> None:
+        await self.writer.drain()
+
+    def close(self) -> None:
+        self.writer.close()
+
+    async def wait_closed(self) -> None:
+        await self.writer.wait_closed()
 
 
 class MultiWriter(Writer):
