@@ -32,7 +32,7 @@ class ListenerManager(ABC):
         ...
 
 
-class SerialTopicsListenerManager:
+class SerialTopicsListenerManager(ListenerManager):
     """Ensures messages are processed in order for each topic."""
 
     def __init__(self, queue_maxsize: int):
