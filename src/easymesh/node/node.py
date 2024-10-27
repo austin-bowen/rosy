@@ -114,7 +114,6 @@ class MeshNode:
 
         self_peer = next(filter(lambda p: p.id == self.id, peers), None)
 
-        # TODO lock the writers
         writers = [
             await peer.connection.get_writer() for peer in peers
             if peer is not self_peer
