@@ -2,9 +2,10 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from inspect import isawaitable
 from typing import Literal, TypeVar, Union
 
-from easymesh.asyncio import MultiWriter, close_ignoring_errors
+from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -111,28 +112,40 @@ class MeshNode:
 
     async def send(self, topic: Topic, data: Data = None):
         peers = await self._get_peers_for_topic(topic)
+        if not peers:
+            return
 
-        self_peer = next(filter(lambda p: p.id == self.id, peers), None)
+        peers = self._load_balancer.choose_nodes(peers, topic)
 
-        writers = [
-            await peer.connection.get_writer() for peer in peers
-            if peer is not self_peer
-        ]
+        peers_without_self = []
+        send_to_self = False
+        for peer in peers:
+            if peer.id == self.id:
+                assert not send_to_self
+                send_to_self = True
+            else:
+                peers_without_self.append(peer)
+
+        message = Message(topic, data)
+
+        tasks = []
+        if peers_without_self:
+            tasks.append(self._send_to_peers(peers_without_self, message))
+        if send_to_self:
+            tasks.append(self._listener_manager.handle_message(message))
+
+        await many(tasks)
+
+    async def _send_to_peers(self, peers: list[MeshPeer], message: Message) -> None:
+        writers = [await peer.connection.get_writer() for peer in peers]
 
         multi_writer = MultiWriter(writers)
         message_writer = MessageWriter(multi_writer, codec=self._message_codec)
-        message = Message(topic, data)
 
         [await writer.lock.acquire() for writer in writers]
 
         try:
             await message_writer.write(message, drain=False)
-
-            # TODO This doesn't guarantee self-messages are processed in order
-            send_to_self = (
-                asyncio.create_task(self._listener_manager.handle_message(message))
-                if self_peer is not None else None
-            )
 
             to_close = []
             for peer, writer in zip(peers, writers):
@@ -140,7 +153,7 @@ class MeshNode:
                     await writer.drain()
                 except Exception as e:
                     print(
-                        f'Error sending message with topic={topic} '
+                        f'Error sending message with topic={message.topic} '
                         f'to node {peer.id}: {e!r}'
                     )
 
@@ -150,9 +163,6 @@ class MeshNode:
 
         for connection in to_close:
             await connection.close()
-
-        if send_to_self is not None:
-            await send_to_self
 
     async def send_result(
             self,
@@ -176,7 +186,7 @@ class MeshNode:
             return False, None
 
         result = fn(*args, **kwargs)
-        if asyncio.iscoroutine(result):
+        if isawaitable(result):
             result = await result
 
         await self.send(topic, result)
@@ -193,10 +203,7 @@ class MeshNode:
 
     async def _get_peers_for_topic(self, topic: Topic) -> list[MeshPeer]:
         peers = self._peer_manager.get_peers()
-
-        listening_peers = [p for p in peers if await p.is_listening_to(topic)]
-
-        return self._load_balancer.choose_nodes(listening_peers, topic)
+        return [p for p in peers if await p.is_listening_to(topic)]
 
     def get_topic_sender(self, topic: Topic) -> 'TopicSender':
         return TopicSender(self, topic)
@@ -233,6 +240,9 @@ class TopicSender:
 
     async def has_listeners(self) -> bool:
         return await self.node.topic_has_listeners(self.topic)
+
+    async def wait_for_listener(self, poll_interval: float = 1.) -> None:
+        await self.node.wait_for_listener(self.topic, poll_interval)
 
 
 async def build_mesh_node(
