@@ -79,3 +79,4 @@ It does **not** guarantee message delivery; there are no delivery confirmations,
   - Nodes should automatically reconnect to coordinator if they lose connection
 - Security
   - Simple authentication via authkey. Plaintext to start, mutual HMAC later.
+- Logging
