@@ -10,10 +10,5 @@ Common commands:
 
 ## PyPI
 
-To publish to PyPI, create file `.pypirc` like so:
-
-```
-[pypi]
-username = __token__
-password = <token>
-```
+To publish to PyPI, configure `poetry` to use your credentials following
+[these instructions](https://python-poetry.org/docs/repositories/#configuring-credentials).
