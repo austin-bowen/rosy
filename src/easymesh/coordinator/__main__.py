@@ -10,7 +10,11 @@ from easymesh.types import ServerHost
 async def main() -> None:
     args = _parse_args()
 
-    server = build_mesh_coordinator_server(args.host, args.port)
+    server = build_mesh_coordinator_server(
+        host=args.host,
+        port=args.port,
+        authkey=args.authkey,
+    )
 
     try:
         await server.start()
@@ -42,6 +46,11 @@ def _parse_args() -> Namespace:
     parser.add_argument(
         '--port', default=DEFAULT_COORDINATOR_PORT, type=int,
         help=f'Port to bind to. Default is {DEFAULT_COORDINATOR_PORT}.',
+    )
+
+    parser.add_argument(
+        '--authkey', default=None, type=lambda arg: arg.encode(),
+        help='Authkey to use for connections. Default is None.',
     )
 
     return parser.parse_args()

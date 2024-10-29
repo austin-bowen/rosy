@@ -6,6 +6,7 @@ from inspect import isawaitable
 from typing import Literal, TypeVar, Union
 
 from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
+from easymesh.authentication import Authenticator, optional_authkey_authenticator
 from easymesh.codec import Codec, pickle_codec
 from easymesh.coordinator.client import MeshCoordinatorClient, build_coordinator_client
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -34,6 +35,8 @@ T = TypeVar('T')
 
 
 class MeshNode:
+    load_balancer: LoadBalancer
+
     def __init__(
             self,
             id: NodeId,
@@ -42,6 +45,7 @@ class MeshNode:
             listener_manager: ListenerManager,
             peer_manager: PeerManager,
             message_codec: Codec[Data],
+            authenticator: Authenticator,
             load_balancer: LoadBalancer,
     ):
         self._id = id
@@ -50,7 +54,8 @@ class MeshNode:
         self._listener_manager = listener_manager
         self._peer_manager = peer_manager
         self._message_codec = message_codec
-        self._load_balancer = load_balancer
+        self._authenticator = authenticator
+        self.load_balancer = load_balancer
 
         self._connection_specs = []
 
@@ -97,6 +102,8 @@ class MeshNode:
         peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
         print(f'New connection from: {peer_name}')
 
+        await self._authenticator.authenticate(reader, writer)
+
         # Don't need the writer
         writer.write_eof()
 
@@ -115,7 +122,7 @@ class MeshNode:
         if not peers:
             return
 
-        peers = self._load_balancer.choose_nodes(peers, topic)
+        peers = self.load_balancer.choose_nodes(peers, topic)
 
         peers_without_self = []
         send_to_self = False
@@ -265,12 +272,17 @@ async def build_mesh_node(
         node_client_host: Host = None,
         message_queue_maxsize: int = 10,
         message_codec: Codec[Data] = pickle_codec,
+        authkey: bytes = None,
+        authenticator: Authenticator = None,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
         start: bool = True,
 ) -> MeshNode:
+    authenticator = authenticator or optional_authkey_authenticator(authkey)
+
     mesh_coordinator_client = await build_coordinator_client(
         coordinator_host,
         coordinator_port,
+        authenticator,
     )
 
     server_providers = []
@@ -287,7 +299,7 @@ async def build_mesh_node(
         raise ValueError('Must allow at least one type of connection')
 
     listener_manager = SerialTopicsListenerManager(message_queue_maxsize)
-    peer_manager = PeerManager()
+    peer_manager = PeerManager(authenticator)
 
     if load_balancer == 'default':
         load_balancer = GroupingLoadBalancer(node_name_group_key, RoundRobinLoadBalancer())
@@ -301,6 +313,7 @@ async def build_mesh_node(
         listener_manager,
         peer_manager,
         message_codec,
+        authenticator,
         load_balancer,
     )
 

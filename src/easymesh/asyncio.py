@@ -69,6 +69,11 @@ def noop():
     return asyncio.sleep(0)
 
 
+class Reader(Protocol):
+    async def readexactly(self, n: int) -> bytes:
+        ...
+
+
 class Writer(Protocol):
     def write(self, data: bytes) -> None:
         ...

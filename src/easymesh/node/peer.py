@@ -3,7 +3,8 @@ from asyncio import open_connection, open_unix_connection
 from dataclasses import dataclass
 from typing import Iterable
 
-from easymesh.asyncio import LockableWriter, Writer, close_ignoring_errors
+from easymesh.asyncio import LockableWriter, Reader, Writer, close_ignoring_errors
+from easymesh.authentication import Authenticator
 from easymesh.network import get_hostname
 from easymesh.specs import (
     ConnectionSpec,
@@ -17,14 +18,15 @@ from easymesh.types import Host, Topic
 
 
 class PeerWriterBuilder:
-    def __init__(self, host: Host = None):
+    def __init__(self, authenticator: Authenticator, host: Host = None):
+        self.authenticator = authenticator
         self.host = host or get_hostname()
 
     async def build(self, conn_specs: Iterable[ConnectionSpec]) -> Writer:
-        writer = None
+        reader, writer = None, None
         for conn_spec in conn_specs:
             try:
-                _, writer = await self._get_connection(conn_spec)
+                reader, writer = await self._get_connection(conn_spec)
             except ConnectionError as e:
                 print(f'Error connecting to {conn_spec}: {e}')
                 continue
@@ -34,9 +36,11 @@ class PeerWriterBuilder:
         if not writer:
             raise ConnectionError('Could not connect to any connection spec')
 
+        await self.authenticator.authenticate(reader, writer)
+
         return writer
 
-    async def _get_connection(self, conn_spec: ConnectionSpec):
+    async def _get_connection(self, conn_spec: ConnectionSpec) -> tuple[Reader, Writer]:
         if isinstance(conn_spec, IpConnectionSpec):
             return await open_connection(
                 host=conn_spec.host,
@@ -125,9 +129,9 @@ class MeshPeer:
 
 
 class PeerManager:
-    def __init__(self):
+    def __init__(self, authenticator: Authenticator):
         self._connection_pool = PeerWriterPool(
-            writer_builder=PeerWriterBuilder(),
+            writer_builder=PeerWriterBuilder(authenticator),
         )
         self._peers: list[MeshPeer] = []
 

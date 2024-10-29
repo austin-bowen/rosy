@@ -2,7 +2,7 @@ from abc import abstractmethod
 from asyncio import open_connection
 from collections.abc import Awaitable, Callable
 
-from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
+from easymesh.authentication import Authenticator
 from easymesh.objectio import CodecObjectReader, CodecObjectWriter, ObjectIO
 from easymesh.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from easymesh.rpc import ObjectIORPC, RPC
@@ -51,10 +51,13 @@ class RPCMeshCoordinatorClient(MeshCoordinatorClient):
 
 
 async def build_coordinator_client(
-        host: Host = 'localhost',
-        port: Port = DEFAULT_COORDINATOR_PORT,
+        host: Host,
+        port: Port,
+        authenticator: Authenticator,
 ) -> MeshCoordinatorClient:
     reader, writer = await open_connection(host, port)
+    await authenticator.authenticate(reader, writer)
+
     rpc = ObjectIORPC(ObjectIO(
         reader=CodecObjectReader(reader),
         writer=CodecObjectWriter(writer),

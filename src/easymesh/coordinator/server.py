@@ -5,6 +5,7 @@ from codecs import StreamWriter
 from typing import Optional
 
 from easymesh.asyncio import close_ignoring_errors
+from easymesh.authentication import AuthKey, Authenticator, optional_authkey_authenticator
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.objectio import (
     CodecObjectReader,
@@ -28,9 +29,11 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             self,
             start_stream_server,
             build_rpc,
+            authenticator: Authenticator,
     ):
         self.start_stream_server = start_stream_server
         self.build_rpc = build_rpc
+        self.authenticator = authenticator
 
         self._node_clients: dict[RPC, Optional[NodeId]] = {}
         self._nodes: dict[NodeId, MeshNodeSpec] = {}
@@ -41,6 +44,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
         print(f'New connection from: {peer_name}')
+
+        await self.authenticator.authenticate(reader, writer)
 
         rpc = self.build_rpc(reader, writer)
         rpc.request_handler = lambda r: self._handle_request(r, rpc)
@@ -106,6 +111,8 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 def build_mesh_coordinator_server(
         host: ServerHost = DEFAULT_COORDINATOR_HOST,
         port: Port = DEFAULT_COORDINATOR_PORT,
+        authkey: AuthKey = None,
+        authenticator: Authenticator = None,
 ) -> MeshCoordinatorServer:
     async def start_stream_server(cb):
         return await asyncio.start_server(cb, host=host, port=port)
@@ -116,4 +123,6 @@ def build_mesh_coordinator_server(
             writer=CodecObjectWriter(writer),
         ))
 
-    return RPCMeshCoordinatorServer(start_stream_server, build_rpc)
+    authenticator = authenticator or optional_authkey_authenticator(authkey)
+
+    return RPCMeshCoordinatorServer(start_stream_server, build_rpc, authenticator)
