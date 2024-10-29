@@ -9,6 +9,7 @@ async def main():
         name=args.name,
         coordinator_host=args.coordinator.host,
         coordinator_port=args.coordinator.port,
+        authkey=args.authkey,
     )
 
     await node.wait_for_listener('some-topic')

@@ -1,6 +1,7 @@
 import asyncio
 from argparse import ArgumentParser, Namespace
 
+from easymesh.argparse import add_authkey_arg
 from easymesh.asyncio import forever
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.coordinator.server import build_mesh_coordinator_server
@@ -48,10 +49,7 @@ def _parse_args() -> Namespace:
         help=f'Port to bind to. Default is {DEFAULT_COORDINATOR_PORT}.',
     )
 
-    parser.add_argument(
-        '--authkey', default=None, type=lambda arg: arg.encode(),
-        help='Authkey to use for connections. Default is None.',
-    )
+    add_authkey_arg(parser)
 
     return parser.parse_args()
 

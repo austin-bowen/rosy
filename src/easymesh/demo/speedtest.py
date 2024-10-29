@@ -3,7 +3,7 @@ import time
 from argparse import ArgumentParser, Namespace
 from typing import Optional
 
-from easymesh.argparse import add_coordinator_arg
+from easymesh.argparse import add_authkey_arg, add_coordinator_arg
 from easymesh.asyncio import noop
 from easymesh.node.node import MeshNode, build_mesh_node
 from easymesh.types import Data, Topic
@@ -58,7 +58,7 @@ class SpeedTest:
 
             if message_count != last_count:
                 mps = (message_count - (last_count or 0)) / sleep_time
-                print(f'Received message count: {message_count}; mps={round(mps)}')
+                print(f'[{self.node}] Received message count: {message_count}; mps={round(mps)}')
                 last_count = message_count
 
 
@@ -71,6 +71,7 @@ async def main() -> None:
         coordinator_port=args.coordinator.port,
         allow_unix_connections=not args.disable_unix,
         allow_tcp_connections=not args.disable_tcp,
+        authkey=args.authkey,
         load_balancer='default' if args.enable_load_balancer else None,
     )
 
@@ -84,6 +85,7 @@ async def main() -> None:
         data = None
         # data = b'helloworld' * 100000
         # data = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
+        # import numpy as np
         # data = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
         # data = torch.tensor(data)
 
@@ -92,7 +94,7 @@ async def main() -> None:
 
         print(f'Running speed test for {args.seconds}s...')
         mps = await speed_tester.measure_mps(topic, data=data, duration=args.seconds)
-        print(f'mps={round(mps)}')
+        print(f'[{node}] mps={round(mps)}')
     else:
         raise ValueError(f'Invalid role={args.role}')
 
@@ -105,6 +107,7 @@ def _parse_args() -> Namespace:
         help='Role of the node: sender or receiver.',
     )
     add_coordinator_arg(parser)
+    add_authkey_arg(parser)
     parser.add_argument(
         '--seconds', type=float, default=10.,
         help='How long to run the speed test in seconds. Default: 10',

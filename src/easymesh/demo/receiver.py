@@ -14,6 +14,7 @@ async def main():
         name=args.name,
         coordinator_host=args.coordinator.host,
         coordinator_port=args.coordinator.port,
+        authkey=args.authkey,
     )
 
     await node.add_listener('some-topic', handle_message)

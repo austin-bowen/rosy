@@ -24,6 +24,16 @@ def add_coordinator_arg(parser: ArgumentParser) -> None:
     )
 
 
+def add_authkey_arg(parser: ArgumentParser) -> None:
+    parser.add_argument(
+        '--authkey',
+        default=None,
+        type=lambda arg: arg.encode(),
+        help='Authentication key to use for new connections between all nodes in the mesh. '
+             'Should ideally be >= 32 characters. Default is None.',
+    )
+
+
 def endpoint_arg(default_port: Port = None) -> Callable[[str], Endpoint]:
     """
     Returns a function that parses a string of format ``host[:port]`` into an
