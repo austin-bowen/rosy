@@ -73,10 +73,25 @@ When a node needs to send a message, it uses the mesh topology to find all curre
 
 It does **not** guarantee message delivery; there are no delivery confirmations, and if a message fails to be sent to a node (e.g. due to network failure), it will not be retried.
 
+### Security
+
+Security is not a primary concern of `easymesh`. Messages are sent in plaintext (unencrypted) for speed, and by default, there is no authentication of nodes on the mesh.
+
+There is optional authentication support to ensure all nodes on the mesh are allowed to be there. This is done using symmetric HMAC challenge-response. The coordinator will authenticate all nodes before adding them to the mesh, and all nodes will authenticate each other before connecting. This could come in handy when e.g. running multiple meshes on the same network, to avoid accidentally connecting a node to the wrong mesh.
+
+Simply provide the `--authkey=...` argument when starting the coordinator, and ensure the `authkey=b'...'` argument is provided to `build_mesh_node(...)`, e.g.
+
+```bash
+$ python -m easymesh.coordinator --authkey my-secret-key
+```
+
+```python
+node = await easymesh.build_mesh_node(name='my-node', authkey=b'my-secret-key')
+```
+
+
 ## Roadmap
 
 - Robustness to failure
   - Nodes should automatically reconnect to coordinator if they lose connection
-- Security
-  - Simple authentication via authkey. Plaintext to start, mutual HMAC later.
 - Logging
