@@ -1,9 +1,12 @@
 import asyncio
+import hmac
+import secrets
 from abc import ABC, abstractmethod
 from asyncio import IncompleteReadError
 from typing import Optional, Union
 
 from easymesh.asyncio import Reader, Writer
+from easymesh.utils import require
 
 AuthKey = bytes
 
@@ -22,26 +25,50 @@ class NoAuthenticator(Authenticator):
         pass
 
 
-class PlaintextAuthkeyAuthenticator(Authenticator):
-    def __init__(self, authkey: AuthKey, timeout: Optional[float] = 10.):
-        if not authkey:
-            raise ValueError('authkey must not be empty.')
+class HMACAuthenticator(Authenticator):
+    """
+    Authenticates using symmetric HMAC challenge-response with a shared secret key.
+    """
+
+    def __init__(
+            self,
+            authkey: AuthKey,
+            challenge_length: int = 32,
+            digest='sha256',
+            timeout: Optional[float] = 10.,
+    ):
+        require(authkey, 'authkey must not be empty.')
+        require(challenge_length > 0, 'challenge_length must be > 0.')
 
         self.authkey = authkey
+        self.challenge_length = challenge_length
+        self.digest = digest
         self.timeout = timeout
 
     async def authenticate(self, reader: Reader, writer: Writer) -> None:
-        await self._send_authkey(writer)
-        await self._receive_and_check_authkey(reader)
+        sent_challenge = secrets.token_bytes(self.challenge_length)
 
-    async def _send_authkey(self, writer: Writer) -> None:
-        writer.write(self.authkey)
+        writer.write(sent_challenge)
         await writer.drain()
 
-    async def _receive_and_check_authkey(self, reader: Reader) -> None:
+        received_challenge = await self._read_exactly(reader, self.challenge_length)
+
+        hmac_digest = self._hmac_digest(received_challenge)
+
+        writer.write(hmac_digest)
+        await writer.drain()
+
+        expected_hmac = self._hmac_digest(sent_challenge)
+
+        received_hmac = await self._read_exactly(reader, len(expected_hmac))
+
+        if not hmac.compare_digest(expected_hmac, received_hmac):
+            raise AuthenticationError('Received HMAC digest does not match expected digest.')
+
+    async def _read_exactly(self, reader: Reader, n: int) -> bytes:
         try:
-            received_authkey = await asyncio.wait_for(
-                reader.readexactly(len(self.authkey)),
+            return await asyncio.wait_for(
+                reader.readexactly(n),
                 timeout=self.timeout,
             )
         except TimeoutError:
@@ -49,11 +76,8 @@ class PlaintextAuthkeyAuthenticator(Authenticator):
         except IncompleteReadError as e:
             raise AuthenticationError(e)
 
-        if received_authkey != self.authkey:
-            raise AuthenticationError(
-                f'Received authkey={received_authkey} does not '
-                f'match expected authkey={self.authkey}.'
-            )
+    def _hmac_digest(self, challenge: bytes) -> bytes:
+        return hmac.digest(self.authkey, challenge, self.digest)
 
 
 class AuthenticationError(Exception):
@@ -62,5 +86,5 @@ class AuthenticationError(Exception):
 
 def optional_authkey_authenticator(
         authkey: Optional[AuthKey],
-) -> Union[PlaintextAuthkeyAuthenticator, NoAuthenticator]:
-    return PlaintextAuthkeyAuthenticator(authkey) if authkey else NoAuthenticator()
+) -> Union[HMACAuthenticator, NoAuthenticator]:
+    return HMACAuthenticator(authkey) if authkey else NoAuthenticator()
