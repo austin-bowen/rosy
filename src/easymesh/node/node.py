@@ -180,6 +180,16 @@ class MeshNode:
 
         Returns a tuple of (did_send, result). If there were no listeners, then
         this returns (False, None).
+
+        Args:
+            topic:
+                Topic to send the result to, if there are listeners.
+            fn:
+                Function (either "normal" or async) to generate the result.
+            args:
+                Passed to ``fn``.
+            kwargs:
+                Passed to ``fn``.
         """
 
         if not await self.topic_has_listeners(topic):
