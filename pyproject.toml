@@ -8,6 +8,10 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
