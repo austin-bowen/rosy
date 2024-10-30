@@ -6,11 +6,14 @@ from typing import Generic, Literal, TypeVar
 from easymesh.asyncio import Writer
 from easymesh.codec import Codec, pickle_codec
 from easymesh.types import Data, Message
+from easymesh.utils import require
 
 DEFAULT_TOPIC_ENCODING: str = 'utf-8'
 
 ByteOrder = Literal['big', 'little']
 DEFAULT_BYTE_ORDER: ByteOrder = 'little'
+
+DEFAULT_MAX_HEADER_LEN: int = 8
 
 T = TypeVar('T')
 
@@ -40,9 +43,15 @@ class ObjectIO(Generic[T]):
 
 
 class StreamObjectReader(ObjectReader[T]):
-    def __init__(self, reader: StreamReader, byte_order: ByteOrder):
+    def __init__(
+            self,
+            reader: StreamReader,
+            byte_order: ByteOrder,
+            max_header_len: int,
+    ):
         self.reader = reader
         self.byte_order = byte_order
+        self.max_header_len = max_header_len
 
         self._read_lock = Lock()
 
@@ -60,6 +69,11 @@ class StreamObjectReader(ObjectReader[T]):
         if not header_len:
             return b''
 
+        require(
+            header_len <= self.max_header_len,
+            f'Received header_len={header_len} > max_header_len={self.max_header_len}',
+        )
+
         header = await self.reader.readexactly(header_len)
         data_len = self._bytes_to_int(header)
 
@@ -70,9 +84,15 @@ class StreamObjectReader(ObjectReader[T]):
 
 
 class StreamObjectWriter(ObjectWriter[T]):
-    def __init__(self, writer: Writer, byte_order: ByteOrder):
+    def __init__(
+            self,
+            writer: Writer,
+            byte_order: ByteOrder,
+            max_header_len: int,
+    ):
         self.writer = writer
         self.byte_order = byte_order
+        self.max_header_len = max_header_len
 
         self._write_lock = Lock()
 
@@ -91,6 +111,12 @@ class StreamObjectWriter(ObjectWriter[T]):
         data_len = len(data)
 
         header_len = (data_len.bit_length() + 7) // 8
+
+        require(
+            header_len <= self.max_header_len,
+            f'Computed header_len={header_len} > max_header_len={self.max_header_len}',
+        )
+
         self.writer.write(self._int_to_bytes(header_len, length=1))
 
         if not data_len:
@@ -111,8 +137,9 @@ class CodecObjectReader(StreamObjectReader[T]):
             reader: StreamReader,
             codec: Codec[T] = pickle_codec,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            max_header_len: int = DEFAULT_MAX_HEADER_LEN,
     ):
-        super().__init__(reader, byte_order)
+        super().__init__(reader, byte_order, max_header_len)
         self.codec = codec
 
     async def _read(self) -> T:
@@ -126,8 +153,9 @@ class CodecObjectWriter(StreamObjectWriter[T]):
             writer: Writer,
             codec: Codec[T] = pickle_codec,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            max_header_len: int = DEFAULT_MAX_HEADER_LEN,
     ):
-        super().__init__(writer, byte_order)
+        super().__init__(writer, byte_order, max_header_len)
         self.codec = codec
 
     async def _write(self, obj: T) -> None:
@@ -139,11 +167,12 @@ class MessageReader(StreamObjectReader[Message]):
     def __init__(
             self,
             reader: StreamReader,
-            codec: Codec[Data] = pickle_codec,
+            codec: Codec[Data],
             topic_encoding: str = DEFAULT_TOPIC_ENCODING,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            max_header_len: int = DEFAULT_MAX_HEADER_LEN,
     ):
-        super().__init__(reader, byte_order)
+        super().__init__(reader, byte_order, max_header_len)
         self.codec = codec
         self.topic_encoding = topic_encoding
 
@@ -161,11 +190,12 @@ class MessageWriter(StreamObjectWriter[Message]):
     def __init__(
             self,
             writer: Writer,
-            codec: Codec[Data] = pickle_codec,
+            codec: Codec[Data],
             topic_encoding: str = DEFAULT_TOPIC_ENCODING,
             byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+            max_header_len: int = DEFAULT_MAX_HEADER_LEN,
     ):
-        super().__init__(writer, byte_order)
+        super().__init__(writer, byte_order, max_header_len)
         self.codec = codec
         self.topic_encoding = topic_encoding
 
