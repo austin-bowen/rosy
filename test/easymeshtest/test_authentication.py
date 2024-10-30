@@ -8,6 +8,7 @@ from easymesh.authentication import (
     AuthenticationError,
     HMACAuthenticator,
     NoAuthenticator,
+    optional_authkey_authenticator,
 )
 
 
@@ -112,3 +113,15 @@ class TestHMACAuthenticator:
             call(self.hmac_to_client),
         ])
         assert self.writer.drain.await_count == 2
+
+
+class TestOptionalAuthkeyAuthenticator:
+    def test_returns_NoAuthenticator_when_authkey_is_None(self):
+        auth = optional_authkey_authenticator(authkey=None)
+        assert isinstance(auth, NoAuthenticator)
+
+    def test_returns_HMACAuthenticator_when_authkey_is_not_None(self):
+        authkey = b'authkey'
+        auth = optional_authkey_authenticator(authkey)
+        assert isinstance(auth, HMACAuthenticator)
+        assert auth.authkey == authkey
