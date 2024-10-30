@@ -3,6 +3,7 @@ import hmac
 import secrets
 from abc import ABC, abstractmethod
 from asyncio import IncompleteReadError
+from collections.abc import Callable
 from typing import Optional, Union
 
 from easymesh.asyncio import Reader, Writer
@@ -36,6 +37,7 @@ class HMACAuthenticator(Authenticator):
             challenge_length: int = 32,
             digest='sha256',
             timeout: Optional[float] = 10.,
+            get_random_bytes: Callable[[int], bytes] = secrets.token_bytes,
     ):
         require(authkey, 'authkey must not be empty.')
         require(challenge_length > 0, 'challenge_length must be > 0.')
@@ -44,9 +46,10 @@ class HMACAuthenticator(Authenticator):
         self.challenge_length = challenge_length
         self.digest = digest
         self.timeout = timeout
+        self.get_random_bytes = get_random_bytes
 
     async def authenticate(self, reader: Reader, writer: Writer) -> None:
-        sent_challenge = secrets.token_bytes(self.challenge_length)
+        sent_challenge = self.get_random_bytes(self.challenge_length)
 
         writer.write(sent_challenge)
         await writer.drain()
