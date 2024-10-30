@@ -31,6 +31,11 @@ from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec, NodeId
 from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
 
+try:
+    from easymesh.codec import msgpack_codec
+except ImportError:
+    msgpack_codec = None
+
 T = TypeVar('T')
 
 
@@ -271,7 +276,7 @@ async def build_mesh_node(
         node_server_host: ServerHost = None,
         node_client_host: Host = None,
         message_queue_maxsize: int = 10,
-        message_codec: Codec[Data] = pickle_codec,
+        message_codec: Union[Codec[Data], Literal['pickle', 'msgpack']] = 'pickle',
         authkey: bytes = None,
         authenticator: Authenticator = None,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
@@ -300,6 +305,13 @@ async def build_mesh_node(
 
     listener_manager = SerialTopicsListenerManager(message_queue_maxsize)
     peer_manager = PeerManager(authenticator)
+
+    if message_codec == 'pickle':
+        message_codec = pickle_codec
+    elif message_codec == 'msgpack':
+        if not msgpack_codec:
+            raise ValueError('msgpack is not installed')
+        message_codec = msgpack_codec
 
     if load_balancer == 'default':
         load_balancer = GroupingLoadBalancer(node_name_group_key, RoundRobinLoadBalancer())
