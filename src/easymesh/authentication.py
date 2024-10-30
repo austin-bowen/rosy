@@ -49,23 +49,23 @@ class HMACAuthenticator(Authenticator):
         self.get_random_bytes = get_random_bytes
 
     async def authenticate(self, reader: Reader, writer: Writer) -> None:
-        sent_challenge = self.get_random_bytes(self.challenge_length)
+        challenge_to_client = self.get_random_bytes(self.challenge_length)
 
-        writer.write(sent_challenge)
+        writer.write(challenge_to_client)
         await writer.drain()
 
-        received_challenge = await self._read_exactly(reader, self.challenge_length)
+        challenge_from_client = await self._read_exactly(reader, self.challenge_length)
 
-        hmac_digest = self._hmac_digest(received_challenge)
+        hmac_to_client = self._hmac_digest(challenge_from_client)
 
-        writer.write(hmac_digest)
+        writer.write(hmac_to_client)
         await writer.drain()
 
-        expected_hmac = self._hmac_digest(sent_challenge)
+        expected_hmac = self._hmac_digest(challenge_to_client)
 
-        received_hmac = await self._read_exactly(reader, len(expected_hmac))
+        hmac_from_client = await self._read_exactly(reader, len(expected_hmac))
 
-        if not hmac.compare_digest(expected_hmac, received_hmac):
+        if not hmac.compare_digest(hmac_from_client, expected_hmac):
             raise AuthenticationError('Received HMAC digest does not match expected digest.')
 
     async def _read_exactly(self, reader: Reader, n: int) -> bytes:
