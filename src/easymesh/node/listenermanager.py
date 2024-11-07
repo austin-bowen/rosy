@@ -45,6 +45,8 @@ class SerialTopicsListenerManager(ListenerManager):
 
     def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
         self._listeners[topic].remove(callback)
+        if not self._listeners[topic]:
+            del self._listeners[topic]
 
     def has_listener(self, topic: Topic) -> bool:
         return bool(self._listeners[topic])
