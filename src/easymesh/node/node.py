@@ -321,6 +321,9 @@ class TopicSender:
     async def wait_for_listener(self, poll_interval: float = 1.) -> None:
         await self.node.wait_for_listener(self.topic, poll_interval)
 
+    def depends_on_listener(self, poll_interval: float = 1.):
+        return self.node.depends_on_listener(self.topic, poll_interval)
+
 
 async def build_mesh_node(
         name: str,
