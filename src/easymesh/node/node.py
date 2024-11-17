@@ -2,6 +2,7 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from functools import wraps
 from inspect import isawaitable
 from typing import Literal, Optional, TypeVar, Union
 
@@ -231,9 +232,8 @@ class MeshNode:
         Useful for send-only nodes to avoid doing unnecessary work when there
         are no listeners for a topic.
 
-        Combine this with ``stop_listening_until_downstream_listening`` in
-        intermediate nodes to make all nodes in a chain wait until there is a
-        listener at the end of the chain.
+        Combine this with ``depends_on_listener`` in intermediate nodes to make all
+        nodes in a chain wait until there is a listener at the end of the chain.
         """
 
         while not await self.topic_has_listeners(topic):
@@ -258,32 +258,45 @@ class MeshNode:
 
         return callback
 
-    async def stop_listening_until_downstream_listening(
-            self,
-            upstream_topic: Topic,
-            downstream_topic: Topic,
-    ) -> None:
+    def depends_on_listener(self, downstream_topic: Topic, poll_interval: float = 1.):
         """
-        If ``downstream_topic`` has no listeners, then stop listening to the
-        ``upstream_topic`` until ``downstream_topic`` has listeners.
+        Decorator for callback functions that send messages to a downstream
+        topic. If there is no listener for the downstream topic, then the node
+        will stop listening to the upstream topic until there is a listener for
+        the downstream topic.
 
-        Useful for nodes intended for intermediate processing, i.e. nodes that
+        Useful for nodes that do intermediate processing, i.e. nodes that
         receive a message on a topic, process it, and then send the result on
         another topic.
+
+        Example:
+            @node.depends_on_listener('bar')
+            async def handle_foo(topic, data):
+                await node.send('bar', data)
+
+            await node.listen('foo', handle_foo)
 
         Combine this with ``wait_for_listener`` in send-only nodes to make all
         nodes in a chain wait until there is a listener at the end of the chain.
         """
 
-        if await self.topic_has_listeners(downstream_topic):
-            return
+        def decorator(callback):
+            @wraps(callback)
+            async def wrapper(topic: Topic, data: Data) -> None:
+                if await self.topic_has_listeners(downstream_topic):
+                    return await callback(topic, data)
 
-        callback = await self.stop_listening(upstream_topic)
-        if callback is None:
-            return
+                await self.stop_listening(topic)
 
-        await self.wait_for_listener(downstream_topic)
-        await self.listen(upstream_topic, callback)
+                async def wait_for_listener_then_listen():
+                    await self.wait_for_listener(downstream_topic, poll_interval)
+                    await self.listen(topic, wrapper)
+
+                asyncio.create_task(wait_for_listener_then_listen())
+
+            return wrapper
+
+        return decorator
 
 
 @dataclass
