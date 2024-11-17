@@ -25,6 +25,7 @@ if __name__ == '__main__':
 ```
 
 [easymesh/demo/**receiver.py**](src/easymesh/demo/receiver.py):
+
 ```python
 import easymesh
 from easymesh.asyncio import forever
@@ -34,7 +35,7 @@ async def callback(topic, data):
 
 async def main():
     node = await easymesh.build_mesh_node(name='receiver')
-    await node.add_listener('some-topic', callback)
+    await node.listen('some-topic', callback)
     await forever()
 
 if __name__ == '__main__':
@@ -95,3 +96,5 @@ node = await easymesh.build_mesh_node(name='my-node', authkey=b'my-secret-key')
 - Robustness to failure
   - Nodes should automatically reconnect to coordinator if they lose connection
 - Logging
+- Coordinator commands
+  - Kill one or all nodes

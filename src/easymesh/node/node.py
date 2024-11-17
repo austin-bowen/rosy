@@ -230,7 +230,7 @@ class MeshNode:
     def get_topic_sender(self, topic: Topic) -> 'TopicSender':
         return TopicSender(self, topic)
 
-    async def add_listener(self, topic: Topic, callback: ListenerCallback) -> None:
+    async def listen(self, topic: Topic, callback: ListenerCallback) -> None:
         self._listener_manager.add_listener(topic, callback)
         await self._register_node()
 

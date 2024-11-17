@@ -17,7 +17,7 @@ async def main():
         authkey=args.authkey,
     )
 
-    await node.add_listener('some-topic', handle_message)
+    await node.listen('some-topic', handle_message)
     await forever()
 
 

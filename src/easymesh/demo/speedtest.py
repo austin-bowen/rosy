@@ -50,7 +50,7 @@ class SpeedTest:
             nonlocal message_count
             message_count += 1
 
-        await self.node.add_listener(topic, handle_message)
+        await self.node.listen(topic, handle_message)
 
         sleep_time = 1.
         while True:
