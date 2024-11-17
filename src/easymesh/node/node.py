@@ -231,11 +231,11 @@ class MeshNode:
         return TopicSender(self, topic)
 
     async def listen(self, topic: Topic, callback: ListenerCallback) -> None:
-        self._listener_manager.add_listener(topic, callback)
+        self._listener_manager.set_listener(topic, callback)
         await self._register_node()
 
-    async def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
-        self._listener_manager.remove_listener(topic, callback)
+    async def stop_listening(self, topic: Topic) -> None:
+        self._listener_manager.remove_listener(topic)
         await self._register_node()
 
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:

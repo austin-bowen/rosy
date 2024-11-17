@@ -1,10 +1,8 @@
 import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Queue, Task
-from collections import defaultdict
 from typing import Awaitable, Callable
 
-from easymesh.asyncio import many
 from easymesh.types import Data, Message, Topic
 
 ListenerCallback = Callable[[Topic, Data], Awaitable[None]]
@@ -12,11 +10,11 @@ ListenerCallback = Callable[[Topic, Data], Awaitable[None]]
 
 class ListenerManager(ABC):
     @abstractmethod
-    def add_listener(self, topic: Topic, callback: ListenerCallback) -> None:
+    def set_listener(self, topic: Topic, callback: ListenerCallback) -> None:
         ...
 
     @abstractmethod
-    def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
+    def remove_listener(self, topic: Topic) -> None:
         ...
 
     @abstractmethod
@@ -37,19 +35,17 @@ class SerialTopicsListenerManager(ListenerManager):
 
     def __init__(self, queue_maxsize: int):
         self._queue_maxsize = queue_maxsize
-        self._listeners: dict[Topic, set[ListenerCallback]] = defaultdict(set)
+        self._listeners: dict[Topic, ListenerCallback] = {}
         self._topic_queues: dict[Topic, tuple[Queue[Data], Task]] = {}
 
-    def add_listener(self, topic: Topic, callback: ListenerCallback) -> None:
-        self._listeners[topic].add(callback)
+    def set_listener(self, topic: Topic, callback: ListenerCallback) -> None:
+        self._listeners[topic] = callback
 
-    def remove_listener(self, topic: Topic, callback: ListenerCallback) -> None:
-        self._listeners[topic].remove(callback)
-        if not self._listeners[topic]:
-            del self._listeners[topic]
+    def remove_listener(self, topic: Topic) -> None:
+        self._listeners.pop(topic, None)
 
     def has_listener(self, topic: Topic) -> bool:
-        return bool(self._listeners[topic])
+        return topic in self._listeners
 
     def get_topics(self) -> set[Topic]:
         return set(self._listeners.keys())
@@ -81,9 +77,8 @@ class SerialTopicsListenerManager(ListenerManager):
         while True:
             data = await queue.get()
             try:
-                await many(
-                    listener(topic, data)
-                    for listener in self._listeners[topic]
-                )
+                callback = self._listeners.get(topic, None)
+                if callback is not None:
+                    await callback(topic, data)
             finally:
                 queue.task_done()
