@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Queue, Task
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Optional
 
 from easymesh.types import Data, Message, Topic
 
@@ -14,7 +14,7 @@ class ListenerManager(ABC):
         ...
 
     @abstractmethod
-    def remove_listener(self, topic: Topic) -> None:
+    def remove_listener(self, topic: Topic) -> Optional[ListenerCallback]:
         ...
 
     @abstractmethod
@@ -41,8 +41,8 @@ class SerialTopicsListenerManager(ListenerManager):
     def set_listener(self, topic: Topic, callback: ListenerCallback) -> None:
         self._listeners[topic] = callback
 
-    def remove_listener(self, topic: Topic) -> None:
-        self._listeners.pop(topic, None)
+    def remove_listener(self, topic: Topic) -> Optional[ListenerCallback]:
+        return self._listeners.pop(topic, None)
 
     def has_listener(self, topic: Topic) -> bool:
         return topic in self._listeners

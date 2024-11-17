@@ -3,7 +3,7 @@ from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from inspect import isawaitable
-from typing import Literal, TypeVar, Union
+from typing import Literal, Optional, TypeVar, Union
 
 from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
 from easymesh.authentication import Authenticator, optional_authkey_authenticator
@@ -122,6 +122,11 @@ class MeshNode:
         finally:
             await close_ignoring_errors(writer)
 
+    async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
+        print('Received mesh topology broadcast')
+        topology = broadcast.mesh_topology
+        await self._peer_manager.set_mesh_topology(topology)
+
     async def send(self, topic: Topic, data: Data = None):
         peers = await self._get_peers_for_topic(topic)
         if not peers:
@@ -220,6 +225,17 @@ class MeshNode:
         return bool(peers)
 
     async def wait_for_listener(self, topic: Topic, poll_interval: float = 1.) -> None:
+        """
+        Wait until there is a listener for a topic.
+
+        Useful for send-only nodes to avoid doing unnecessary work when there
+        are no listeners for a topic.
+
+        Combine this with ``stop_listening_until_downstream_listening`` in
+        intermediate nodes to make all nodes in a chain wait until there is a
+        listener at the end of the chain.
+        """
+
         while not await self.topic_has_listeners(topic):
             await asyncio.sleep(poll_interval)
 
@@ -234,14 +250,40 @@ class MeshNode:
         self._listener_manager.set_listener(topic, callback)
         await self._register_node()
 
-    async def stop_listening(self, topic: Topic) -> None:
-        self._listener_manager.remove_listener(topic)
-        await self._register_node()
+    async def stop_listening(self, topic: Topic) -> Optional[ListenerCallback]:
+        callback = self._listener_manager.remove_listener(topic)
 
-    async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
-        print('Received mesh topology broadcast')
-        topology = broadcast.mesh_topology
-        await self._peer_manager.set_mesh_topology(topology)
+        if callback is not None:
+            await self._register_node()
+
+        return callback
+
+    async def stop_listening_until_downstream_listening(
+            self,
+            upstream_topic: Topic,
+            downstream_topic: Topic,
+    ) -> None:
+        """
+        If ``downstream_topic`` has no listeners, then stop listening to the
+        ``upstream_topic`` until ``downstream_topic`` has listeners.
+
+        Useful for nodes intended for intermediate processing, i.e. nodes that
+        receive a message on a topic, process it, and then send the result on
+        another topic.
+
+        Combine this with ``wait_for_listener`` in send-only nodes to make all
+        nodes in a chain wait until there is a listener at the end of the chain.
+        """
+
+        if await self.topic_has_listeners(downstream_topic):
+            return
+
+        callback = await self.stop_listening(upstream_topic)
+        if callback is None:
+            return
+
+        await self.wait_for_listener(downstream_topic)
+        await self.listen(upstream_topic, callback)
 
 
 @dataclass
