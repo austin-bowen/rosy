@@ -12,6 +12,9 @@ class Endpoint:
     host: Host
     port: Port
 
+    def __str__(self):
+        return f'{self.host}:{self.port}'
+
 
 Topic = str
 Data = Any

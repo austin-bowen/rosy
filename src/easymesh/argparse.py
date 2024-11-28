@@ -6,53 +6,81 @@ from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from easymesh.types import Endpoint, Port
 
 
-def get_node_arg_parser(default_node_name: str = None, **kwargs) -> ArgumentParser:
+def get_node_arg_parser(
+        default_node_name: str = None,
+        default_coordinator_endpoint: Endpoint = None,
+        default_authkey: bytes = None,
+        **kwargs,
+) -> ArgumentParser:
     """
-    Returns an argument parser with node-specific arguments added.
+    Returns an argument parser with the following node-specific arguments:
+    - `--name`
+    - `--coordinator HOST[:PORT]`
+    - `--authkey`
 
     Args:
         default_node_name:
-            Default node name. If not given, the argument is required.
+            Default node name. If not given, the argument `--name` is required.
+        default_coordinator_endpoint:
+            Default coordinator endpoint. If not given, the argument will
+            default to `localhost:DEFAULT_COORDINATOR_PORT`.
+        default_authkey:
+            Default authentication key. If not given, the argument will
+            default to `None` (i.e. no auth key).
         **kwargs:
             These are passed to the `ArgumentParser` constructor.
     """
 
     parser = ArgumentParser(**kwargs)
-    add_node_args(parser, default_node_name)
+    add_node_args(parser, default_node_name, default_coordinator_endpoint)
     return parser
 
 
-def add_node_args(parser: ArgumentParser, default_node_name: str = None) -> None:
+def add_node_args(
+        parser: ArgumentParser,
+        default_node_name: str = None,
+        default_coordinator: Endpoint = None,
+        default_authkey: bytes = None,
+) -> None:
     """
-    Adds node-specific arguments to an argument parser.
+    Adds node-specific arguments to an argument parser:
+    - `--name`
+    - `--coordinator HOST[:PORT]`
+    - `--authkey`
 
     Args:
         parser:
             Argument parser to which the arguments will be added.
         default_node_name:
             Default node name. If not given, the argument is required.
+        default_coordinator:
+            Default coordinator endpoint. If not given, the argument will
+            default to `localhost:DEFAULT_COORDINATOR_PORT`.
+        default_authkey:
+            Default authentication key. If not given, the argument will
+            default to `None` (i.e. no auth key).
     """
 
     add_node_name_arg(parser, default_node_name)
-    add_coordinator_arg(parser)
-    add_authkey_arg(parser)
+    add_coordinator_arg(parser, default_coordinator)
+    add_authkey_arg(parser, default_authkey)
 
 
-def add_node_name_arg(parser: ArgumentParser, default_node_name: str = None) -> None:
+def add_node_name_arg(parser: ArgumentParser, default: str = None) -> None:
     """
     Adds a `--name` argument to an argument parser.
 
     Args:
         parser:
             Argument parser to which the argument will be added.
-        default_node_name:
+        default:
             Default node name. If not given, the argument will be required.
     """
 
     arg_args = dict(
-        default=default_node_name,
+        default=default,
         help='Node name. Default: %(default)',
-    ) if default_node_name is not None else dict(
+    ) if default is not None else dict(
         required=True,
         help='Node name.',
     )
@@ -60,28 +88,51 @@ def add_node_name_arg(parser: ArgumentParser, default_node_name: str = None) -> 
     parser.add_argument('--name', **arg_args)
 
 
-def add_coordinator_arg(parser: ArgumentParser) -> None:
+def add_coordinator_arg(
+        parser: ArgumentParser,
+        default: Endpoint = None,
+) -> None:
     """
     Adds a `--coordinator HOST[:PORT]` argument to an argument parser.
+
+    Args:
+        parser:
+            Argument parser to which the argument will be added.
+        default:
+            Default coordinator endpoint. If not given, the argument will
+            default to `localhost:DEFAULT_COORDINATOR_PORT`.
     """
+
+    if default is None:
+        default = Endpoint('localhost', DEFAULT_COORDINATOR_PORT)
 
     parser.add_argument(
         '--coordinator',
-        default=Endpoint('localhost', DEFAULT_COORDINATOR_PORT),
-        type=endpoint_arg(default_port=DEFAULT_COORDINATOR_PORT),
+        default=default,
+        type=endpoint_arg(default_port=default.port),
         metavar='HOST[:PORT]',
-        help=f'Coordinator host and port. Defaults to localhost:{DEFAULT_COORDINATOR_PORT}',
+        help=f'Coordinator host and port. Default: %(default)s',
     )
 
 
-def add_authkey_arg(parser: ArgumentParser) -> None:
+def add_authkey_arg(
+        parser: ArgumentParser,
+        default: bytes = None,
+) -> None:
     """
     Adds an `--authkey` argument to an argument parser.
+
+    Args:
+        parser:
+            Argument parser to which the argument will be added.
+        default:
+            Default authentication key. If not given, the argument will
+            default to `None` (i.e. no auth key).
     """
 
     parser.add_argument(
         '--authkey',
-        default=None,
+        default=default,
         type=lambda arg: arg.encode(),
         help='Authentication key to use for new connections between all nodes in the mesh. '
              'Should ideally be >= 32 characters. Default: %(default)s',
