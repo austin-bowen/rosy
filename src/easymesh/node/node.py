@@ -1,4 +1,5 @@
 import asyncio
+from argparse import Namespace
 from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from functools import wraps
 from inspect import isawaitable
 from typing import Literal, Optional, TypeVar, Union
 
+from easymesh.argparse import get_node_arg_parser
 from easymesh.asyncio import MultiWriter, close_ignoring_errors, many
 from easymesh.authentication import Authenticator, optional_authkey_authenticator
 from easymesh.codec import Codec, pickle_codec
@@ -339,6 +341,7 @@ async def build_mesh_node(
         authenticator: Authenticator = None,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
         start: bool = True,
+        **kwargs,
 ) -> MeshNode:
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
@@ -391,3 +394,33 @@ async def build_mesh_node(
         await node.start()
 
     return node
+
+
+async def build_mesh_node_from_args(
+        default_node_name: str = None,
+        args: Namespace = None,
+        **kwargs,
+) -> MeshNode:
+    """
+    Builds a mesh node from command line arguments.
+
+    Args:
+        default_node_name:
+            Default node name. If not given, the argument is required.
+            Ignored if `args` is given.
+        args:
+            Arguments from an argument parser. If not given, an argument parser
+            is created using `get_node_arg_parser` and is used to parse args.
+            This is useful if you create your own argument parser.
+        kwargs:
+            Additional keyword arguments to pass to `build_mesh_node`.
+            These will override anything specified in `args`.
+    """
+
+    if args is None:
+        args = get_node_arg_parser(default_node_name).parse_args()
+
+    build_args = vars(args)
+    build_args.update(kwargs)
+
+    return await build_mesh_node(**build_args)

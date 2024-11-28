@@ -10,22 +10,18 @@ Nodes can run on a single machine, or be distributed across multiple machines on
 
 ## Show me the code!
 
+Here are some simplified examples. See the linked files for the full code.
+
 [easymesh/demo/**sender.py**](src/easymesh/demo/sender.py):
 ```python
 import easymesh
 
 async def main():
     node = await easymesh.build_mesh_node(name='sender')
-    await node.wait_for_listener('some-topic')
     await node.send('some-topic', {'hello': 'world!'})
-
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
 ```
 
 [easymesh/demo/**receiver.py**](src/easymesh/demo/receiver.py):
-
 ```python
 import easymesh
 from easymesh.asyncio import forever
@@ -37,10 +33,6 @@ async def main():
     node = await easymesh.build_mesh_node(name='receiver')
     await node.listen('some-topic', callback)
     await forever()
-
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
 ```
 
 **Terminal:**
