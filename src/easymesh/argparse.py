@@ -8,7 +8,7 @@ from easymesh.types import Endpoint, Port
 
 def get_node_arg_parser(
         default_node_name: str = None,
-        default_coordinator_endpoint: Endpoint = None,
+        default_coordinator: Endpoint = None,
         default_authkey: bytes = None,
         **kwargs,
 ) -> ArgumentParser:
@@ -21,7 +21,7 @@ def get_node_arg_parser(
     Args:
         default_node_name:
             Default node name. If not given, the argument `--name` is required.
-        default_coordinator_endpoint:
+        default_coordinator:
             Default coordinator endpoint. If not given, the argument will
             default to `localhost:DEFAULT_COORDINATOR_PORT`.
         default_authkey:
@@ -32,7 +32,7 @@ def get_node_arg_parser(
     """
 
     parser = ArgumentParser(**kwargs)
-    add_node_args(parser, default_node_name, default_coordinator_endpoint)
+    add_node_args(parser, default_node_name, default_coordinator, default_authkey)
     return parser
 
 
