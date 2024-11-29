@@ -421,6 +421,11 @@ async def build_mesh_node_from_args(
         args = get_node_arg_parser(default_node_name).parse_args()
 
     build_args = vars(args)
+
+    if hasattr(args, 'coordinator'):
+        build_args['coordinator_host'] = args.coordinator.host
+        build_args['coordinator_port'] = args.coordinator.port
+
     build_args.update(kwargs)
 
     return await build_mesh_node(**build_args)
