@@ -79,7 +79,7 @@ def add_node_name_arg(parser: ArgumentParser, default: str = None) -> None:
 
     arg_args = dict(
         default=default,
-        help='Node name. Default: %(default)',
+        help='Node name. Default: %(default)s',
     ) if default is not None else dict(
         required=True,
         help='Node name.',
