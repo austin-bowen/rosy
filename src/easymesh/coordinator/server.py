@@ -53,7 +53,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 
         try:
             await rpc.run_forever()
-        except EOFError:
+        except (ConnectionResetError, EOFError):
             print('Client disconnected')
         finally:
             await self._remove_node(rpc)
