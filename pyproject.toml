@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "easymesh"
-version = "0.1.5"
+version = "0.1.6"
 description = "Simple, fast inter-process message passing for distributed Python processes"
 authors = ["Austin Bowen <austin.bowen.314@gmail.com>"]
 readme = "README.md"
