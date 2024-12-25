@@ -23,6 +23,27 @@ async def forever():
         await asyncio.sleep(60)
 
 
+async def log_error(
+        awaitable: Awaitable[T],
+        base_exception: Type[E] = Exception,
+) -> Union[T, E]:
+    """
+    Returns the result of the awaitable, logging any exceptions.
+
+    If an exception occurs, it is returned.
+
+    Args:
+        awaitable: The awaitable to await.
+        base_exception: The base type of exception to catch.
+    """
+
+    try:
+        return await awaitable
+    except base_exception as e:
+        traceback.print_exc()
+        return e
+
+
 async def many(
         awaitables: Iterable[Awaitable[T]],
         base_exception: Type[E] = Exception,

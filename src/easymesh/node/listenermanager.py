@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from asyncio import Queue, Task
 from typing import Awaitable, Callable, Optional
 
+from easymesh.asyncio import log_error
 from easymesh.types import Data, Message, Topic
 
 ListenerCallback = Callable[[Topic, Data], Awaitable[None]]
@@ -62,15 +63,18 @@ class SerialTopicsListenerManager(ListenerManager):
 
         if queue is None:
             queue = Queue(self._queue_maxsize)
+        else:
+            print(
+                f'ERROR: Queue processor for topic={topic} '
+                f'has stopped unexpectedly; restarting.'
+            )
 
-        assert queue_task is None or queue_task.done()
         queue_task = asyncio.create_task(
             self._process_queue(topic, queue),
             name=f'queue processor for topic={topic}',
         )
 
         self._topic_queues[topic] = (queue, queue_task)
-
         return queue
 
     async def _process_queue(self, topic: Topic, queue: Queue[Data]):
@@ -79,6 +83,6 @@ class SerialTopicsListenerManager(ListenerManager):
             try:
                 callback = self._listeners.get(topic, None)
                 if callback is not None:
-                    await callback(topic, data)
+                    await log_error(callback(topic, data))
             finally:
                 queue.task_done()
