@@ -38,7 +38,7 @@ async def main():
 **Terminal:**
 
 ```bash
-$ python -m easymesh.coordinator &
+$ python -m easymesh &
 $ python -m easymesh.demo.receiver &
 $ python -m easymesh.demo.sender
 receiver got: topic=some-topic; data={'hello': 'world!'}
@@ -75,7 +75,7 @@ There is optional authentication support to ensure all nodes on the mesh are all
 Simply provide the `--authkey=...` argument when starting the coordinator, and ensure the `authkey=b'...'` argument is provided to `build_mesh_node(...)`, e.g.
 
 ```bash
-$ python -m easymesh.coordinator --authkey my-secret-key
+$ python -m easymesh --authkey my-secret-key
 ```
 
 ```python

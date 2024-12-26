@@ -20,10 +20,10 @@ async def main() -> None:
     try:
         await server.start()
     except:
-        print(f'Failed to start coordinator on {args.host}:{args.port}')
+        print(f'Failed to start easymesh coordinator on {args.host}:{args.port}')
         raise
     else:
-        print(f'Started coordinator on {args.host}:{args.port}')
+        print(f'Started easymesh coordinator on {args.host}:{args.port}')
 
     await forever()
 
