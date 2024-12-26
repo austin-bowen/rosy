@@ -4,7 +4,7 @@ from asyncio import StreamReader
 from codecs import StreamWriter
 from typing import Optional
 
-from easymesh.asyncio import close_ignoring_errors
+from easymesh.asyncio import close_ignoring_errors, many
 from easymesh.authentication import AuthKey, Authenticator, optional_authkey_authenticator
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from easymesh.objectio import (
@@ -56,8 +56,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         except (ConnectionResetError, EOFError):
             print('Client disconnected')
         finally:
-            await self._remove_node(rpc)
-            await close_ignoring_errors(writer)
+            try:
+                await self._remove_node(rpc)
+            finally:
+                await close_ignoring_errors(writer)
 
     async def _handle_request(self, request, rpc: RPC):
         if request == b'ping':
@@ -79,8 +81,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         self._node_clients[rpc] = node_spec.id
         self._nodes[node_spec.id] = node_spec
 
-        # noinspection PyAsyncCall
-        asyncio.create_task(self._broadcast_topology())
+        await self._broadcast_topology()
 
         return RegisterNodeResponse()
 
@@ -88,8 +89,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         node_id = self._node_clients.pop(rpc)
         self._nodes.pop(node_id, None)
 
-        # noinspection PyAsyncCall
-        asyncio.create_task(self._broadcast_topology())
+        await self._broadcast_topology()
 
     async def _broadcast_topology(self) -> None:
         print(f'\nBroadcasting topology to {len(self._nodes)} nodes...')
@@ -102,10 +102,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         mesh_topology = MeshTopologySpec(nodes=nodes)
         message = MeshTopologyBroadcast(mesh_topology)
 
-        await asyncio.gather(*(
+        await many(
             node_client.send_message(message)
             for node_client in self._node_clients.keys()
-        ))
+        )
 
 
 def build_mesh_coordinator_server(
