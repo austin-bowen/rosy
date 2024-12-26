@@ -1,6 +1,5 @@
 import asyncio
 from argparse import Namespace
-from datetime import datetime
 
 from easymesh import build_mesh_node_from_args
 from easymesh.argparse import get_node_arg_parser
@@ -9,19 +8,15 @@ from easymesh.argparse import get_node_arg_parser
 async def main(args: Namespace):
     node = await build_mesh_node_from_args(args=args)
 
-    def log(msg_) -> None:
-        now = datetime.now()
-        print(f'[{now}] [{node.id.name}] {msg_}')
-
     topic_sender = node.get_topic_sender(args.topic)
 
     data = eval(args.data) if args.eval else args.data
 
     while True:
-        log(f'Sending topic={args.topic!r} data={args.data!r}')
+        node.log(f'Sending topic={args.topic!r} data={args.data!r}')
 
         if not await topic_sender.has_listeners():
-            log(f'WARNING: No listeners on topic {args.topic!r}.')
+            node.log(f'WARNING: No listeners on topic {args.topic!r}.')
 
         await topic_sender.send(data)
 

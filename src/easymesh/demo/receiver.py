@@ -1,6 +1,5 @@
 import asyncio
 from argparse import Namespace
-from datetime import datetime
 
 from easymesh import build_mesh_node_from_args
 from easymesh.argparse import get_node_arg_parser
@@ -10,17 +9,13 @@ from easymesh.asyncio import forever
 async def main(args: Namespace):
     node = await build_mesh_node_from_args(args=args)
 
-    def log(msg_) -> None:
-        now = datetime.now()
-        print(f'[{now}] [{node.id.name}] {msg_}')
-
     async def handle_message(topic, data):
-        log(f'Received topic={topic!r} data={data!r}')
+        node.log(f'Received topic={topic!r} data={data!r}')
 
     for topic in args.topics:
         await node.listen(topic, handle_message)
 
-    log(f'Listening to topics: {args.topics}')
+    node.log(f'Listening to topics: {args.topics}')
     await forever()
 
 

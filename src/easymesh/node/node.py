@@ -3,6 +3,7 @@ from argparse import Namespace
 from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from functools import wraps
 from inspect import isawaitable
 from typing import Literal, Optional, TypeVar, Union
@@ -75,6 +76,10 @@ class MeshNode:
 
     def __str__(self) -> str:
         return str(self.id)
+
+    def log(self, message: str, *args, **kwargs) -> None:
+        now = datetime.now()
+        print(f'[{now}] [{self}] {message}', *args, **kwargs)
 
     async def start(self) -> None:
         print('Starting node servers...')

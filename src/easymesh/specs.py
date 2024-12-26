@@ -32,8 +32,8 @@ class NodeId:
     uuid: NodeUUID = field(default_factory=uuid4)
 
     def __str__(self) -> str:
-        short_uuid = str(self.uuid)[:8]
-        return f'{self.name}@{self.hostname} (uuid={short_uuid}…)'
+        short_uuid = str(self.uuid)[:4]
+        return f'{self.name}@{self.hostname} ({short_uuid})'
 
 
 @dataclass
