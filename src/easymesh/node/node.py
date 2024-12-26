@@ -77,12 +77,12 @@ class MeshNode:
     def __str__(self) -> str:
         return str(self.id)
 
-    def log(self, message: str, *args, **kwargs) -> None:
+    def log(self, *values, **kwargs) -> None:
         now = datetime.now()
-        print(f'[{now}] [{self}] {message}', *args, **kwargs)
+        print(f'[{now}] [{self}]', *values, **kwargs)
 
     async def start(self) -> None:
-        print('Starting node servers...')
+        self.log('Starting node servers...')
         self._connection_specs = []
         for server_provider in self._server_providers:
             try:
@@ -90,9 +90,9 @@ class MeshNode:
                     self._handle_connection
                 )
             except UnsupportedProviderError as e:
-                print(e)
+                self.log(e)
             else:
-                print(f'Started node server with connection_spec={connection_spec}')
+                self.log(f'Started node server with connection_spec={connection_spec}')
                 self._connection_specs.append(connection_spec)
 
         if not self._connection_specs:
@@ -107,13 +107,13 @@ class MeshNode:
             listening_to_topics=self._listener_manager.get_topics(),
         )
 
-        print(f'node_spec={node_spec}')
-        print('Registering node with server...')
+        self.log(f'node_spec={node_spec}')
+        self.log('Registering node with server...')
         await self._mesh_coordinator_client.register_node(node_spec)
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
-        print(f'New connection from: {peer_name}')
+        self.log(f'New connection from: {peer_name}')
 
         await self._authenticator.authenticate(reader, writer)
 
@@ -126,12 +126,16 @@ class MeshNode:
             async for message in message_reader:
                 await self._listener_manager.handle_message(message)
         except EOFError:
-            print(f'Closed connection from: {peer_name}')
+            self.log(f'Closed connection from: {peer_name}')
         finally:
             await close_ignoring_errors(writer)
 
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
-        print('Received mesh topology broadcast')
+        self.log(
+            f'Received mesh topology broadcast with '
+            f'{len(broadcast.mesh_topology.nodes)} nodes.'
+        )
+
         topology = broadcast.mesh_topology
         await self._peer_manager.set_mesh_topology(topology)
 
@@ -177,7 +181,7 @@ class MeshNode:
                 try:
                     await writer.drain()
                 except Exception as e:
-                    print(
+                    self.log(
                         f'Error sending message with topic={message.topic} '
                         f'to node {peer.id}: {e!r}'
                     )
