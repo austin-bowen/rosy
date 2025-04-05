@@ -97,7 +97,6 @@ files = [
 
 [package.dependencies]
 pytest = ">=8.2,<9"
-typing-extensions = {version = ">=4.12", markers = "python_version < \"3.10\""}
 
 [package.extras]
 docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1)"]
@@ -144,18 +143,7 @@ files = [
     {file = "tomli-2.2.1.tar.gz", hash = "sha256:cd45e1dc79c835ce60f7404ec8119f2eb06d38b1deba146f07ced3bbc44505ff"},
 ]
 
-[[package]]
-name = "typing-extensions"
-version = "4.13.1"
-description = "Backported and Experimental Type Hints for Python 3.8+"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "typing_extensions-4.13.1-py3-none-any.whl", hash = "sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69"},
-    {file = "typing_extensions-4.13.1.tar.gz", hash = "sha256:98795af00fb9640edec5b8e31fc647597b4691f099ad75f469a2616be1a76dff"},
-]
-
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.9"
-content-hash = "4c4a42e26b9eb4237e35acc4df4bdef3d08a24a262df973cfa07b36463125a24"
+python-versions = "^3.10"
+content-hash = "a27f4edf338674d4c05449908bdb61412d5997afdc60650d2d5d1675afe9881d"
