@@ -340,6 +340,7 @@ async def build_mesh_node(
         name: str,
         coordinator_host: Host = 'localhost',
         coordinator_port: Port = DEFAULT_COORDINATOR_PORT,
+        coordinator_reconnect_timeout: Optional[float] = 5.0,
         allow_unix_connections: bool = True,
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
@@ -358,6 +359,7 @@ async def build_mesh_node(
         coordinator_host,
         coordinator_port,
         authenticator,
+        reconnect_timeout=coordinator_reconnect_timeout,
     )
 
     server_providers = []
