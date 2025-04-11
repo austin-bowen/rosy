@@ -4,13 +4,18 @@ Simple, fast inter-process message passing for distributed Python processes.
 
 `easymesh` is inspired by [ROS (Robot Operating System)](https://www.ros.org/); it allows nodes to send messages on a "topic" to any other nodes listening to that topic. Messages can contain any Python data that is serializable by `pickle`, or whatever serde implementation you choose.
 
-Nodes can run on a single machine, or be distributed across multiple machines on a network. As long as they can talk to the coordinator node, they can figure out how to talk to each other.
+Nodes can run on a single machine, or be distributed across multiple machines on a network. As long as they can talk to the coordinator node, they can figure out how to talk to each other. Nodes will automatically reconnect to the coordinator and other nodes if they lose connection.
 
 `easymesh` also has simple load balancing: if multiple nodes of the same name are listening to a topic, then messages will be sent to them in a round-robin fashion. (The load balancing strategy can be changed or disabled if desired.)
 
 ## Show me the code!
 
 Here are some simplified examples. See the linked files for the full code.
+
+Start the coordinator:
+```bash
+$ python -m easymesh
+```
 
 [easymesh/demo/**sender.py**](src/easymesh/demo/sender.py):
 ```python
@@ -85,8 +90,6 @@ node = await easymesh.build_mesh_node(name='my-node', authkey=b'my-secret-key')
 
 ## Roadmap
 
-- Robustness to failure
-  - Nodes should automatically reconnect to coordinator if they lose connection
 - Logging
 - Coordinator commands
   - Kill one or all nodes
