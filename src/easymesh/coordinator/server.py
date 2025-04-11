@@ -30,10 +30,12 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             start_stream_server,
             build_rpc,
             authenticator: Authenticator,
+            log_heartbeats: bool,
     ):
         self.start_stream_server = start_stream_server
         self.build_rpc = build_rpc
         self.authenticator = authenticator
+        self.log_heartbeats = log_heartbeats
 
         self._node_clients: dict[RPC, Optional[NodeId]] = {}
         self._nodes: dict[NodeId, MeshNodeSpec] = {}
@@ -48,7 +50,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         await self.authenticator.authenticate(reader, writer)
 
         rpc = self.build_rpc(reader, writer)
-        rpc.request_handler = lambda r: self._handle_request(r, rpc)
+        rpc.request_handler = lambda r: self._handle_request(r, rpc, peer_name)
         self._node_clients[rpc] = None
 
         try:
@@ -61,9 +63,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             finally:
                 await close_ignoring_errors(writer)
 
-    async def _handle_request(self, request, rpc: RPC):
+    async def _handle_request(self, request, rpc: RPC, peer_name: str):
         if request == b'ping':
-            print('Received heartbeat')
+            if self.log_heartbeats:
+                print(f'Received heartbeat from {peer_name}')
             return b'pong'
         elif isinstance(request, RegisterNodeRequest):
             return await self._handle_register_node(request, rpc)
@@ -113,6 +116,7 @@ def build_mesh_coordinator_server(
         port: Port = DEFAULT_COORDINATOR_PORT,
         authkey: AuthKey = None,
         authenticator: Authenticator = None,
+        log_heartbeats: bool = False,
 ) -> MeshCoordinatorServer:
     async def start_stream_server(cb):
         return await asyncio.start_server(cb, host=host, port=port)
@@ -125,4 +129,9 @@ def build_mesh_coordinator_server(
 
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
-    return RPCMeshCoordinatorServer(start_stream_server, build_rpc, authenticator)
+    return RPCMeshCoordinatorServer(
+        start_stream_server,
+        build_rpc,
+        authenticator,
+        log_heartbeats,
+    )

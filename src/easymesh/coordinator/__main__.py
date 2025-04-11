@@ -15,6 +15,7 @@ async def main() -> None:
         host=args.host,
         port=args.port,
         authkey=args.authkey,
+        log_heartbeats=args.log_heartbeats,
     )
 
     try:
@@ -50,6 +51,11 @@ def _parse_args() -> Namespace:
     )
 
     add_authkey_arg(parser)
+
+    parser.add_argument(
+        '--log-heartbeats', action='store_true',
+        help='Log heartbeats from nodes.',
+    )
 
     return parser.parse_args()
 
