@@ -1,15 +1,14 @@
 import asyncio
 from argparse import Namespace
 from datetime import datetime
-from pathlib import Path
 
-from easymesh.bag.file import get_bag_file_messages
+from easymesh.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 from easymesh.node.node import MeshNode
 from easymesh.utils import require
 
 
 async def play(node: MeshNode, args: Namespace) -> None:
-    bag_file_path = args.input or get_bag_file_path()
+    bag_file_path = args.input or get_most_recent_bag_file_path()
 
     print(f'Playing back messages from "{bag_file_path}":')
 
@@ -53,20 +52,6 @@ def add_play_args(subparsers) -> None:
         action='store_true',
         help='Send messages immediately without waiting for the next send time.',
     )
-
-
-def get_bag_file_path() -> Path:
-    matching_files = Path('.').glob(
-        'record_????-??-??-??-??-??.bag'
-    )
-
-    try:
-        return max(matching_files)
-    except ValueError:
-        raise FileNotFoundError(
-            'No bag files found in the current directory. '
-            'Use --input to specify a file.'
-        )
 
 
 async def _wait_for_next_send(
