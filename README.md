@@ -12,11 +12,6 @@ Nodes can run on a single machine, or be distributed across multiple machines on
 
 Here are some simplified examples. See the linked files for the full code.
 
-Start the coordinator:
-```bash
-$ python -m easymesh
-```
-
 [easymesh/demo/**sender.py**](src/easymesh/demo/sender.py):
 ```python
 import easymesh
@@ -43,7 +38,7 @@ async def main():
 **Terminal:**
 
 ```bash
-$ python -m easymesh &
+$ easymesh &  # Start the coordinator node
 $ python -m easymesh.demo.receiver &
 $ python -m easymesh.demo.sender
 receiver got: topic=some-topic; data={'hello': 'world!'}
@@ -57,17 +52,17 @@ pip install git+https://github.com/austin-bowen/easymesh.git
 
 ## Commands
 
-### `python -m easymesh`
+### `$ easymesh`
 
 Start the coordinator node. By default, it will listen on port `6374` on all interfaces. Use the `--help` arg to see all options.
 
-### `python -m easymesh.demo.{sender,receiver}`
+### `$ python -m easymesh.demo.{sender,receiver}`
 
-Example sender and receiver nodes. These are also useful for sanity checking and testing.
+Example sender and receiver nodes. These are also useful for sanity checking and testing your own nodes.
 
-### `python -m easymesh.bag {record,play,info}`
+### `$ meshbag {record,play,info}`
 
-Tool for recording and playing back messages, modeled after the [`rosbag` ROS command line tool](https://wiki.ros.org/rosbag). The options are:
+Tool for recording and playing back messages. Based on the [`rosbag` ROS command line tool](https://wiki.ros.org/rosbag). The options are:
 
 - `record <topics>`: Record messages on the given topic(s) to a file. By default, a file named `record_<datetime>.bag` will be created in the current directory.
 - `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
@@ -100,7 +95,7 @@ There is optional authentication support to ensure all nodes on the mesh are all
 Simply provide the `--authkey=...` argument when starting the coordinator, and ensure the `authkey=b'...'` argument is provided to `build_mesh_node(...)`, e.g.
 
 ```bash
-$ python -m easymesh --authkey my-secret-key
+$ easymesh --authkey my-secret-key
 ```
 
 ```python
