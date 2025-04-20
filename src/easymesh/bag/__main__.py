@@ -8,7 +8,14 @@ from easymesh.bag.play import add_play_args, play
 from easymesh.bag.record import add_record_args, record
 
 
-async def main(args: Namespace):
+def main() -> None:
+    try:
+        asyncio.run(_main(parse_args()))
+    except KeyboardInterrupt:
+        pass
+
+
+async def _main(args: Namespace):
     if args.command == 'record':
         node = await build_mesh_node_from_args(args=args)
         await record(node, args)
@@ -24,8 +31,8 @@ async def main(args: Namespace):
 def parse_args() -> Namespace:
     parser = get_node_arg_parser(
         default_node_name='easymesh.bag',
-        description='Tool for recording and playing back messages, '
-                    'modeled after the `rosbag` ROS command line tool.'
+        description='Tool for recording and playing back messages. '
+                    'Based on the `rosbag` ROS command line tool.'
     )
 
     subparsers = parser.add_subparsers(dest='command', required=True)
@@ -38,7 +45,4 @@ def parse_args() -> Namespace:
 
 
 if __name__ == '__main__':
-    try:
-        asyncio.run(main(parse_args()))
-    except KeyboardInterrupt:
-        pass
+    main()

@@ -17,6 +17,7 @@ pytest-asyncio = "*"
 
 [project.scripts]
 easymesh = "easymesh.__main__:main"
+meshbag = "easymesh.bag.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0"]
