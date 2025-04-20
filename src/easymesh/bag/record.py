@@ -1,12 +1,46 @@
+import asyncio
+import pickle
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
+from easymesh.asyncio import forever
 from easymesh.node.node import MeshNode
 
 
 async def record(node: MeshNode, args: Namespace) -> None:
-    ...
+    bag_file_path = args.output or get_bag_file_path()
+
+    with open(bag_file_path, 'wb') as bag_file:
+        message_counter = 0
+
+        async def callback(topic, data) -> None:
+            nonlocal message_counter
+
+            now = datetime.now()
+            pickle.dump((now, topic, data), bag_file)
+
+            message_counter += 1
+            if not args.no_dots:
+                print('.', end='', flush=True)
+
+        for topic in args.topics:
+            await node.listen(topic, callback)
+
+        print(f'Recording topics to "{bag_file_path}":')
+        for topic in args.topics:
+            print(f'- {topic}')
+
+        try:
+            await forever()
+        except asyncio.CancelledError:
+            print('\nRecording stopped.')
+
+    if message_counter == 0:
+        print('No messages recorded.')
+        bag_file_path.unlink()
+    else:
+        print(f'Recorded {message_counter} messages to "{bag_file_path}".')
 
 
 def add_record_args(subparsers) -> None:
@@ -14,7 +48,14 @@ def add_record_args(subparsers) -> None:
 
     parser.add_argument(
         '--output', '-o',
-        help='Output file path. Default: record_<date>_<time>.bag',
+        type=Path,
+        help='Output file path. Default: record_<YYYY-MM-DD>-<HH-MM-SS>.bag',
+    )
+
+    parser.add_argument(
+        '--no-dots',
+        action='store_true',
+        help='Disable logging of "." when a new message is received.'
     )
 
     parser.add_argument(

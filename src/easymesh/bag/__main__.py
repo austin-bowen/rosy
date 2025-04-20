@@ -30,4 +30,7 @@ def parse_args() -> Namespace:
 
 
 if __name__ == '__main__':
-    asyncio.run(main(parse_args()))
+    try:
+        asyncio.run(main(parse_args()))
+    except KeyboardInterrupt:
+        pass
