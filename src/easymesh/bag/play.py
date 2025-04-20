@@ -1,10 +1,34 @@
+import asyncio
 from argparse import Namespace
+from datetime import datetime
+from pathlib import Path
 
+from easymesh.bag.file import get_bag_file_messages
 from easymesh.node.node import MeshNode
+from easymesh.utils import require
 
 
 async def play(node: MeshNode, args: Namespace) -> None:
-    ...
+    bag_file_path = args.input or get_bag_file_path()
+
+    print(f'Playing back messages from "{bag_file_path}":')
+
+    first_instant = None
+    first_sent_instant = datetime.now()
+
+    for instant, topic, data in get_bag_file_messages(bag_file_path):
+        if not first_instant:
+            first_instant = instant
+        elif not args.immediate:
+            await _wait_for_next_send(
+                first_instant,
+                first_sent_instant,
+                instant,
+                args.rate,
+            )
+
+        print(f'[{instant}] {topic}: {data}')
+        await node.send(topic, data)
 
 
 def add_play_args(subparsers) -> None:
@@ -18,8 +42,44 @@ def add_play_args(subparsers) -> None:
     )
 
     parser.add_argument(
-        '--speed',
+        '--rate', '-r',
         type=float,
         default=1.0,
-        help='Playback speed. Default: %(default)s',
+        help='Playback rate. Default: %(default)s',
     )
+
+    parser.add_argument(
+        '--immediate',
+        action='store_true',
+        help='Send messages immediately without waiting for the next send time.',
+    )
+
+
+def get_bag_file_path() -> Path:
+    matching_files = Path('.').glob(
+        'record_????-??-??-??-??-??.bag'
+    )
+
+    try:
+        return max(matching_files)
+    except ValueError:
+        raise FileNotFoundError(
+            'No bag files found in the current directory. '
+            'Use --input to specify a file.'
+        )
+
+
+async def _wait_for_next_send(
+        first_instant: datetime,
+        first_sent_instant: datetime,
+        instant: datetime,
+        rate: float,
+) -> None:
+    require(rate > 0, f'Rate must be greater than 0; got {rate}')
+
+    dt = (instant - first_instant) / rate
+    send_instant = first_sent_instant + dt
+    now = datetime.now()
+    wait_time = (send_instant - now).total_seconds()
+
+    await asyncio.sleep(wait_time)
