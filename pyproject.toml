@@ -7,7 +7,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-aiofiles = "^24"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
