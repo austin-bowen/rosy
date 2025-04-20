@@ -1,17 +1,26 @@
-import argparse
 import asyncio
 from argparse import Namespace
 
-from easymesh.bag.play import add_play_args
-from easymesh.bag.record import add_record_args
+from easymesh import build_mesh_node_from_args
+from easymesh.argparse import get_node_arg_parser
+from easymesh.bag.play import add_play_args, play
+from easymesh.bag.record import add_record_args, record
 
 
 async def main(args: Namespace):
-    print(args)
+    node = await build_mesh_node_from_args(args=args)
+
+    if args.command == 'record':
+        await record(node, args)
+    elif args.command == 'play':
+        await play(node, args)
+    else:
+        raise ValueError(f'Unknown command: {args.command}')
 
 
 def parse_args() -> Namespace:
-    parser = argparse.ArgumentParser()
+    parser = get_node_arg_parser(default_node_name='bag')
+
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     add_record_args(subparsers)
