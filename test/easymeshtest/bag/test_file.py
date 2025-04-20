@@ -33,25 +33,30 @@ def test_get_bag_file_messages(open_mock, pickle_mock):
 
 
 class TestGetMostRecentBagFilePath:
-    @patch('easymesh.bag.file.Path.glob')
-    def test_returns_most_recent_bag_file_path(self, glob_mock):
-        glob_mock.return_value = [
+    @patch('easymesh.bag.file.Path')
+    def test_returns_most_recent_bag_file_path(self, Path_mock):
+        Path_mock.return_value.glob.return_value = [
             Path('record_2025-01-02-12-34-00.bag'),
             Path('record_2025-01-02-12-34-01.bag'),
-            Path('not_a_record_2025-01-02-12-34-02.bag'),
         ]
 
         result = get_most_recent_bag_file_path()
 
         assert result == Path('record_2025-01-02-12-34-01.bag')
 
-        glob_mock.assert_called_once_with('record_????-??-??-??-??-??.bag')
+        Path_mock.assert_called_once_with('.')
+        Path_mock.return_value.glob.assert_called_once_with(
+            'record_????-??-??-??-??-??.bag'
+        )
 
-    @patch('easymesh.bag.file.Path.glob')
-    def test_raises_FileNotFoundError_if_no_bag_file_found(self, glob_mock):
-        glob_mock.return_value = []
+    @patch('easymesh.bag.file.Path')
+    def test_raises_FileNotFoundError_if_no_bag_file_found(self, Path_mock):
+        Path_mock.return_value.glob.return_value = []
 
         with pytest.raises(FileNotFoundError):
             get_most_recent_bag_file_path()
 
-        glob_mock.assert_called_once_with('record_????-??-??-??-??-??.bag')
+        Path_mock.assert_called_once_with('.')
+        Path_mock.return_value.glob.assert_called_once_with(
+            'record_????-??-??-??-??-??.bag'
+        )

@@ -1,6 +1,7 @@
 import asyncio
 from argparse import Namespace
 from datetime import datetime
+from pathlib import Path
 
 from easymesh.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 from easymesh.node.node import MeshNode
@@ -34,8 +35,8 @@ def add_play_args(subparsers) -> None:
     parser = subparsers.add_parser('play', help='Playback recorded messages from file')
 
     parser.add_argument(
-        '--input',
-        type=str,
+        '--input', '-i',
+        type=Path,
         help='Input file path. Default: The most recent '
              'record_*.bag file in the current directory.',
     )
