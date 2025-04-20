@@ -30,7 +30,7 @@ async def _main(args: Namespace):
 
 def parse_args() -> Namespace:
     parser = get_node_arg_parser(
-        default_node_name='easymesh.bag',
+        default_node_name='meshbag',
         description='Tool for recording and playing back messages. '
                     'Based on the `rosbag` ROS command line tool.'
     )
