@@ -11,7 +11,7 @@ from easymesh.utils import require
 async def play(node: MeshNode, args: Namespace) -> None:
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
-    print(f'Playing back messages from "{bag_file_path}":')
+    print(f'Playing back messages from "{bag_file_path}"...')
 
     first_instant = None
     first_sent_instant = datetime.now()
@@ -27,8 +27,13 @@ async def play(node: MeshNode, args: Namespace) -> None:
                 args.rate,
             )
 
-        print(f'[{instant}] {topic}: {data}')
         await node.send(topic, data)
+
+        if not args.no_log:
+            if args.no_log_data:
+                print(f'[{instant}] {topic}')
+            else:
+                print(f'[{instant}] {topic}: {data}')
 
 
 def add_play_args(subparsers) -> None:
@@ -52,6 +57,18 @@ def add_play_args(subparsers) -> None:
         '--immediate',
         action='store_true',
         help='Send messages immediately without waiting for the next send time.',
+    )
+
+    parser.add_argument(
+        '--no-log',
+        action='store_true',
+        help='Do not log sent messages to the console.',
+    )
+
+    parser.add_argument(
+        '--no-log-data',
+        action='store_true',
+        help='Do not log data from sent messages to the console.',
     )
 
 
