@@ -1,17 +1,23 @@
-[tool.poetry]
+[project]
 name = "easymesh"
 version = "0.1.9"
 description = "Simple, fast inter-process message passing for distributed Python processes"
-authors = ["Austin Bowen <austin.bowen.314@gmail.com>"]
+authors = [
+    {name = "Austin Bowen", email = "austin.bowen.314@gmail.com"}
+]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 pytest-asyncio = "*"
 
+[project.scripts]
+easymesh = "easymesh.__main__:main"
+
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"

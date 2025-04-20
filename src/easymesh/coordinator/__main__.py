@@ -30,14 +30,16 @@ async def main() -> None:
 
 
 def _parse_args() -> Namespace:
+    parser = ArgumentParser(
+        description='Start the easymesh coordinator.',
+    )
+
     def server_host_arg(arg: str) -> ServerHost:
         if arg == 'None':
             return None
 
         hosts = arg.split(',')
         return hosts if len(hosts) > 1 else hosts[0]
-
-    parser = ArgumentParser()
 
     parser.add_argument(
         '--host', default=DEFAULT_COORDINATOR_HOST, type=server_host_arg,
