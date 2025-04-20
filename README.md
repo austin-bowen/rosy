@@ -55,6 +55,26 @@ receiver got: topic=some-topic; data={'hello': 'world!'}
 pip install git+https://github.com/austin-bowen/easymesh.git
 ```
 
+## Commands
+
+### `python -m easymesh`
+
+Start the coordinator node. By default, it will listen on port `6374` on all interfaces. Use the `--help` arg to see all options.
+
+### `python -m easymesh.demo.{sender,receiver}`
+
+Example sender and receiver nodes. These are also useful for sanity checking and testing.
+
+### `python -m easymesh.bag {record,play,info}`
+
+Tool for recording and playing back messages, modeled after the [`rosbag` ROS command line tool](https://wiki.ros.org/rosbag). The options are:
+
+- `record <topics>`: Record messages on the given topic(s) to a file. By default, a file named `record_<datetime>.bag` will be created in the current directory.
+- `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
+- `info`: Print information about a bag file. By default, the most recent bag file in the current directory will be used.
+
+Give the `--help` arg to any command to see all options.
+
 ## What is a mesh?
 
 A mesh is a collection of "nodes" that can send messages to each other. A message can be any Python object. There is one node per Python process, with nodes potentially distributed across multiple machines. Each node listens to specific message "topics", and calls listener callbacks when messages are received on those topics. Each node can send messages to any topic, and the message will be sent to all listening nodes.
