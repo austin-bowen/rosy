@@ -6,7 +6,7 @@ from easymesh.node.node import MeshNode
 async def play(node: MeshNode, args: Namespace) -> None:
     ...
 
-Build
+
 def add_play_args(subparsers) -> None:
     parser = subparsers.add_parser('play', help='Playback recorded messages from file')
 
