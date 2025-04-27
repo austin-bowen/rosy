@@ -66,10 +66,6 @@ def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
 
     config = config.get('coordinator', {})
 
-    if not is_enabled(config):
-        _print('Not starting coordinator.')
-        return []
-
     args = ['easymesh']
 
     host = config.get('host')
@@ -98,11 +94,14 @@ def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
     if log_heartbeats:
         args.append('--log-heartbeats')
 
-    _print(f"Starting coordinator: {args}")
-    pm.popen(args)
+    if is_enabled(config):
+        _print(f"Starting coordinator: {args}")
+        pm.popen(args)
 
-    delay = config.get('post_delay', 1)
-    sleep(delay)
+        delay = config.get('post_delay', 1)
+        sleep(delay)
+    else:
+        _print('Not starting coordinator.')
 
     return node_args
 
