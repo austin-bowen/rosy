@@ -1,0 +1,51 @@
+# This is an example launch file with all options shown
+
+# The coordinator section is completely optional.
+# It will be started with default settings before nodes are started.
+coordinator:
+  # Host for server to bind to. Default: "" (listen on all interfaces)
+  host: ""
+  # Port for server to bind to. Default: 6374
+  port: 6374
+  # Authentication key. Default: None
+  authkey: "authkey"
+  # Log heartbeats from clients. Default: False
+  log_heartbeats: false
+
+  # Do not start the coordinator. Default: false
+  disabled: false
+  # Only start the coordinator on this host. Default: Machine's hostname
+  on_host: "hostname"
+  # Seconds to wait after starting the coordinator. Default: 1.0
+  post_delay: 1.0
+# Nodes to start
+nodes:
+  name1:
+    # Command to run to start the node.
+    command:
+      - "python"
+      - "-m"
+      - "name1_node"
+      - "--arg"
+      - "value"
+
+    # Run command in a shell.
+    # Default:
+    # - False if command is a list.
+    # - True if command is a string.
+    shell: false
+
+    # Do not start this node. Default: false
+    disabled: false
+    # Only start the node on this host. Default: Machine's hostname
+    on_host: "hostname"
+    # Number of this node to start. Default: 1
+    number: 1
+    # Seconds to wait before starting the node. Default: 0.0
+    pre_delay: 0.0
+    # Seconds to wait after starting the node. Default: 0.0
+    post_delay: 0.0
+
+  name2:
+    # Command can also just be a string.
+    command: "python name2_node.py"

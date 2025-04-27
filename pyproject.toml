@@ -9,7 +9,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = [
+    "PyYAML",
+]
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"

@@ -146,7 +146,7 @@ class ProcessManager:
         if timeout is None:
             timeout = self.timeout
 
-        print(f'Stopping {len(self.processes)} processes...')
+        print(f'Stopping {len(processes)} processes...')
         for process in processes:
             process.send_signal(signal.SIGTERM)
 
@@ -173,12 +173,8 @@ class ProcessManager:
         Wait for all processes to finish.
 
         Args:
-            timeout:
-                Optional timeout override. Defaults to `self.timeout`.
+            timeout: Optional wait timeout.
         """
-
-        if timeout is None:
-            timeout = self.timeout
 
         for process in list(self.processes):
             process.wait(timeout)
