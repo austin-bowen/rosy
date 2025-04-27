@@ -1,18 +1,16 @@
 import argparse
-from dataclasses import dataclass
 from pathlib import Path
 from time import sleep
-from typing import Union
 
-import yaml
-
-from easymesh.network import get_hostname
+from easymesh.launch.args import ProcessArgs
+from easymesh.launch.config import is_enabled, load_config
 from easymesh.procman import ProcessManager
 
 
 def main() -> None:
     args = parse_args()
 
+    _print(f"Using config: {args.config}")
     config = load_config(args.config)
     _print('Press Ctrl+C to stop all nodes.')
 
@@ -42,12 +40,6 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
-
-
-def load_config(path: Path) -> dict:
-    _print(f"Using config: {path}")
-    with path.open('r') as file:
-        return yaml.safe_load(file)
 
 
 def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
@@ -131,39 +123,8 @@ def start_node(
     sleep(delay)
 
 
-def is_enabled(config: dict) -> bool:
-    disabled = config.get('disabled', False)
-    return not disabled and is_enabled_on_host(config)
-
-
-def is_enabled_on_host(config: dict) -> bool:
-    hostname = get_hostname()
-    on_host = config.get('on_host', hostname)
-    return on_host == hostname
-
-
 def _print(*args, **kwargs) -> None:
     print('[meshlaunch]', *args, **kwargs)
-
-
-@dataclass
-class ProcessArgs:
-    args: Union[str, list[str]]
-
-    def append(self, arg: str) -> None:
-        if isinstance(self.args, str):
-            if not arg:
-                arg = '""'
-            elif ' ' in arg and not (arg[0] == arg[-1] == '"'):
-                arg = f'"{arg}"'
-
-            self.args = f'{self.args} {arg}'
-        else:
-            self.args.append(arg)
-
-    def extend(self, args: list[str]) -> None:
-        for arg in args:
-            self.append(arg)
 
 
 if __name__ == '__main__':
