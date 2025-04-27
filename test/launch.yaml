@@ -1,33 +1,46 @@
-# This is an example launch file with all options shown
+# This is an example launch file with all options shown.
+# Almost everything is optional! Minimal example:
+# nodes:
+#   my_node:
+#     command: "python my_node.py"
 
 # The coordinator section is completely optional.
 # It will be started with default settings before nodes are started.
 coordinator:
   # Host for server to bind to. Default: "" (listen on all interfaces)
   host: ""
+  # Hostname that clients (i.e. nodes) use to find the coordinator.
+  # Change this to the hostname of the machine running the coordinator
+  # if you will have nodes running on different machines.
+  # Default: localhost
+  client_host: localhost
   # Port for server to bind to. Default: 6374
   port: 6374
   # Authentication key. Default: None
-  authkey: "authkey"
+  authkey: authkey
   # Log heartbeats from clients. Default: False
   log_heartbeats: false
 
   # Do not start the coordinator. Default: false
   disabled: false
   # Only start the coordinator on this host. Default: Machine's hostname
-  on_host: "hostname"
+  on_host: hostname
   # Seconds to wait after starting the coordinator. Default: 1.0
   post_delay: 1.0
-# Nodes to start
+# [REQUIRED] Nodes to start
 nodes:
   name1:
-    # Command to run to start the node.
+    # [REQUIRED] Command to run to start the node.
+    # Some arguments will be automatically appended to this command:
+    # - `--name <name>`
+    # - `--coordinator <client_host>:<port>`, if set in the "coordinator" section.
+    # - `--authkey <authkey>`, if set in the "coordinator" section.
     command:
-      - "python"
-      - "-m"
-      - "name1_node"
-      - "--arg"
-      - "value"
+      - python
+      - -m
+      - name1_node
+      - --arg
+      - value
 
     # Run command in a shell.
     # Default:
@@ -38,7 +51,7 @@ nodes:
     # Do not start this node. Default: false
     disabled: false
     # Only start the node on this host. Default: Machine's hostname
-    on_host: "hostname"
+    on_host: hostname
     # Number of this node to start. Default: 1
     number: 1
     # Seconds to wait before starting the node. Default: 0.0
@@ -48,4 +61,4 @@ nodes:
 
   name2:
     # Command can also just be a string.
-    command: "python name2_node.py"
+    command: python name2_node.py

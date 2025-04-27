@@ -14,13 +14,14 @@ def main() -> None:
     args = parse_args()
 
     config = load_config(args.config)
+    _print('Press Ctrl+C to stop all nodes.')
 
     with ProcessManager() as pm:
-        start_coordinator(config, pm)
+        node_args = start_coordinator(config, pm)
 
         nodes = config['nodes']
         for node_name, node_config in nodes.items():
-            start_node(node_name, node_config, pm)
+            start_node(node_name, node_config, node_args, pm)
 
         try:
             pm.wait()
@@ -44,17 +45,24 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_config(path: Path) -> dict:
-    print(f"Using config: {path}")
+    _print(f"Using config: {path}")
     with path.open('r') as file:
         return yaml.safe_load(file)
 
 
-def start_coordinator(config: dict, pm: ProcessManager) -> None:
+def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
+    """
+    Start the coordinator (if not disabled), and return a list of coordinator
+    arguments to pass to nodes.
+    """
+
+    node_args = []
+
     config = config.get('coordinator', {})
 
     if not is_enabled(config):
-        print('Not starting coordinator.')
-        return
+        _print('Not starting coordinator.')
+        return []
 
     args = ['easymesh']
 
@@ -66,22 +74,39 @@ def start_coordinator(config: dict, pm: ProcessManager) -> None:
     if port is not None:
         args.extend(['--port', str(port)])
 
+    client_host = config.get('client_host')
+    if client_host or port:
+        coordinator_arg = (client_host or '')
+        if port:
+            coordinator_arg += f':{port}'
+
+        node_args.extend(['--coordinator', coordinator_arg])
+
     authkey = config.get('authkey')
     if authkey is not None:
-        args.extend(['--authkey', authkey])
+        authkey_arg = ['--authkey', authkey]
+        args.extend(authkey_arg)
+        node_args.extend(authkey_arg)
 
     log_heartbeats = config.get('log_heartbeats', False)
     if log_heartbeats:
         args.append('--log-heartbeats')
 
-    print(f"Starting coordinator: {args}")
+    _print(f"Starting coordinator: {args}")
     pm.popen(args)
 
     delay = config.get('post_delay', 1)
     sleep(delay)
 
+    return node_args
 
-def start_node(name: str, config: dict, pm: ProcessManager) -> None:
+
+def start_node(
+        name: str,
+        config: dict,
+        coordinator_args: list[str],
+        pm: ProcessManager,
+) -> None:
     if not is_enabled(config):
         return
 
@@ -91,6 +116,7 @@ def start_node(name: str, config: dict, pm: ProcessManager) -> None:
     command = config['command']
     command = ProcessArgs(command)
     command.extend(['--name', name])
+    command.extend(coordinator_args)
     command = command.args
 
     default_shell = isinstance(command, str)
@@ -98,7 +124,7 @@ def start_node(name: str, config: dict, pm: ProcessManager) -> None:
 
     number = config.get('number', 1)
     for i in range(number):
-        print(f'Starting node {name!r} ({i + 1}/{number}): {command}')
+        _print(f'Starting node {name!r} ({i + 1}/{number}): {command}')
         pm.popen(command, shell=shell)
 
     delay = config.get('post_delay', 0)
@@ -114,6 +140,10 @@ def is_enabled_on_host(config: dict) -> bool:
     hostname = get_hostname()
     on_host = config.get('on_host', hostname)
     return on_host == hostname
+
+
+def _print(*args, **kwargs) -> None:
+    print('[meshlaunch]', *args, **kwargs)
 
 
 @dataclass
