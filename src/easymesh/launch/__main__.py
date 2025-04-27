@@ -19,7 +19,7 @@ def main() -> None:
     _print('Press Ctrl+C to stop all nodes.')
 
     with ProcessManager() as pm:
-        node_args = start_coordinator(config, pm)
+        node_args = start_coordinator(config, args.no_coordinator, pm)
 
         nodes = config['nodes']
         for node_name, node_config in nodes.items():
@@ -40,10 +40,17 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        '-c', '--config',
+        'config',
+        nargs='?',
         default=Path('launch.yaml'),
         type=Path,
         help="Path to the configuration file. Default: %(default)s",
+    )
+
+    parser.add_argument(
+        '--no-coordinator',
+        action='store_true',
+        help="Don't start the coordinator",
     )
 
     parser.add_argument(
@@ -56,7 +63,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
+def start_coordinator(
+        config: dict,
+        disabled: bool,
+        pm: ProcessManager,
+) -> list[str]:
     """
     Start the coordinator (if not disabled), and return a list of coordinator
     arguments to pass to nodes.
@@ -94,7 +105,7 @@ def start_coordinator(config: dict, pm: ProcessManager) -> list[str]:
     if log_heartbeats:
         args.append('--log-heartbeats')
 
-    if is_enabled(config):
+    if not disabled and is_enabled(config):
         _print(f"Starting coordinator: {args}")
         pm.popen(args)
 

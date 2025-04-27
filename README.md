@@ -58,7 +58,7 @@ Use the `--help` arg on any command to see all options.
 
 Start the coordinator node. By default, it will listen on port `6374` on all interfaces.
 
-### `$ meshlaunch [--config CONFIG]`
+### `$ meshlaunch [config]`
 
 Launch a coordinator and several nodes all at once. Based on the [`roslaunch` ROS command line tool](https://wiki.ros.org/roslaunch). `--config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/easymesh/demo/launch.yaml) for a runnable example.
 
