@@ -12,6 +12,10 @@ def main() -> None:
 
     _print(f"Using config: {args.config}")
     config = load_config(args.config)
+
+    if args.exclude:
+        _print(f"Excluding nodes: {args.exclude}")
+
     _print('Press Ctrl+C to stop all nodes.')
 
     with ProcessManager() as pm:
@@ -19,6 +23,9 @@ def main() -> None:
 
         nodes = config['nodes']
         for node_name, node_config in nodes.items():
+            if node_name in args.exclude:
+                continue
+
             start_node(node_name, node_config, node_args, pm)
 
         try:
@@ -37,6 +44,13 @@ def parse_args() -> argparse.Namespace:
         default=Path('launch.yaml'),
         type=Path,
         help="Path to the configuration file. Default: %(default)s",
+    )
+
+    parser.add_argument(
+        '-e', '--exclude',
+        nargs='+',
+        default=[],
+        help='Nodes to exclude from starting',
     )
 
     return parser.parse_args()
