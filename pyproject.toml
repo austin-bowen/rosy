@@ -9,7 +9,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = [
+    "PyYAML",
+]
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
@@ -18,6 +20,7 @@ pytest-asyncio = "*"
 [project.scripts]
 easymesh = "easymesh.__main__:main"
 meshbag = "easymesh.bag.__main__:main"
+meshlaunch = "easymesh.launch.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0"]
