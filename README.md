@@ -52,13 +52,15 @@ pip install git+https://github.com/austin-bowen/easymesh.git
 
 ## Commands
 
+Use the `--help` arg on any command to see all options.
+
 ### `$ easymesh`
 
-Start the coordinator node. By default, it will listen on port `6374` on all interfaces. Use the `--help` arg to see all options.
+Start the coordinator node. By default, it will listen on port `6374` on all interfaces.
 
-### `$ python -m easymesh.demo.{sender,receiver}`
+### `$ meshlaunch [--config CONFIG]`
 
-Example sender and receiver nodes. These are also useful for sanity checking and testing your own nodes.
+Launch a coordinator and several nodes all at once. Based on the [`roslaunch` ROS command line tool](https://wiki.ros.org/roslaunch). `--config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/easymesh/demo/launch.yaml) for a runnable example.
 
 ### `$ meshbag {record,play,info}`
 
@@ -68,7 +70,11 @@ Tool for recording and playing back messages. Based on the [`rosbag` ROS command
 - `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
 - `info`: Print information about a bag file. By default, the most recent bag file in the current directory will be used.
 
-Give the `--help` arg to any command to see all options.
+Use the `--help` arg on any of those sub-commands to see all options.
+
+### `$ python -m easymesh.demo.{sender,receiver}`
+
+Example sender and receiver nodes. These are also useful for sanity checking and testing your own nodes.
 
 ## What is a mesh?
 
