@@ -1,8 +1,10 @@
 # This is an example launch file with all options shown.
-# Almost everything is optional! Minimal example:
+# Launch files are run with the `meshlaunch` command.
+
+# Almost all options are optional! Minimal example:
 # nodes:
 #   my_node:
-#     command: "python my_node.py"
+#     command: python my_node.py
 
 # The coordinator section is completely optional.
 # It will be started with default settings before nodes are started.
