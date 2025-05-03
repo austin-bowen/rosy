@@ -76,6 +76,10 @@ Use the `--help` arg on any of those sub-commands to see all options.
 
 Example sender and receiver nodes. These are also useful for sanity checking and testing your own nodes.
 
+### `$ python -m easymesh.demo.speedtest {send,recv}`
+
+Performs a speed test sending and receiving messages.
+
 ## What is a mesh?
 
 A mesh is a collection of "nodes" that can send messages to each other. A message can be any Python object. There is one node per Python process, with nodes potentially distributed across multiple machines. Each node listens to specific message "topics", and calls listener callbacks when messages are received on those topics. Each node can send messages to any topic, and the message will be sent to all listening nodes.
