@@ -6,7 +6,7 @@ from typing import Optional
 from easymesh.argparse import add_authkey_arg, add_coordinator_arg
 from easymesh.asyncio import noop
 from easymesh.node.node import MeshNode, build_mesh_node
-from easymesh.types import Data, Topic
+from easymesh.types import Topic
 
 
 class SpeedTest:
@@ -16,50 +16,77 @@ class SpeedTest:
     async def measure_mps(
             self,
             topic: Topic,
-            data: Data = None,
+            message_size: int = 0,
             duration: float = 10.,
             warmup: Optional[float] = 1.,
     ) -> float:
         """Measure messages per second."""
 
         if warmup is not None and warmup > 0.:
-            await self.measure_mps(topic, data=data, duration=warmup, warmup=None)
+            end_time = time.monotonic() + warmup
+            while time.monotonic() < end_time:
+                await self.node.send('warmup')
+                await noop()
 
         topic_sender = self.node.get_topic_sender(topic)
 
         if not await topic_sender.has_listeners():
             raise ValueError(f'No listeners for topic={topic}')
 
+        dummy_data = b'\xAA' * message_size
         message_count = 0
         start_time = time.monotonic()
 
         while (end_time := time.monotonic()) - start_time < duration:
+            send_time = time.time()
+            data = send_time, dummy_data
             await topic_sender.send(data)
             await noop()  # Yield to other tasks since this runs as fast as possible and can block other tasks
             message_count += 1
 
         true_duration = end_time - start_time
 
+        await self.node.send('stop')
+
         return message_count / true_duration
 
     async def receive(self, topic: Topic) -> None:
         message_count = 0
         last_count = None
+        avg_latency = 0.
+        stop_signal = asyncio.locks.Event()
 
-        async def handle_message(topic_, data):
-            nonlocal message_count
+        async def handle_warmup(topic_, data_):
+            pass
+
+        async def handle_message(topic_, data_):
+            nonlocal message_count, avg_latency
+
+            now = time.time()
+            send_time = data_[0]
+            dt = now - send_time
+
             message_count += 1
+            avg_latency += (dt - avg_latency) / message_count
 
+        async def handle_stop(topic_, data_):
+            print(f'[{self.node}] Received stop signal')
+            stop_signal.set()
+
+        await self.node.listen('warmup', handle_warmup)
         await self.node.listen(topic, handle_message)
+        await self.node.listen('stop', handle_stop)
 
         sleep_time = 1.
-        while True:
+        while not stop_signal.is_set():
             await asyncio.sleep(sleep_time)
 
             if message_count != last_count:
                 mps = (message_count - (last_count or 0)) / sleep_time
                 print(f'[{self.node}] Received message count: {message_count}; mps={round(mps)}')
                 last_count = message_count
+
+                print(f'[{self.node}] Avg latency: {avg_latency}s')
 
 
 async def main() -> None:
@@ -82,18 +109,15 @@ async def main() -> None:
     if args.role == 'recv':
         await speed_tester.receive(topic)
     elif args.role == 'send':
-        data = None
-        # data = b'helloworld' * 100000
-        # data = dict(foo=list(range(100)), bar='bar' * 100, baz=dict(a=dict(b=dict(c='c'))))
-        # import numpy as np
-        # data = (np.random.random_sample((3, 1280, 720)) * 255).astype(np.uint8)
-        # data = torch.tensor(data)
-
         print('Waiting for listeners...')
         await node.wait_for_listener(topic)
 
         print(f'Running speed test for {args.seconds}s...')
-        mps = await speed_tester.measure_mps(topic, data=data, duration=args.seconds)
+        mps = await speed_tester.measure_mps(
+            topic,
+            message_size=args.message_size,
+            duration=args.seconds,
+        )
         print(f'[{node}] mps={round(mps)}')
     else:
         raise ValueError(f'Invalid role={args.role}')
@@ -110,11 +134,15 @@ def _parse_args() -> Namespace:
     add_authkey_arg(parser)
     parser.add_argument(
         '--seconds', type=float, default=10.,
-        help='How long to run the speed test in seconds. Default: 10',
+        help='How long to run the speed test in seconds. Default: %(default)s',
     )
     parser.add_argument(
-        '--topic', default='speed-test',
-        help='Topic to send/receive on. Default: speed-test',
+        '--topic', default='t',
+        help='Topic to send/receive on. Default: %(default)s',
+    )
+    parser.add_argument(
+        '--message-size', type=int, default=0,
+        help='Size of the message to send in bytes. Default: 0 (no data).',
     )
     parser.add_argument(
         '--enable-load-balancer', action='store_true',
