@@ -80,6 +80,20 @@ Example sender and receiver nodes. These are also useful for sanity checking and
 
 Performs a speed test sending and receiving messages.
 
+Some results:
+
+| Hardware      | Message size | Messages/s | Latency (ms) | Bandwidth (MB/s) |
+|---------------|--------------|------------|--------------|------------------|
+| Laptop*       | 0            | 69000      | 0.032        | N/A              |
+| Laptop*       | 1 kB         | 67000      | 0.037        | 67               |
+| Laptop*       | 1 MB         | 1600       | 1.1          | 1600             |
+| Jetson Nano** | 0            | 6500       | 0.43         | N/A              |
+| Jetson Nano** | 1 kB         | 6300       | 0.45         | 6.3              |
+| Jetson Nano** | 1 MB         | 230        | 6.3          | 230              |
+
+\* Dell XPS 17 9730 with a 13th Gen Intel Core i9-13900H CPU and 64 GB DDR5 RAM running Ubuntu 24.04 and Python 3.10.\
+\** [NVIDIA Jetson Nano](https://developer.nvidia.com/embedded/jetson-nano) running Ubuntu 18.04 and Python 3.12.
+
 ## What is a mesh?
 
 A mesh is a collection of "nodes" that can send messages to each other. A message can be any Python object. There is one node per Python process, with nodes potentially distributed across multiple machines. Each node listens to specific message "topics", and calls listener callbacks when messages are received on those topics. Each node can send messages to any topic, and the message will be sent to all listening nodes.
