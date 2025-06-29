@@ -1,8 +1,12 @@
 # easymesh
 
-Simple, fast inter-process message passing for distributed Python processes.
+Simple and fast inter-process message passing for distributed Python processes. Inspired by [ROS (Robot Operating System)](https://www.ros.org/).
 
-`easymesh` is inspired by [ROS (Robot Operating System)](https://www.ros.org/); it allows nodes to send messages on a "topic" to any other nodes listening to that topic. Messages can contain any Python data that is serializable by `pickle`, or whatever serde implementation you choose.
+`easymesh` allows sending messages between nodes in two different ways:
+1. **Topics**: Unidirectional, "fire and forget" messages that are sent from a node to all nodes listening to that topic.
+2. **Services**: Bidirectional, request-response messages that allow a node to get a response from any node hosting the service being called.
+
+Messages can contain any Python data that is serializable by `pickle` (default) or `msgpack`. Alternatively, you can even provide your own custom serde.
 
 Nodes can run on a single machine, or be distributed across multiple machines on a network. As long as they can talk to the coordinator node, they can figure out how to talk to each other. Nodes will automatically reconnect to the coordinator and other nodes if they lose connection.
 
@@ -11,6 +15,8 @@ Nodes can run on a single machine, or be distributed across multiple machines on
 ## Show me the code!
 
 Here are some simplified examples. See the linked files for the full code.
+
+### Example: Sending messages using Topics
 
 [easymesh/demo/**sender.py**](src/easymesh/demo/sender.py):
 ```python
@@ -26,13 +32,13 @@ async def main():
 import easymesh
 from easymesh.asyncio import forever
 
-async def callback(topic, data):
-    print(f'receiver got: topic={topic}; data={data}')
-
 async def main():
     node = await easymesh.build_mesh_node(name='receiver')
     await node.listen('some-topic', callback)
     await forever()
+    
+async def callback(topic, data):
+    print(f'receiver got: topic={topic}; data={data}')
 ```
 
 **Terminal:**
@@ -42,6 +48,31 @@ $ easymesh &  # Start the coordinator node
 $ python -m easymesh.demo.receiver &
 $ python -m easymesh.demo.sender
 receiver got: topic=some-topic; data={'hello': 'world!'}
+```
+
+### Example: Calling Services
+
+**Client:**
+```python
+import easymesh
+
+async def main():
+    node = await easymesh.build_mesh_node(name='client')
+    response = await node.request('add', (2, 2), timeout=10)
+    assert response == 4
+```
+
+**Server:**
+```python
+import easymesh
+
+async def main():
+    node = await easymesh.build_mesh_node(name='server')
+    await node.add_service('add', add)
+
+async def add(data):
+    a, b = data
+    return a + b
 ```
 
 ## Installation
@@ -125,10 +156,3 @@ $ easymesh --authkey my-secret-key
 ```python
 node = await easymesh.build_mesh_node(name='my-node', authkey=b'my-secret-key')
 ```
-
-
-## Roadmap
-
-- Logging
-- Coordinator commands
-  - Kill one or all nodes

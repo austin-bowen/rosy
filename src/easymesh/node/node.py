@@ -30,10 +30,21 @@ from easymesh.node.serverprovider import (
     TmpUnixServerProvider,
     UnsupportedProviderError,
 )
+from easymesh.node.servicesmanager import BasicServicesOverTopicsManager, ServicesManager
 from easymesh.objectio import MessageReader, MessageWriter
 from easymesh.reqres import MeshTopologyBroadcast
 from easymesh.specs import MeshNodeSpec, NodeId
-from easymesh.types import Data, Host, Message, Port, ServerHost, Topic
+from easymesh.types import (
+    Data,
+    Host,
+    Message,
+    Port,
+    ServerHost,
+    ServiceCallback,
+    ServiceName,
+    ServiceResponse,
+    Topic,
+)
 
 try:
     from easymesh.codec import msgpack_codec
@@ -56,6 +67,7 @@ class MeshNode:
             message_codec: Codec[Data],
             authenticator: Authenticator,
             load_balancer: LoadBalancer,
+            services_manager: ServicesManager,
     ):
         self._id = id
         self._mesh_coordinator_client = mesh_coordinator_client
@@ -65,6 +77,7 @@ class MeshNode:
         self._message_codec = message_codec
         self._authenticator = authenticator
         self.load_balancer = load_balancer
+        self._services_manager = services_manager
 
         self._connection_specs = []
 
@@ -99,6 +112,8 @@ class MeshNode:
             raise RuntimeError('Unable to start any node servers')
 
         await self._register_node()
+
+        await self._services_manager.start(self)
 
     async def _register_node(self) -> None:
         node_spec = MeshNodeSpec(
@@ -309,6 +324,32 @@ class MeshNode:
 
         return decorator
 
+    async def request(
+            self,
+            service: ServiceName,
+            data: Data = None,
+            timeout: float = None,
+    ) -> ServiceResponse:
+        """Send a request to a service and return the response."""
+        return await self._services_manager.request(service, data, timeout)
+
+    async def add_service(self, service: ServiceName, handler: ServiceCallback) -> None:
+        """Add a service to the node that other nodes can send requests to."""
+        await self._services_manager.add_service(service, handler)
+
+    def get_service(self, service: ServiceName) -> 'ServiceCaller':
+        """
+        Returns a convenient way to call a service if used more than once.
+
+        Example:
+            >>> math_service = node.get_service('math')
+            >>> result = await math_service('2 + 2')
+            >>> # ... is equivalent to ...
+            >>> result = await node.request('math', '2 + 2')
+        """
+
+        return ServiceCaller(service, self._services_manager)
+
 
 @dataclass
 class TopicSender:
@@ -336,6 +377,24 @@ class TopicSender:
         return self.node.depends_on_listener(self.topic, poll_interval)
 
 
+class ServiceCaller:
+    service: ServiceName
+
+    def __init__(self, service: ServiceName, service_manager: ServicesManager):
+        self.service = service
+        self._service_manager = service_manager
+
+    def __str__(self) -> str:
+        name = self.__class__.__name__
+        return f'{name}(service={self.service})'
+
+    async def __call__(self, *args, **kwargs) -> ServiceResponse:
+        return await self.request(*args, **kwargs)
+
+    async def request(self, data: Data = None, timeout: float = None) -> ServiceResponse:
+        return await self._service_manager.request(self.service, data, timeout)
+
+
 async def build_mesh_node(
         name: str,
         coordinator_host: Host = 'localhost',
@@ -350,6 +409,7 @@ async def build_mesh_node(
         authkey: bytes = None,
         authenticator: Authenticator = None,
         load_balancer: Union[LoadBalancer, Literal['default'], None] = 'default',
+        services_manager: ServicesManager = None,
         start: bool = True,
         **kwargs,
 ) -> MeshNode:
@@ -390,6 +450,8 @@ async def build_mesh_node(
     elif load_balancer is None:
         load_balancer = NoopLoadBalancer()
 
+    services_manager = services_manager or BasicServicesOverTopicsManager()
+
     node = MeshNode(
         NodeId(name),
         mesh_coordinator_client,
@@ -399,6 +461,7 @@ async def build_mesh_node(
         message_codec,
         authenticator,
         load_balancer,
+        services_manager,
     )
 
     if start:

@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
@@ -25,3 +25,8 @@ TopicCallback = Callable[[Topic, Data], None]
 class Message:
     topic: Topic
     data: Optional[Data]
+
+
+ServiceName = str
+ServiceResponse = Any
+ServiceCallback = Callable[[Topic, Data], Awaitable[ServiceResponse]]
