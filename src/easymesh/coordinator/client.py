@@ -2,7 +2,6 @@ import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Lock, open_connection, wait_for
 from collections.abc import Awaitable, Callable
-from typing import Optional
 
 from easymesh.authentication import Authenticator, NoAuthenticator
 from easymesh.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -17,6 +16,11 @@ MeshTopologyBroadcastHandler = Callable[[MeshTopologyBroadcast], Awaitable[None]
 
 class MeshCoordinatorClient(ABC):
     mesh_topology_broadcast_handler: MeshTopologyBroadcastHandler
+
+    def set_broadcast_handler(
+            self, handler: MeshTopologyBroadcastHandler
+    ) -> None:
+        self.mesh_topology_broadcast_handler = handler
 
     @abstractmethod
     async def send_heartbeat(self) -> None:
@@ -72,11 +76,11 @@ class ReconnectMeshCoordinatorClient(MeshCoordinatorClient):
         self.client_builder = client_builder
         self.timeout = timeout
 
-        self._client: Optional[MeshCoordinatorClient] = None
+        self._client: MeshCoordinatorClient | None = None
         self._client_lock = Lock()
-        self._node_spec: Optional[MeshNodeSpec] = None
+        self._node_spec: MeshNodeSpec | None = None
         self._mesh_topology_broadcast_handler = None
-        self._connection_monitor_task: Optional[asyncio.Task] = None
+        self._connection_monitor_task: asyncio.Task | None = None
 
     @property
     async def client(self) -> MeshCoordinatorClient:
@@ -156,7 +160,7 @@ async def build_coordinator_client(
         host: Host,
         port: Port = DEFAULT_COORDINATOR_PORT,
         authenticator: Authenticator = None,
-        reconnect_timeout: Optional[float] = 5.0,
+        reconnect_timeout: float | None = 5.0,
 ) -> MeshCoordinatorClient:
     if authenticator is None:
         authenticator = NoAuthenticator()

@@ -4,11 +4,11 @@ from datetime import datetime
 from pathlib import Path
 
 from easymesh.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
-from easymesh.node.node import MeshNode
+from easymesh import Node
 from easymesh.utils import require
 
 
-async def play(node: MeshNode, args: Namespace) -> None:
+async def play(node: Node, args: Namespace) -> None:
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
     print(f'Playing back messages from "{bag_file_path}"...')
@@ -16,7 +16,7 @@ async def play(node: MeshNode, args: Namespace) -> None:
     first_instant = None
     first_sent_instant = datetime.now()
 
-    for instant, topic, data in get_bag_file_messages(bag_file_path):
+    for instant, topic, args_, kwargs_ in get_bag_file_messages(bag_file_path):
         if not first_instant:
             first_instant = instant
         elif not args.immediate:
@@ -27,13 +27,13 @@ async def play(node: MeshNode, args: Namespace) -> None:
                 args.rate,
             )
 
-        await node.send(topic, data)
+        await node.send(topic, *args_, **kwargs_)
 
         if not args.no_log:
             if args.no_log_data:
                 print(f'[{instant}] {topic}')
             else:
-                print(f'[{instant}] {topic}: {data}')
+                print(f'[{instant}] {topic}: args={args_}; kwargs={kwargs_}')
 
 
 def add_play_args(subparsers) -> None:

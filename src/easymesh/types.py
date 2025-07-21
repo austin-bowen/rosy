@@ -1,9 +1,9 @@
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Awaitable, Callable, Protocol
 
 Host = str
-ServerHost = Union[Host, Sequence[Host], None]
+ServerHost = Host | Sequence[Host] | None
 Port = int
 
 
@@ -20,13 +20,12 @@ Topic = str
 Data = Any
 TopicCallback = Callable[[Topic, Data], None]
 
-
-@dataclass(slots=True)
-class Message:
-    topic: Topic
-    data: Optional[Data]
+Service = str
+ServiceCallback = Callable[[Service, Data], Awaitable[Data]]
 
 
-ServiceName = str
-ServiceResponse = Any
-ServiceCallback = Callable[[Topic, Data], Awaitable[ServiceResponse]]
+class Buffer(Protocol):
+    """Not available in std lib until Python 3.12."""
+
+    def __buffer__(self, *args, **kwargs):
+        ...

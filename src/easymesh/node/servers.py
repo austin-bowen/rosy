@@ -1,14 +1,20 @@
 import asyncio
+import logging
 import tempfile
-from abc import abstractmethod
-from asyncio import Server
-from typing import Optional
+from abc import ABC, abstractmethod
+from asyncio import Server, StreamReader, StreamWriter
+from collections.abc import Awaitable, Callable, Iterable
 
+from easymesh.asyncio import Reader, Writer
 from easymesh.specs import ConnectionSpec, IpConnectionSpec, UnixConnectionSpec
 from easymesh.types import Host, Port, ServerHost
 
+ClientConnectedCallback = Callable[[Reader, Writer], Awaitable[None]]
 
-class ServerProvider:
+logger = logging.getLogger(__name__)
+
+
+class ServerProvider(ABC):
     @abstractmethod
     async def start_server(
             self,
@@ -86,8 +92,8 @@ class TmpUnixServerProvider(ServerProvider):
 
     def __init__(
             self,
-            prefix: Optional[str] = 'mesh-node-server.',
-            suffix: Optional[str] = '.sock',
+            prefix: str | None = 'mesh-node-server.',
+            suffix: str | None = '.sock',
             dir=None,
             **kwargs,
     ):
@@ -131,6 +137,40 @@ class TmpUnixServerProvider(ServerProvider):
         return server, conn_spec
 
 
+class ServersManager:
+    def __init__(
+            self,
+            server_providers: Iterable[ServerProvider],
+            client_connected_cb: ClientConnectedCallback,
+    ):
+        self.server_providers = server_providers
+        self.client_connected_cb = client_connected_cb
+
+        self._connection_specs: list[ConnectionSpec] = []
+
+    @property
+    def connection_specs(self) -> list[ConnectionSpec]:
+        return list(self._connection_specs)
+
+    async def start_servers(self) -> None:
+        if self._connection_specs:
+            raise RuntimeError('Servers have already been started.')
+
+        client_connected_cb = _close_on_return(self.client_connected_cb)
+
+        for provider in self.server_providers:
+            try:
+                server, connection_spec = await provider.start_server(client_connected_cb)
+            except UnsupportedProviderError as e:
+                logger.exception(f'Failed to start server using provider={provider}', exc_info=e)
+            else:
+                logger.debug(f'Started node server with connection_spec={connection_spec}')
+                self._connection_specs.append(connection_spec)
+
+        if not self._connection_specs:
+            raise RuntimeError('Unable to start any server with the given server providers.')
+
+
 class UnsupportedProviderError(Exception):
     """Raised when trying to start a server from an unsupported server provider."""
 
@@ -138,3 +178,18 @@ class UnsupportedProviderError(Exception):
         super().__init__(
             f'Unsupported server provider {provider.__class__}: {message}'
         )
+
+
+def _close_on_return(
+        callback: ClientConnectedCallback,
+) -> Callable[[StreamReader, StreamWriter], Awaitable[None]]:
+    async def wrapped_callback(reader: StreamReader, writer: StreamWriter) -> None:
+        try:
+            await callback(reader, writer)
+        except Exception as e:
+            logger.exception('Error in client connected callback', exc_info=e)
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    return wrapped_callback

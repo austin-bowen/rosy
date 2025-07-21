@@ -2,7 +2,10 @@ import asyncio
 import traceback
 from asyncio import Lock, Task
 from collections.abc import Awaitable, Iterable, Sized
-from typing import Protocol, Type, TypeVar, Union
+from io import BytesIO
+from typing import Protocol, Type, TypeVar
+
+from easymesh.types import Buffer
 
 T = TypeVar('T')
 E = TypeVar('E', bound=BaseException)
@@ -19,14 +22,13 @@ async def close_ignoring_errors(writer: 'Writer') -> None:
 
 async def forever():
     """Never returns."""
-    while True:
-        await asyncio.sleep(60)
+    await asyncio.Future()
 
 
 async def log_error(
         awaitable: Awaitable[T],
         base_exception: Type[E] = Exception,
-) -> Union[T, E]:
+) -> T | E:
     """
     Returns the result of the awaitable, logging any exceptions.
 
@@ -47,7 +49,7 @@ async def log_error(
 async def many(
         awaitables: Iterable[Awaitable[T]],
         base_exception: Type[E] = Exception,
-) -> list[Union[T, E]]:
+) -> list[T | E]:
     """
     Await multiple awaitables in parallel and returns their results.
 
@@ -94,6 +96,9 @@ class Reader(Protocol):
     async def readexactly(self, n: int) -> bytes:
         ...
 
+    async def readuntil(self, separator: bytes) -> bytes:
+        ...
+
 
 class Writer(Protocol):
     def write(self, data: bytes) -> None:
@@ -105,7 +110,13 @@ class Writer(Protocol):
     def close(self) -> None:
         ...
 
+    def is_closing(self) -> bool:
+        ...
+
     async def wait_closed(self) -> None:
+        ...
+
+    def get_extra_info(self, name: str, default=None):
         ...
 
 
@@ -118,7 +129,15 @@ class LockableWriter(Writer):
     def lock(self) -> Lock:
         return self._lock
 
+    async def __aenter__(self) -> 'LockableWriter':
+        await self.lock.acquire()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._lock.release()
+
     def write(self, data: bytes) -> None:
+        self.require_locked()
         self.writer.write(data)
 
     async def drain(self) -> None:
@@ -127,26 +146,48 @@ class LockableWriter(Writer):
     def close(self) -> None:
         self.writer.close()
 
+    def is_closing(self) -> bool:
+        return self.writer.is_closing()
+
     async def wait_closed(self) -> None:
         await self.writer.wait_closed()
 
+    def get_extra_info(self, name: str, default=None):
+        return self.writer.get_extra_info(name, default)
 
-class MultiWriter(Writer):
-    def __init__(self, writers: Iterable[Writer]):
-        self.writers = writers
+    def require_locked(self) -> None:
+        if not self._lock.locked():
+            raise RuntimeError('Writer must be locked before writing')
 
+
+class BufferReader(Reader):
+    def __init__(self, data: bytes):
+        self._data = BytesIO(data)
+
+    async def readexactly(self, n: int) -> bytes:
+        data = self._data.read(n)
+        assert len(data) == n
+        return data
+
+    async def readuntil(self, separator: bytes) -> bytes:
+        raise NotImplementedError()
+
+
+class BufferWriter(bytearray, Buffer, Writer):
     def write(self, data: bytes) -> None:
-        for writer in self.writers:
-            writer.write(data)
+        self.extend(data)
 
     async def drain(self) -> None:
-        for writer in self.writers:
-            await writer.drain()
+        pass
 
     def close(self) -> None:
-        for writer in self.writers:
-            writer.close()
+        pass
+
+    def is_closing(self) -> bool:
+        pass
 
     async def wait_closed(self) -> None:
-        for writer in self.writers:
-            await writer.wait_closed()
+        pass
+
+    def get_extra_info(self, name: str, default=None):
+        raise NotImplementedError()
