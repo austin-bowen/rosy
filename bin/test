@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-pytest --cov=src/easymesh --cov-report=term-missing
+pytest --cov=src/rosy --cov-report=term-missing
 rm .coverage

@@ -1,5 +1,5 @@
 # This is an example launch file with all options shown.
-# Launch files are run with the `meshlaunch` command.
+# Launch files are run with the `rosylaunch` command.
 
 # Almost all options are optional! Minimal example:
 # nodes:

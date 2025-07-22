@@ -1,5 +1,5 @@
 [project]
-name = "easymesh"
+name = "rosy"
 version = "0.3.0"
 description = "Simple, fast inter-process message passing for distributed Python processes"
 authors = [
@@ -20,9 +20,9 @@ pytest-asyncio = "*"
 pytest-cov = "*"
 
 [project.scripts]
-easymesh = "easymesh.__main__:main"
-meshbag = "easymesh.bag.__main__:main"
-meshlaunch = "easymesh.launch.__main__:main"
+rosy = "rosy.__main__:main"
+rosybag = "rosy.bag.__main__:main"
+rosylaunch = "rosy.launch.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0"]

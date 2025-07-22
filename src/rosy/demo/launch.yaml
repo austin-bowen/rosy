@@ -1,0 +1,15 @@
+coordinator:
+  authkey: demo
+nodes:
+  receiver:
+    command:
+    - python
+    - -m
+    - rosy.demo.receiver
+    post_delay: 1
+  sender:
+    command:
+      - python
+      - -m
+      - rosy.demo.sender
+      - --interval=1
