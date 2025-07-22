@@ -2,6 +2,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Protocol
 
+Data = Any
+
+Topic = str
+TopicCallback = Callable[[Topic], Awaitable[None]] | Callable[[Topic, ...], Awaitable[None]]
+
+Service = str
+ServiceCallback = Callable[[Service], Awaitable[Data]] | Callable[[Service, ...], Awaitable[Data]]
+
 Host = str
 ServerHost = Host | Sequence[Host] | None
 Port = int
@@ -14,14 +22,6 @@ class Endpoint:
 
     def __str__(self):
         return f'{self.host}:{self.port}'
-
-
-Topic = str
-Data = Any
-TopicCallback = Callable[[Topic, Data], None]
-
-Service = str
-ServiceCallback = Callable[[Service, Data], Awaitable[Data]]
 
 
 class Buffer(Protocol):

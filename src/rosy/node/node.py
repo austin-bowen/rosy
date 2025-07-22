@@ -9,13 +9,12 @@ from rosy.node.peer import PeerConnectionManager
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.handlermanager import ServiceHandlerManager
-from rosy.node.service.types import ServiceResponse
-from rosy.node.topic.listenermanager import TopicListenerCallback, TopicListenerManager
+from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
 from rosy.reqres import MeshTopologyBroadcast
 from rosy.specs import MeshNodeSpec, NodeId
-from rosy.types import Data, Service, ServiceCallback, Topic
+from rosy.types import Data, Service, ServiceCallback, Topic, TopicCallback
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class Node:
     async def listen(
             self,
             topic: Topic,
-            callback: TopicListenerCallback,
+            callback: TopicCallback,
     ) -> None:
         self.topic_listener_manager.set_listener(topic, callback)
         await self.register()
@@ -243,7 +242,7 @@ class ServiceProxy(NamedTuple):
         name = self.__class__.__name__
         return f'{name}(service={self.service})'
 
-    async def __call__(self, *args: Data, **kwargs: Data) -> ServiceResponse:
+    async def __call__(self, *args: Data, **kwargs: Data) -> Data:
         return await self.call(*args, **kwargs)
 
     async def call(self, *args: Data, **kwargs: Data) -> Data:
