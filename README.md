@@ -113,21 +113,22 @@ Example sender and receiver nodes. These are also useful for sanity checking and
 
 ### `$ python -m rosy.demo.speedtest {send,recv}`
 
-Performs a speed test sending and receiving messages.
+Performs a speed test sending and receiving topic messages.
 
 Some results:
 
-| Hardware      | Message size | Messages/s | Latency (ms) | Bandwidth (MB/s) |
-|---------------|--------------|------------|--------------|------------------|
-| Laptop*       | 0            | 116000     | 0.023        | N/A              |
-| Laptop*       | 1 kB         | 115000     | 0.028        | 115              |
-| Laptop*       | 1 MB         | 1300       | 1.2          | 1300             |
-| Jetson Nano** | 0            | ?          | ?            | N/A              |
-| Jetson Nano** | 1 kB         | ?          | ?            | ?                |
-| Jetson Nano** | 1 MB         | ?          | ?            | ?                |
+| Hardware    | Message size | Messages/s | Latency (ms) | Bandwidth (MB/s) |
+|-------------|--------------|------------|--------------|------------------|
+| Laptop*     | 0            | 116000     | 0.023        | N/A              |
+| Laptop*     | 1 kB         | 115000     | 0.028        | 115              |
+| Laptop*     | 1 MB         | 1300       | 1.2          | 1300             |
+| Orin Nano** | 0            | 29000      | 0.13         | N/A              |
+| Orin Nano** | 1 kB         | 28000      | 0.15         | 28               |
+| Orin Nano** | 1 MB         | 363        | 3.6          | 363              |
 
-\* Dell XPS 17 9730 with a 13th Gen Intel Core i9-13900H CPU and 64 GB DDR5 RAM running Ubuntu 24.04 and Python 3.10.\
-\** [NVIDIA Jetson Nano](https://developer.nvidia.com/embedded/jetson-nano) running Ubuntu 18.04 and Python 3.12.
+\* Dell XPS 17 9730 with an Intel Core i9-13900H CPU and 64 GB DDR5 RAM running Ubuntu 24.04 and Python 3.10.\
+\** [NVIDIA Jetson Orin Nano](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
+running Ubuntu 22.04 and Python 3.13.
 
 ## What is a mesh?
 
