@@ -119,12 +119,12 @@ Some results:
 
 | Hardware      | Message size | Messages/s | Latency (ms) | Bandwidth (MB/s) |
 |---------------|--------------|------------|--------------|------------------|
-| Laptop*       | 0            | 69000      | 0.032        | N/A              |
-| Laptop*       | 1 kB         | 67000      | 0.037        | 67               |
-| Laptop*       | 1 MB         | 1600       | 1.1          | 1600             |
-| Jetson Nano** | 0            | 6500       | 0.43         | N/A              |
-| Jetson Nano** | 1 kB         | 6300       | 0.45         | 6.3              |
-| Jetson Nano** | 1 MB         | 230        | 6.3          | 230              |
+| Laptop*       | 0            | 116000     | 0.023        | N/A              |
+| Laptop*       | 1 kB         | 115000     | 0.028        | 115              |
+| Laptop*       | 1 MB         | 1300       | 1.2          | 1300             |
+| Jetson Nano** | 0            | ?          | ?            | N/A              |
+| Jetson Nano** | 1 kB         | ?          | ?            | ?                |
+| Jetson Nano** | 1 MB         | ?          | ?            | ?                |
 
 \* Dell XPS 17 9730 with a 13th Gen Intel Core i9-13900H CPU and 64 GB DDR5 RAM running Ubuntu 24.04 and Python 3.10.\
 \** [NVIDIA Jetson Nano](https://developer.nvidia.com/embedded/jetson-nano) running Ubuntu 18.04 and Python 3.12.
