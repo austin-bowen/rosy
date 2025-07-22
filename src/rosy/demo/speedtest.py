@@ -4,7 +4,6 @@ from argparse import ArgumentParser, Namespace
 
 from rosy import Node, build_node
 from rosy.argparse import add_authkey_arg, add_coordinator_arg
-from rosy.asyncio import noop
 from rosy.types import Topic
 
 
@@ -21,18 +20,18 @@ class SpeedTest:
     ) -> float:
         """Measure messages per second."""
 
-        if warmup is not None and warmup > 0.:
-            end_time = time.monotonic() + warmup
-            while time.monotonic() < end_time:
-                await self.node.send('warmup')
-                await noop()
-
         topic_sender = self.node.get_topic(topic)
 
         if not await topic_sender.has_listeners():
             raise ValueError(f'No listeners for topic={topic}')
 
-        dummy_data = b'\xAA' * message_size
+        dummy_data = 'A' * message_size
+
+        if warmup is not None and warmup > 0.:
+            end_time = time.monotonic() + warmup
+            while time.monotonic() < end_time:
+                await self.node.send('warmup')
+
         message_count = 0
         start_time = time.monotonic()
 
@@ -40,7 +39,6 @@ class SpeedTest:
             send_time = time.time()
             data = send_time, dummy_data
             await topic_sender.send(data)
-            await noop()  # Yield to other tasks since this runs as fast as possible and can block other tasks
             message_count += 1
 
         true_duration = end_time - start_time
@@ -55,7 +53,7 @@ class SpeedTest:
         avg_latency = 0.
         stop_signal = asyncio.locks.Event()
 
-        async def handle_warmup(topic_, data_):
+        async def handle_warmup(topic_):
             pass
 
         async def handle_message(topic_, data_):
@@ -68,7 +66,7 @@ class SpeedTest:
             message_count += 1
             avg_latency += (dt - avg_latency) / message_count
 
-        async def handle_stop(topic_, data_):
+        async def handle_stop(topic_):
             print(f'[{self.node}] Received stop signal')
             stop_signal.set()
 
@@ -99,6 +97,7 @@ async def main() -> None:
         coordinator_port=args.coordinator.port,
         allow_unix_connections=not args.disable_unix,
         allow_tcp_connections=not args.disable_tcp,
+        data_codec=args.codec,
         authkey=args.authkey,
         topic_load_balancer=load_balancer,
         service_load_balancer=load_balancer,
@@ -145,6 +144,12 @@ def _parse_args() -> Namespace:
     parser.add_argument(
         '--message-size', type=int, default=0,
         help='Size of the message to send in bytes. Default: 0 (no data).',
+    )
+    parser.add_argument(
+        '--codec',
+        choices=('pickle', 'json', 'msgpack'),
+        default='pickle',
+        help='Codec to use for encoding/decoding messages. Default: %(default)s.',
     )
     parser.add_argument(
         '--enable-load-balancer', action='store_true',
