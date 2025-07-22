@@ -1,12 +1,10 @@
-from typing_extensions import Buffer
-
 from rosy.asyncio import log_error, many
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.peer import PeerConnectionManager, PeerSelector
 from rosy.node.topic.types import TopicMessage
 from rosy.node.types import Args, KWArgs
 from rosy.specs import MeshNodeSpec
-from rosy.types import Topic
+from rosy.types import Buffer, Topic
 
 
 class TopicSender:
