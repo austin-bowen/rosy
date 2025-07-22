@@ -3,15 +3,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar
 
+import msgpack
 import orjson
 
 from rosy.asyncio import BufferWriter, Reader, Writer
 from rosy.utils import require
-
-try:
-    import msgpack
-except ImportError:
-    msgpack = None
 
 T = TypeVar('T')
 K = TypeVar('K')
@@ -246,31 +242,30 @@ class JsonCodec(Codec[Any]):
 json_codec = JsonCodec()
 """JSON codec with default settings. Encoded data can be up to 4 GiB in size."""
 
-if msgpack:
-    MsgpackTypes = None | bool | int | float | str | bytes | bytearray | list | tuple | dict
+MsgpackTypes = None | bool | int | float | str | bytes | bytearray | list | tuple | dict
 
 
-    class MsgpackCodec(Codec[MsgpackTypes]):
-        def __init__(
-                self,
-                pack_kwargs: dict[str, Any] = None,
-                unpack_kwargs: dict[str, Any] = None,
-                len_header_bytes: int = 4,
-                len_header_codec: Codec[int] = None,
-        ):
-            self.pack_kwargs = pack_kwargs or {}
-            self.unpack_kwargs = unpack_kwargs or {}
-            self.len_header_codec = len_header_codec or FixedLengthIntCodec(len_header_bytes)
+class MsgpackCodec(Codec[MsgpackTypes]):
+    def __init__(
+            self,
+            pack_kwargs: dict[str, Any] = None,
+            unpack_kwargs: dict[str, Any] = None,
+            len_header_bytes: int = 4,
+            len_header_codec: Codec[int] = None,
+    ):
+        self.pack_kwargs = pack_kwargs or {}
+        self.unpack_kwargs = unpack_kwargs or {}
+        self.len_header_codec = len_header_codec or FixedLengthIntCodec(len_header_bytes)
 
-        async def encode(self, writer: Writer, obj: MsgpackTypes) -> None:
-            data = msgpack.packb(obj, **self.pack_kwargs)
-            await self.len_header_codec.encode(writer, len(data))
-            writer.write(data)
+    async def encode(self, writer: Writer, obj: MsgpackTypes) -> None:
+        data = msgpack.packb(obj, **self.pack_kwargs)
+        await self.len_header_codec.encode(writer, len(data))
+        writer.write(data)
 
-        async def decode(self, reader: Reader) -> MsgpackTypes:
-            data_len = await self.len_header_codec.decode(reader)
-            data = await reader.readexactly(data_len)
-            return msgpack.unpackb(data, **self.unpack_kwargs)
+    async def decode(self, reader: Reader) -> MsgpackTypes:
+        data_len = await self.len_header_codec.decode(reader)
+        data = await reader.readexactly(data_len)
+        return msgpack.unpackb(data, **self.unpack_kwargs)
 
 
-    msgpack_codec = MsgpackCodec()
+msgpack_codec = MsgpackCodec()

@@ -10,7 +10,9 @@ from rosy.codec import (
     FixedLengthIntCodec,
     LengthPrefixedStringCodec,
     SequenceCodec,
-    json_codec, pickle_codec,
+    json_codec,
+    msgpack_codec,
+    pickle_codec,
 )
 from rosy.coordinator.client import build_coordinator_client
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
@@ -37,11 +39,6 @@ from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
 from rosy.specs import NodeId
 from rosy.types import Data, Host, Port, ServerHost
-
-try:
-    from rosy.codec import msgpack_codec
-except ImportError:
-    msgpack_codec = None
 
 
 async def build_node_from_args(
@@ -122,8 +119,6 @@ async def build_node(
     elif data_codec == 'json':
         data_codec = json_codec
     elif data_codec == 'msgpack':
-        if not msgpack_codec:
-            raise ValueError('msgpack is not installed')
         data_codec = msgpack_codec
 
     node_message_codec = build_node_message_codec(data_codec)
