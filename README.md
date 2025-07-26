@@ -89,15 +89,15 @@ pip install git+https://github.com/austin-bowen/rosy.git
 
 Use the `--help` arg on any command to see all options.
 
-### `$ rosy`
+### `$ rosy` or `rosy coordinator`
 
 Start the coordinator node. By default, it will listen on port `7679` on all interfaces.
 
-### `$ rosylaunch [config]`
+### `$ rosy launch [config]`
 
 Launch a coordinator and several nodes all at once. Based on the [`roslaunch` ROS command line tool](https://wiki.ros.org/roslaunch). `config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/rosy/demo/launch.yaml) for a runnable example.
 
-### `$ rosybag {record,play,info}`
+### `$ rosy bag {record,play,info}`
 
 Tool for recording and playing back messages. Based on the [`rosbag` ROS command line tool](https://wiki.ros.org/rosbag). The options are:
 

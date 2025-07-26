@@ -1,4 +1,3 @@
-import asyncio
 from argparse import ArgumentParser, Namespace
 
 from rosy.argparse import add_authkey_arg
@@ -8,9 +7,7 @@ from rosy.coordinator.server import build_mesh_coordinator_server
 from rosy.types import ServerHost
 
 
-async def main() -> None:
-    args = _parse_args()
-
+async def coordinator_main(args: Namespace) -> None:
     server = build_mesh_coordinator_server(
         host=args.host,
         port=args.port,
@@ -29,9 +26,11 @@ async def main() -> None:
     await forever()
 
 
-def _parse_args() -> Namespace:
-    parser = ArgumentParser(
+def add_coordinator_command(subparsers) -> None:
+    parser: ArgumentParser = subparsers.add_parser(
+        'coordinator',
         description='Start the rosy coordinator.',
+        help='(Default) Start the rosy coordinator',
     )
 
     def server_host_arg(arg: str) -> ServerHost:
@@ -58,9 +57,3 @@ def _parse_args() -> Namespace:
         '--log-heartbeats', action='store_true',
         help='Log heartbeats from nodes.',
     )
-
-    return parser.parse_args()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())

@@ -1,6 +1,6 @@
 [project]
 name = "rosy"
-version = "0.4.0"
+version = "0.5.0"
 description = "Simple, fast inter-process message passing for distributed Python processes"
 authors = [
     {name = "Austin Bowen", email = "austin.bowen.314@gmail.com"}
@@ -22,8 +22,6 @@ pytest-cov = "*"
 
 [project.scripts]
 rosy = "rosy.__main__:main"
-rosybag = "rosy.bag.__main__:main"
-rosylaunch = "rosy.launch.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0"]

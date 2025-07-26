@@ -1,5 +1,5 @@
 # This is an example launch file with all options shown.
-# Launch files are run with the `rosylaunch` command.
+# Launch files are run with the `rosy launch` command.
 
 # Almost all options are optional! Minimal example:
 # nodes:

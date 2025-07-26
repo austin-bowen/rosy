@@ -1,4 +1,4 @@
-import argparse
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from time import sleep
 
@@ -7,9 +7,7 @@ from rosy.launch.config import is_enabled, load_config
 from rosy.procman import ProcessManager
 
 
-def main() -> None:
-    args = parse_args()
-
+async def launch_main(args: Namespace) -> None:
     _print(f"Using config: {args.config}")
     config = load_config(args.config)
 
@@ -34,9 +32,11 @@ def main() -> None:
             pass
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+def add_launch_command(subparsers) -> None:
+    parser: ArgumentParser = subparsers.add_parser(
+        'launch',
         description="Launch rosy nodes together.",
+        help="Launch rosy nodes together",
     )
 
     parser.add_argument(
@@ -59,8 +59,6 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help='Nodes to exclude from starting',
     )
-
-    return parser.parse_args()
 
 
 def start_coordinator(
@@ -148,8 +146,4 @@ def start_node(
 
 
 def _print(*args, **kwargs) -> None:
-    print('[rosylaunch]', *args, **kwargs)
-
-
-if __name__ == '__main__':
-    main()
+    print('[rosy launch]', *args, **kwargs)

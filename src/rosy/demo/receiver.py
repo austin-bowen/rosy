@@ -9,7 +9,7 @@ from rosy.argparse import get_node_arg_parser
 async def main(args: Namespace):
     logging.basicConfig(level=args.log)
 
-    node = await build_node_from_args(args=args, data_codec='msgpack')
+    node = await build_node_from_args(args=args)
 
     async def handle_message(topic, *args_, **kwargs_):
         print(f'Received topic={topic!r} args={args_!r} kwargs={kwargs_!r}')
