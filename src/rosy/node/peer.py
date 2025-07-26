@@ -3,11 +3,7 @@ from asyncio import Lock, open_connection, open_unix_connection
 from collections.abc import Iterable
 from typing import NamedTuple
 
-from rosy.asyncio import (
-    LockableWriter,
-    Reader,
-    Writer,
-)
+from rosy.asyncio import LockableWriter, Reader, Writer
 from rosy.authentication import Authenticator
 from rosy.network import get_hostname
 from rosy.node.loadbalancing import ServiceLoadBalancer, TopicLoadBalancer
@@ -67,7 +63,7 @@ class PeerConnectionBuilder:
 
             return await open_unix_connection(path=conn_spec.path)
         else:
-            raise ValueError(f'Invalid connection spec: {conn_spec}')
+            raise ValueError(f'Unrecognized connection spec: {conn_spec}')
 
 
 class PeerConnectionManager:

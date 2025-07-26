@@ -67,11 +67,11 @@ class Node:
             topic: Topic,
             callback: TopicCallback,
     ) -> None:
-        self.topic_listener_manager.set_listener(topic, callback)
+        self.topic_listener_manager.set_callback(topic, callback)
         await self.register()
 
     async def stop_listening(self, topic: Topic) -> None:
-        callback = self.topic_listener_manager.remove_listener(topic)
+        callback = self.topic_listener_manager.remove_callback(topic)
 
         if callback is not None:
             await self.register()
@@ -145,20 +145,24 @@ class Node:
 
     async def add_service(self, service: Service, handler: ServiceCallback) -> None:
         """Add a service to the node that other nodes can call."""
-        self.service_handler_manager.set_handler(service, handler)
+        self.service_handler_manager.set_callback(service, handler)
         await self.register()
 
     async def remove_service(self, service: Service) -> None:
         """Stop providing a service."""
-        self.service_handler_manager.remove_handler(service)
-        await self.register()
+        callback = self.service_handler_manager.remove_callback(service)
+
+        if callback is not None:
+            await self.register()
+        else:
+            logger.warning(f"Attempted to remove non-existing service={service!r}")
 
     async def service_has_providers(self, service: Service) -> bool:
         """Check if there are any nodes that provide the service."""
         providers = self.topology_manager.get_nodes_providing_service(service)
         return bool(providers)
 
-    async def wait_for_service(self, service: Service, poll_interval: float = 1.) -> None:
+    async def wait_for_service_provider(self, service: Service, poll_interval: float = 1.) -> None:
         """Wait until there is a provider for a service."""
         while not await self.service_has_providers(service):
             await asyncio.sleep(poll_interval)
@@ -186,8 +190,8 @@ class Node:
         return MeshNodeSpec(
             id=self.id,
             connection_specs=self.servers_manager.connection_specs,
-            topics=self.topic_listener_manager.topics,
-            services=self.service_handler_manager.services,
+            topics=self.topic_listener_manager.keys,
+            services=self.service_handler_manager.keys,
         )
 
     async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
@@ -214,12 +218,16 @@ class Node:
         Does nothing forever. Convenience method to prevent your main function
         from exiting while the node is running.
         """
-        await forever()
+        await forever()  # pragma: no cover
 
 
 class TopicProxy(NamedTuple):
     node: Node
     topic: Topic
+
+    def __str__(self):
+        name = self.__class__.__name__
+        return f'{name}(topic={self.topic!r})'
 
     async def send(self, *args: Data, **kwargs: Data) -> None:
         await self.node.send(self.topic, *args, **kwargs)
@@ -240,7 +248,7 @@ class ServiceProxy(NamedTuple):
 
     def __str__(self) -> str:
         name = self.__class__.__name__
-        return f'{name}(service={self.service})'
+        return f'{name}(service={self.service!r})'
 
     async def __call__(self, *args: Data, **kwargs: Data) -> Data:
         return await self.call(*args, **kwargs)
@@ -252,4 +260,4 @@ class ServiceProxy(NamedTuple):
         return await self.node.service_has_providers(self.service)
 
     async def wait_for_provider(self, poll_interval: float = 1.) -> None:
-        await self.node.wait_for_service(self.service, poll_interval)
+        await self.node.wait_for_service_provider(self.service, poll_interval)
