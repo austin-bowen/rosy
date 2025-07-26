@@ -31,10 +31,14 @@ def add_bag_command(subparsers) -> None:
 
     add_node_args(
         parser,
-        default_node_name='rosy.cli.bag',
+        default_node_name='rosy bag',
     )
 
-    subparsers = parser.add_subparsers(dest='bag_command', required=True)
+    subparsers = parser.add_subparsers(
+        title='commands',
+        dest='bag_command',
+        required=True,
+    )
 
     add_record_args(subparsers)
     add_play_args(subparsers)

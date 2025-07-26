@@ -5,17 +5,20 @@ import sys
 from rosy.cli.bag.main import add_bag_command, bag_main
 from rosy.cli.coordinator import add_coordinator_command, coordinator_main
 from rosy.cli.launch.main import add_launch_command, launch_main
+from rosy.cli.topic.main import add_topic_command, topic_main
 
 _command_to_main = {
     'coordinator': coordinator_main,
     'bag': bag_main,
     'launch': launch_main,
+    'topic': topic_main,
 }
 
 _add_command_functions = [
     add_coordinator_command,
     add_bag_command,
     add_launch_command,
+    add_topic_command,
 ]
 
 
@@ -42,8 +45,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     subparsers = parser.add_subparsers(
-        dest='command',
         title='commands',
+        dest='command',
         required=True,
     )
 
