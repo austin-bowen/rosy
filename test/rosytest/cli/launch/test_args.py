@@ -1,6 +1,6 @@
 import pytest
 
-from rosy.launch.args import ProcessArgs, quote_arg
+from rosy.cli.launch.args import ProcessArgs, quote_arg
 
 
 class TestProcessArgs:

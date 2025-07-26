@@ -2,8 +2,8 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from time import sleep
 
-from rosy.launch.args import ProcessArgs
-from rosy.launch.config import is_enabled, load_config
+from rosy.cli.launch.args import ProcessArgs
+from rosy.cli.launch.config import is_enabled, load_config
 from rosy.procman import ProcessManager
 
 

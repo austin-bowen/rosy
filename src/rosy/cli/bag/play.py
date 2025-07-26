@@ -3,7 +3,7 @@ from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
-from rosy.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
+from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 from rosy import Node
 from rosy.utils import require
 

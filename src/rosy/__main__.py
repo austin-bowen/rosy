@@ -2,9 +2,9 @@ import argparse
 import asyncio
 import sys
 
-from rosy.bag.main import add_bag_command, bag_main
-from rosy.coordinator.main import add_coordinator_command, coordinator_main
-from rosy.launch.main import add_launch_command, launch_main
+from rosy.cli.bag.main import add_bag_command, bag_main
+from rosy.cli.coordinator import add_coordinator_command, coordinator_main
+from rosy.cli.launch.main import add_launch_command, launch_main
 
 _command_to_main = {
     'coordinator': coordinator_main,

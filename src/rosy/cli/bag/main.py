@@ -2,9 +2,9 @@ from argparse import ArgumentParser, Namespace
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_args
-from rosy.bag.info import add_info_args, display_info
-from rosy.bag.play import add_play_args, play
-from rosy.bag.record import add_record_args, record
+from rosy.cli.bag.info import add_info_args, display_info
+from rosy.cli.bag.play import add_play_args, play
+from rosy.cli.bag.record import add_record_args, record
 
 
 async def bag_main(args: Namespace):
@@ -31,7 +31,7 @@ def add_bag_command(subparsers) -> None:
 
     add_node_args(
         parser,
-        default_node_name='rosy.bag',
+        default_node_name='rosy.cli.bag',
     )
 
     subparsers = parser.add_subparsers(dest='bag_command', required=True)

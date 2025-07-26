@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from rosy.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
+from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 
 
-@patch('rosy.bag.file.pickle')
-@patch('rosy.bag.file.open')
+@patch('rosy.cli.bag.file.pickle')
+@patch('rosy.cli.bag.file.open')
 def test_get_bag_file_messages(open_mock, pickle_mock):
     file_path = Path('record.bag')
 
@@ -33,7 +33,7 @@ def test_get_bag_file_messages(open_mock, pickle_mock):
 
 
 class TestGetMostRecentBagFilePath:
-    @patch('rosy.bag.file.Path')
+    @patch('rosy.cli.bag.file.Path')
     def test_returns_most_recent_bag_file_path(self, Path_mock):
         Path_mock.return_value.glob.return_value = [
             Path('record_2025-01-02-12-34-00.bag'),
@@ -49,7 +49,7 @@ class TestGetMostRecentBagFilePath:
             'record_????-??-??-??-??-??.bag'
         )
 
-    @patch('rosy.bag.file.Path')
+    @patch('rosy.cli.bag.file.Path')
     def test_raises_FileNotFoundError_if_no_bag_file_found(self, Path_mock):
         Path_mock.return_value.glob.return_value = []
 

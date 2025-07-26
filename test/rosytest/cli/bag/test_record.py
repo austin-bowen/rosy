@@ -2,10 +2,10 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from rosy.bag.record import get_bag_file_path
+from rosy.cli.bag.record import get_bag_file_path
 
 
-@patch('rosy.bag.record.datetime')
+@patch('rosy.cli.bag.record.datetime')
 def test_get_bag_file_path(datetime_mock):
     datetime_mock.now.return_value = datetime(2025, 1, 2, 12, 34, 56)
 

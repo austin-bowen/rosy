@@ -1,6 +1,6 @@
 import pytest
 
-from rosy.bag.info import get_human_readable_size
+from rosy.cli.bag.info import get_human_readable_size
 
 
 @pytest.mark.parametrize("size,expected", [

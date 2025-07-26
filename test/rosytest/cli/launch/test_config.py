@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from rosy.launch.config import is_enabled, load_config
+from rosy.cli.launch.config import is_enabled, load_config
 
 
 def test_load_config():
@@ -43,7 +43,7 @@ nodes:
     (dict(disabled=True, on_host='this-host'), False),
     (dict(disabled=False, on_host='other-host'), False),
 ])
-@patch('rosy.launch.config.get_hostname')
+@patch('rosy.cli.launch.config.get_hostname')
 def test_is_enabled(
         get_hostname_mock,
         config: dict,
