@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 
-def print_topic_args(args: Iterable, kwargs: dict) -> None:
+def print_args_and_kwargs(args: Iterable, kwargs: dict) -> None:
     if args:
         print('args:')
         for i, arg in enumerate(args):

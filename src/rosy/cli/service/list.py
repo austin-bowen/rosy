@@ -2,7 +2,9 @@ import logging
 from argparse import ArgumentParser, Namespace
 
 from rosy.argparse import add_authkey_arg, add_coordinator_arg
+from rosy.authentication import optional_authkey_authenticator
 from rosy.cli.topology_utils import get_mesh_topology
+from rosy.coordinator.client import build_coordinator_client
 
 
 async def list_main(args: Namespace):
@@ -10,21 +12,21 @@ async def list_main(args: Namespace):
 
     topology = await get_mesh_topology(args)
 
-    topics = sorted({
-        topic
+    services = sorted({
+        service
         for node in topology.nodes
-        for topic in node.topics
+        for service in node.services
     })
 
-    for topic in topics:
-        print(topic)
+    for service in services:
+        print(service)
 
 
 def add_list_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
         'list',
-        description='List all topics currently being listened to by nodes.',
-        help='list topics being listened to',
+        description='List all services currently being provided by nodes.',
+        help='list services being provided',
     )
 
     parser.add_argument(

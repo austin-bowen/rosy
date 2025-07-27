@@ -4,7 +4,7 @@ from datetime import datetime
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_args
-from rosy.cli.topic.utils import print_topic_args
+from rosy.cli.topic.utils import print_args_and_kwargs
 from rosy.types import Topic
 
 
@@ -16,6 +16,10 @@ async def echo_main(args: Namespace):
     for topic in args.topics:
         await node.listen(topic, handle_message)
 
+    async def echo(service, *args, **kwargs):
+        return (service, args, kwargs)
+    await node.add_service('my-service', echo)
+
     print(f'Listening to topics: {args.topics}')
     await node.forever()
 
@@ -25,7 +29,7 @@ async def handle_message(topic: Topic, *args, **kwargs):
     print(f'[{now}]')
 
     print(f'topic={topic!r}')
-    print_topic_args(args, kwargs)
+    print_args_and_kwargs(args, kwargs)
     print()
 
 

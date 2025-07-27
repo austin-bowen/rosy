@@ -11,7 +11,7 @@ from typing import Any
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_args
-from rosy.cli.topic.utils import print_topic_args
+from rosy.cli.topic.utils import print_args_and_kwargs
 
 
 async def send_main(args: Namespace):
@@ -26,12 +26,12 @@ async def send_main(args: Namespace):
             print(f'Waiting for listeners...')
             await topic.wait_for_listener()
 
-        topic_args, topic_kwargs = get_topic_args_and_kwargs(args.args)
+        topic_args, topic_kwargs = parse_args_and_kwargs(args.args)
 
         now = datetime.now()
         print(f'[{now}]')
         print(f'Sending to topic={args.topic!r}')
-        print_topic_args(topic_args, topic_kwargs)
+        print_args_and_kwargs(topic_args, topic_kwargs)
         print()
 
         await topic.send(*topic_args, **topic_kwargs)
@@ -45,7 +45,7 @@ async def send_main(args: Namespace):
         await asyncio.sleep(args.interval)
 
 
-def get_topic_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any]]:
+def parse_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any]]:
     topic_args = []
     topic_kwargs = {}
 
