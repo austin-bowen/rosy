@@ -51,7 +51,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         try:
             await rpc.run_forever()
         except (ConnectionResetError, EOFError):
-            print('Client disconnected')
+            print(f'Client disconnected: {peer_name}')
         finally:
             try:
                 await self._remove_node(rpc)
@@ -91,8 +91,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 
     async def _remove_node(self, rpc: RPC) -> None:
         node_id = self._node_clients.pop(rpc)
-        self._nodes.pop(node_id, None)
+        if node_id is None:
+            return
 
+        self._nodes.pop(node_id, None)
         await self._broadcast_topology()
 
     async def _broadcast_topology(self) -> None:
