@@ -4,6 +4,7 @@ from datetime import datetime
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_args
+from rosy.cli.topic.utils import print_topic_args
 from rosy.types import Topic
 
 
@@ -19,22 +20,12 @@ async def echo_main(args: Namespace):
     await node.forever()
 
 
-async def handle_message(topic: Topic, *args_, **kwargs_):
+async def handle_message(topic: Topic, *args, **kwargs):
     now = datetime.now()
     print(f'[{now}]')
 
     print(f'topic={topic!r}')
-
-    if args_:
-        print('args:')
-        for i, arg in enumerate(args_):
-            print(f'  {i}: {arg!r}')
-
-    if kwargs_:
-        print('kwargs:')
-        for key, value in kwargs_.items():
-            print(f'  {key}={value!r}')
-
+    print_topic_args(args, kwargs)
     print()
 
 
