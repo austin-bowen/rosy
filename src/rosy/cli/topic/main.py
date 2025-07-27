@@ -1,11 +1,14 @@
 from argparse import ArgumentParser, Namespace
 
 from rosy.cli.topic.echo import add_echo_command, echo_main
+from rosy.cli.topic.list import add_list_command, list_main
 from rosy.cli.topic.send import add_send_command, send_main
 
 
 async def topic_main(args: Namespace) -> None:
-    if args.topic_command == 'echo':
+    if args.topic_command == 'list':
+        await list_main(args)
+    elif args.topic_command == 'echo':
         await echo_main(args)
     elif args.topic_command == 'send':
         await send_main(args)
@@ -26,5 +29,6 @@ def add_topic_command(subparsers) -> None:
         required=True,
     )
 
+    add_list_command(subparsers)
     add_echo_command(subparsers)
     add_send_command(subparsers)

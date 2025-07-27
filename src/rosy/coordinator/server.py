@@ -1,23 +1,19 @@
 import asyncio
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from asyncio import StreamReader
 from codecs import StreamWriter
 
 from rosy.asyncio import close_ignoring_errors, many
 from rosy.authentication import AuthKey, Authenticator, optional_authkey_authenticator
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
-from rosy.objectio import (
-    CodecObjectReader,
-    CodecObjectWriter,
-    ObjectIO,
-)
+from rosy.objectio import CodecObjectReader, CodecObjectWriter, ObjectIO
 from rosy.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from rosy.rpc import ObjectIORPC, RPC
 from rosy.specs import MeshNodeSpec, MeshTopologySpec, NodeId
 from rosy.types import Port, ServerHost
 
 
-class MeshCoordinatorServer:
+class MeshCoordinatorServer(ABC):
     @abstractmethod
     async def start(self) -> None:
         ...
@@ -63,7 +59,9 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
                 await close_ignoring_errors(writer)
 
     async def _handle_request(self, request, rpc: RPC, peer_name: str):
-        if request == b'ping':
+        if request == b'get_topology':
+            return self._get_mesh_topology()
+        elif request == b'ping':
             if self.log_heartbeats:
                 print(f'Received heartbeat from {peer_name}')
             return b'pong'
@@ -71,6 +69,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             return await self._handle_register_node(request, rpc)
         else:
             raise Exception(f'Received invalid request object of type={type(request)}')
+
+    def _get_mesh_topology(self) -> MeshTopologySpec:
+        nodes = sorted(self._nodes.values(), key=lambda n: n.id)
+        return MeshTopologySpec(nodes=nodes)
 
     async def _handle_register_node(
             self,
@@ -98,12 +100,11 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         if not self._nodes:
             return
 
-        nodes = sorted(self._nodes.values(), key=lambda n: n.id)
+        mesh_topology = self._get_mesh_topology()
         print('Mesh nodes:')
-        for node in nodes:
+        for node in mesh_topology.nodes:
             print(f'- {node.id}: {node}')
 
-        mesh_topology = MeshTopologySpec(nodes=nodes)
         message = MeshTopologyBroadcast(mesh_topology)
 
         await many(

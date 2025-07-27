@@ -8,7 +8,7 @@ from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from rosy.objectio import CodecObjectReader, CodecObjectWriter, ObjectIO
 from rosy.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNodeResponse
 from rosy.rpc import ObjectIORPC, RPC
-from rosy.specs import MeshNodeSpec
+from rosy.specs import MeshNodeSpec, MeshTopologySpec
 from rosy.types import Host, Port
 
 MeshTopologyBroadcastHandler = Callable[[MeshTopologyBroadcast], Awaitable[None]]
@@ -23,6 +23,10 @@ class MeshCoordinatorClient(ABC):
         self.mesh_topology_broadcast_handler = handler
 
     @abstractmethod
+    async def get_topology(self) -> MeshTopologySpec:
+        ...
+
+    @abstractmethod
     async def send_heartbeat(self) -> None:
         ...
 
@@ -35,6 +39,14 @@ class RPCMeshCoordinatorClient(MeshCoordinatorClient):
     def __init__(self, rpc: RPC):
         self.rpc = rpc
         rpc.message_handler = self._handle_rpc_message
+
+    async def get_topology(self) -> MeshTopologySpec:
+        response = await self.rpc.send_request(b'get_topology')
+
+        if not isinstance(response, MeshTopologySpec):
+            raise Exception(f'Failed to get topology; got response={response}')
+
+        return response
 
     async def send_heartbeat(self) -> None:
         response = await self.rpc.send_request(b'ping')
@@ -108,6 +120,9 @@ class ReconnectMeshCoordinatorClient(MeshCoordinatorClient):
         if self._client is not None:
             self._client.mesh_topology_broadcast_handler = handler
 
+    async def get_topology(self) -> MeshTopologySpec:
+        return await self._call_client_method('get_topology')
+
     async def send_heartbeat(self) -> None:
         await self._call_client_method('send_heartbeat')
 
@@ -122,12 +137,12 @@ class ReconnectMeshCoordinatorClient(MeshCoordinatorClient):
                 f'Registration will be retried. {e!r}'
             )
 
-    async def _call_client_method(self, method: str, *args, **kwargs) -> None:
+    async def _call_client_method(self, method: str, *args, **kwargs):
         try:
             client = await self.client
             client_method = getattr(client, method)
 
-            await wait_for(
+            return await wait_for(
                 client_method(*args, **kwargs),
                 timeout=self.timeout,
             )
