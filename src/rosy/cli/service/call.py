@@ -8,6 +8,7 @@ from rosy import build_node_from_args
 from rosy.argparse import add_node_args
 from rosy.cli.topic.send import parse_args_and_kwargs
 from rosy.cli.topic.utils import print_args_and_kwargs
+from rosy.cli.utils import add_log_arg
 
 
 async def call_main(args: Namespace):
@@ -106,11 +107,7 @@ or follow the format:
         help='Send the message without waiting for any listeners',
     )
 
-    parser.add_argument(
-        '--log',
-        default='ERROR',
-        help='Log level; DEBUG, INFO, ERROR, etc. Default: %(default)s'
-    )
+    add_log_arg(parser)
 
     add_node_args(
         parser,

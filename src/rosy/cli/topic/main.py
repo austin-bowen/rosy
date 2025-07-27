@@ -20,7 +20,7 @@ def add_topic_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
         'topic',
         description='Topic commands.',
-        help='topic commands like send, echo, etc.',
+        help='Topic commands like send, echo, etc.',
     )
 
     subparsers = parser.add_subparsers(

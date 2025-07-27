@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 
 from rosy.argparse import add_authkey_arg, add_coordinator_arg
 from rosy.authentication import optional_authkey_authenticator
-from rosy.cli.topology_utils import get_mesh_topology
+from rosy.cli.utils import add_log_arg, get_mesh_topology
 from rosy.coordinator.client import build_coordinator_client
 
 
@@ -29,11 +29,7 @@ def add_list_command(subparsers) -> None:
         help='list services being provided',
     )
 
-    parser.add_argument(
-        '--log',
-        default='ERROR',
-        help='Log level; DEBUG, INFO, ERROR, etc. Default: %(default)s'
-    )
+    add_log_arg(parser)
 
     add_coordinator_arg(parser)
     add_authkey_arg(parser)

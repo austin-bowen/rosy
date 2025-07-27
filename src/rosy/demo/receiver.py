@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from rosy import build_node_from_args
 from rosy.argparse import get_node_arg_parser
+from rosy.cli.utils import add_log_arg
 
 
 async def main(args: Namespace):
@@ -31,11 +32,7 @@ def parse_args() -> Namespace:
         help='The topics to listen to. Default: %(default)s',
     )
 
-    parser.add_argument(
-        '--log',
-        default='INFO',
-        help='Log level; DEBUG, INFO, ERROR, etc. Default: %(default)s'
-    )
+    add_log_arg(parser, default='INFO')
 
     return parser.parse_args()
 

@@ -17,7 +17,7 @@ def add_service_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
         'service',
         description='Service commands.',
-        help='service commands like list and call',
+        help='Service commands like list and call',
     )
 
     subparsers = parser.add_subparsers(

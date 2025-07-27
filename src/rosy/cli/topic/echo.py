@@ -5,6 +5,7 @@ from datetime import datetime
 from rosy import build_node_from_args
 from rosy.argparse import add_node_args
 from rosy.cli.topic.utils import print_args_and_kwargs
+from rosy.cli.utils import add_log_arg
 from rosy.types import Topic
 
 
@@ -15,10 +16,6 @@ async def echo_main(args: Namespace):
 
     for topic in args.topics:
         await node.listen(topic, handle_message)
-
-    async def echo(service, *args, **kwargs):
-        return (service, args, kwargs)
-    await node.add_service('my-service', echo)
 
     print(f'Listening to topics: {args.topics}')
     await node.forever()
@@ -47,11 +44,7 @@ def add_echo_command(subparsers) -> None:
         help='The topic(s) to listen to.',
     )
 
-    parser.add_argument(
-        '--log',
-        default='ERROR',
-        help='Log level; DEBUG, INFO, ERROR, etc. Default: %(default)s'
-    )
+    add_log_arg(parser)
 
     add_node_args(
         parser,
