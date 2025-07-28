@@ -7,13 +7,11 @@ from rosy.node.loadbalancing import (
     LeastRecentLoadBalancer,
     NoopTopicLoadBalancer,
     RandomLoadBalancer,
-    RoundRobinLoadBalancer,
     ServiceLoadBalancer,
     TopicLoadBalancer,
     node_name_group_key,
 )
 from rosy.specs import MeshNodeSpec, NodeId
-from rosy.types import Service, Topic
 
 
 class TopicLoadBalancerTest:
@@ -98,41 +96,6 @@ class TestRandomLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
             self.nodes,
             'any_service',
         ) is self.expected_node
-
-
-class TestRoundRobinLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
-    load_balancer: RoundRobinLoadBalancer
-
-    def setup_method(self):
-        self.nodes = [mock_node(), mock_node(), mock_node()]
-
-        self.load_balancer = RoundRobinLoadBalancer()
-
-    def test_choose_nodes_returns_first_node(self):
-        assert self._choose_nodes('topic0') == [self.nodes[0]]
-        assert self._choose_nodes('topic0') == [self.nodes[1]]
-        assert self._choose_nodes('topic1') == [self.nodes[0]]
-        assert self._choose_nodes('topic0') == [self.nodes[2]]
-        assert self._choose_nodes('topic0') == [self.nodes[0]]
-        assert self._choose_nodes('topic1') == [self.nodes[1]]
-        assert self._choose_nodes('topic1') == [self.nodes[2]]
-        assert self._choose_nodes('topic1') == [self.nodes[0]]
-
-    def _choose_nodes(self, topic: Topic) -> list[MeshNodeSpec]:
-        return self.load_balancer.choose_nodes(self.nodes, topic)
-
-    def test_choose_node_returns_first_node(self):
-        assert self._choose_node('service0') is self.nodes[0]
-        assert self._choose_node('service0') is self.nodes[1]
-        assert self._choose_node('service1') is self.nodes[0]
-        assert self._choose_node('service0') is self.nodes[2]
-        assert self._choose_node('service0') is self.nodes[0]
-        assert self._choose_node('service1') is self.nodes[1]
-        assert self._choose_node('service1') is self.nodes[2]
-        assert self._choose_node('service1') is self.nodes[0]
-
-    def _choose_node(self, service: Service) -> MeshNodeSpec:
-        return self.load_balancer.choose_node(self.nodes, service)
 
 
 class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):

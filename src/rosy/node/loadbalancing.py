@@ -1,6 +1,6 @@
 import time
 from abc import ABC, abstractmethod
-from collections import Counter, defaultdict
+from collections import defaultdict
 from collections.abc import Callable
 from itertools import chain, groupby
 from random import Random
@@ -80,33 +80,6 @@ class RandomLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
 
     def choose_node(self, nodes: list[MeshNodeSpec], service: Service) -> MeshNodeSpec | None:
         return self.rng.choice(nodes) if nodes else None
-
-
-class RoundRobinLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
-    """
-    Chooses a single node in a round-robin fashion, based on
-    the number of times a message is sent on the topic.
-    """
-
-    def __init__(self):
-        self._topic_counter: dict[Topic, int] = Counter()
-        self._service_counter: dict[Service, int] = Counter()
-
-    def choose_nodes(self, nodes: list[MeshNodeSpec], topic: Topic) -> list[MeshNodeSpec]:
-        if not nodes:
-            return []
-
-        i = self._topic_counter[topic] % len(nodes)
-        self._topic_counter[topic] += 1
-        return [nodes[i]]
-
-    def choose_node(self, nodes: list[MeshNodeSpec], service: Service) -> MeshNodeSpec | None:
-        if not nodes:
-            return None
-
-        i = self._service_counter[service] % len(nodes)
-        self._service_counter[service] += 1
-        return nodes[i]
 
 
 class LeastRecentLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
