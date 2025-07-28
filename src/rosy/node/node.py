@@ -32,6 +32,14 @@ class Node:
             service_caller: ServiceCaller,
             service_handler_manager: ServiceHandlerManager,
     ):
+        """
+        This is a node on the mesh. It is responsible for sending and receiving
+        messages on topics and services.
+
+        You should not instantiate this class directly; instead, use
+        `rosy.build_node()` or `rosy.build_node_from_args()`.
+        """
+
         self._id = id
         self.coordinator_client = coordinator_client
         self.servers_manager = servers_manager
@@ -41,6 +49,8 @@ class Node:
         self.topic_listener_manager = topic_listener_manager
         self.service_caller = service_caller
         self.service_handler_manager = service_handler_manager
+
+        self._started: bool = False
 
         coordinator_client.set_broadcast_handler(self._handle_topology_broadcast)
 
@@ -52,6 +62,13 @@ class Node:
         return str(self.id)
 
     async def start(self) -> None:
+        """
+        Start the node by starting the servers and registering with the coordinator.
+        """
+
+        if self._started:
+            raise RuntimeError('Node is already started.')
+
         logger.info(f'Starting node {self.id}')
 
         logger.debug('Starting servers')
@@ -59,7 +76,10 @@ class Node:
 
         await self.register()
 
+        self._started = True
+
     async def send(self, topic: Topic, *args: Data, **kwargs: Data) -> None:
+        """Send a message on a topic, with optional arguments and keyword arguments."""
         await self.topic_sender.send(topic, args, kwargs)
 
     async def listen(
@@ -67,10 +87,13 @@ class Node:
             topic: Topic,
             callback: TopicCallback,
     ) -> None:
+        """Start listening to a topic with a callback function."""
         self.topic_listener_manager.set_callback(topic, callback)
         await self.register()
 
     async def stop_listening(self, topic: Topic) -> None:
+        """Stop listening to a topic."""
+
         callback = self.topic_listener_manager.remove_callback(topic)
 
         if callback is not None:
@@ -79,6 +102,7 @@ class Node:
             logger.warning(f"Attempted to remove non-existing listener for topic={topic!r}")
 
     async def topic_has_listeners(self, topic: Topic) -> bool:
+        """Check if there are any listeners for a topic."""
         listeners = self.topology_manager.get_nodes_listening_to_topic(topic)
         return bool(listeners)
 
@@ -108,11 +132,11 @@ class Node:
         another topic.
 
         Example:
-            @node.depends_on_listener('bar')
-            async def handle_foo(topic, data):
-                await node.send('bar', data)
-
-            await node.listen('foo', handle_foo)
+            >>> @node.depends_on_listener('bar')
+            >>> async def handle_foo(topic, data):
+            >>>     await node.send('bar', data)
+            >>>
+            >>> await node.listen('foo', handle_foo)
 
         Combine this with ``wait_for_listener`` in send-only nodes to make all
         nodes in a chain wait until there is a listener at the end of the chain.
@@ -138,9 +162,20 @@ class Node:
         return decorator
 
     def get_topic(self, topic: Topic) -> 'TopicProxy':
+        """
+        Returns a topic proxy that can be used to interact with a topic (e.g.
+        send messages) without needing to pass the topic name each time.
+
+        Example:
+            >>> topic = node.get_topic('my_topic')
+            >>> await topic.send('Hello, world!')
+            >>> # ... is equivalent to ...
+            >>> await node.send('my_topic', 'Hello, world!')
+        """
         return TopicProxy(self, topic)
 
     async def call(self, service: Service, *args, **kwargs) -> Data:
+        """Call a service and return the result."""
         return await self.service_caller.call(service, args, kwargs)
 
     async def add_service(self, service: Service, handler: ServiceCallback) -> None:
@@ -181,6 +216,14 @@ class Node:
         return ServiceProxy(self, service)
 
     async def register(self) -> None:
+        """
+        Register the node with the coordinator.
+
+        This is done automatically when the node is started,
+        and when topics or services are added or removed,
+        so there should be no need to call this manually.
+        """
+
         node_spec = self._build_node_spec()
         logger.info('Registering node with coordinator')
         logger.debug(f'node_spec={node_spec}')

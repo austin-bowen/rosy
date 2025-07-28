@@ -5,7 +5,7 @@ from rosy.coordinator.client import build_coordinator_client
 from rosy.specs import MeshTopologySpec
 
 
-def add_log_arg(parser: ArgumentParser, default: str = 'ERROR') -> None:
+def add_log_arg(parser: ArgumentParser, default: str = 'WARNING') -> None:
     parser.add_argument(
         '--log',
         default=default,
