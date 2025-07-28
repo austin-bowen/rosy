@@ -87,19 +87,31 @@ pip install git+https://github.com/austin-bowen/rosy.git
 
 ## Commands
 
-Use the `--help` arg on any command to see all options.
+These commands attempt to mirror the [`ros2` ROS commands](https://docs.ros.org/en/rolling/Concepts/Basic/About-Command-Line-Tools.html). Use the `--help` flag on any command to see all options.
 
 ### `$ rosy` or `rosy coordinator`
 
 Start the coordinator node. By default, it will listen on port `7679` on all interfaces.
 
+### `$ rosy node list`
+
+List all nodes in the mesh, what topics they are listening to, and what services they are providing.
+
+### `$ rosy topic {list,echo,send}`
+
+List all topics, echo messages from a topic, or send a message to a topic.
+
+### `$ rosy service {list,call}`
+
+List all services, or call a service.
+
 ### `$ rosy launch [config]`
 
-Launch a coordinator and several nodes all at once. Based on the [`roslaunch` ROS command line tool](https://wiki.ros.org/roslaunch). `config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/rosy/demo/launch.yaml) for a runnable example.
+Launch a coordinator and several nodes all at once. `config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/rosy/demo/launch.yaml) for a runnable example.
 
 ### `$ rosy bag {record,play,info}`
 
-Tool for recording and playing back messages. Based on the [`rosbag` ROS command line tool](https://wiki.ros.org/rosbag). The options are:
+Tool for recording and playing back messages. The options are:
 
 - `record <topics>`: Record messages on the given topic(s) to a file. By default, a file named `record_<datetime>.bag` will be created in the current directory.
 - `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
