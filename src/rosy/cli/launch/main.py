@@ -75,7 +75,7 @@ def start_coordinator(
 
     config = config.get('coordinator', {})
 
-    args = ['rosy']
+    args = ['rosy', 'coordinator']
 
     host = config.get('host')
     if host is not None:
