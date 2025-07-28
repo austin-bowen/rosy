@@ -1,11 +1,12 @@
+import time
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import defaultdict
 from collections.abc import Callable
 from itertools import chain, groupby
 from random import Random
 from typing import Any
 
-from rosy.specs import MeshNodeSpec
+from rosy.specs import MeshNodeSpec, NodeId
 from rosy.types import Service, Topic
 
 GroupKey = Callable[[MeshNodeSpec], Any]
@@ -81,28 +82,38 @@ class RandomLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
         return self.rng.choice(nodes) if nodes else None
 
 
-class RoundRobinLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
-    """
-    Chooses a single node in a round-robin fashion, based on
-    the number of times a message is sent on the topic.
-    """
+class LeastRecentLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
+    """Chooses the node that has been least recently chosen."""
 
-    def __init__(self):
-        self._topic_counter: dict[Topic, int] = Counter()
-        self._service_counter: dict[Service, int] = Counter()
+    def __init__(
+            self,
+            time_func: Callable[[], float | int] = time.monotonic_ns,
+            rng: Random = None,
+    ):
+        self.time_func = time_func
+        self.rng = rng or Random()
+
+        # By defaulting the last used time to a random value before the current time,
+        # we ensure that any ties between new nodes will be broken randomly,
+        # while still ensuring new nodes will be chosen first.
+        t0 = time_func()
+        self._last_used: defaultdict[NodeId, float | int] = defaultdict(
+            lambda: t0 * self.rng.random(),
+        )
 
     def choose_nodes(self, nodes: list[MeshNodeSpec], topic: Topic) -> list[MeshNodeSpec]:
-        if not nodes:
-            return []
-
-        i = self._topic_counter[topic] % len(nodes)
-        self._topic_counter[topic] += 1
-        return [nodes[i]]
+        return [self._get_least_recent_node(nodes)] if nodes else []
 
     def choose_node(self, nodes: list[MeshNodeSpec], service: Service) -> MeshNodeSpec | None:
-        if not nodes:
-            return None
+        return self._get_least_recent_node(nodes) if nodes else None
 
-        i = self._service_counter[service] % len(nodes)
-        self._service_counter[service] += 1
-        return nodes[i]
+    def _get_least_recent_node(self, nodes: list[MeshNodeSpec]) -> MeshNodeSpec:
+        last_used_times = (self._last_used[node.id] for node in nodes)
+
+        node, _ = min(
+            zip(nodes, last_used_times),
+            key=lambda i: i[1],
+        )
+
+        self._last_used[node.id] = self.time_func()
+        return node

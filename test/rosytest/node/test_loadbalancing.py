@@ -1,17 +1,17 @@
+import time
 from random import Random
 from unittest.mock import call, create_autospec
 
 from rosy.node.loadbalancing import (
     GroupingTopicLoadBalancer,
+    LeastRecentLoadBalancer,
     NoopTopicLoadBalancer,
     RandomLoadBalancer,
-    RoundRobinLoadBalancer,
     ServiceLoadBalancer,
     TopicLoadBalancer,
     node_name_group_key,
 )
 from rosy.specs import MeshNodeSpec, NodeId
-from rosy.types import Service, Topic
 
 
 class TopicLoadBalancerTest:
@@ -98,39 +98,39 @@ class TestRandomLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
         ) is self.expected_node
 
 
-class TestRoundRobinLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
-    load_balancer: RoundRobinLoadBalancer
+class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
+    load_balancer: LeastRecentLoadBalancer
 
     def setup_method(self):
-        self.nodes = [mock_node(), mock_node(), mock_node()]
+        self.nodes = [
+            mock_node('node0'),
+            mock_node('node1'),
+            mock_node('node2'),
+        ]
 
-        self.load_balancer = RoundRobinLoadBalancer()
+        self.load_balancer = LeastRecentLoadBalancer()
 
-    def test_choose_nodes_returns_first_node(self):
-        assert self._choose_nodes('topic0') == [self.nodes[0]]
-        assert self._choose_nodes('topic0') == [self.nodes[1]]
-        assert self._choose_nodes('topic1') == [self.nodes[0]]
-        assert self._choose_nodes('topic0') == [self.nodes[2]]
-        assert self._choose_nodes('topic0') == [self.nodes[0]]
-        assert self._choose_nodes('topic1') == [self.nodes[1]]
-        assert self._choose_nodes('topic1') == [self.nodes[2]]
-        assert self._choose_nodes('topic1') == [self.nodes[0]]
+    def test_default_time_func_is_monotonic_ns(self):
+        load_balancer = LeastRecentLoadBalancer()
+        assert load_balancer.time_func is time.monotonic_ns
 
-    def _choose_nodes(self, topic: Topic) -> list[MeshNodeSpec]:
-        return self.load_balancer.choose_nodes(self.nodes, topic)
+    def test_choose_methods_pick_least_recent(self):
+        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        assert len(nodes) == 1
+        node0 = nodes[0]
 
-    def test_choose_node_returns_first_node(self):
-        assert self._choose_node('service0') is self.nodes[0]
-        assert self._choose_node('service0') is self.nodes[1]
-        assert self._choose_node('service1') is self.nodes[0]
-        assert self._choose_node('service0') is self.nodes[2]
-        assert self._choose_node('service0') is self.nodes[0]
-        assert self._choose_node('service1') is self.nodes[1]
-        assert self._choose_node('service1') is self.nodes[2]
-        assert self._choose_node('service1') is self.nodes[0]
+        node1 = self.load_balancer.choose_node(self.nodes, 'any_service')
 
-    def _choose_node(self, service: Service) -> MeshNodeSpec:
-        return self.load_balancer.choose_node(self.nodes, service)
+        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        assert len(nodes) == 1
+        node2 = nodes[0]
+
+        selected_nodes = {node0, node1, node2}
+        assert selected_nodes == set(self.nodes)
+
+        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node0
+        assert self.load_balancer.choose_nodes(self.nodes, 'any_topic') == [node1]
+        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node2
 
 
 def mock_node(name: str = None):

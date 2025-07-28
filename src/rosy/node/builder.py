@@ -21,7 +21,7 @@ from rosy.node.clienthandler import ClientHandler
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.loadbalancing import (
     GroupingTopicLoadBalancer,
-    RoundRobinLoadBalancer,
+    LeastRecentLoadBalancer,
     ServiceLoadBalancer,
     TopicLoadBalancer,
     node_name_group_key,
@@ -204,17 +204,17 @@ def build_peer_selector(
         topic_load_balancer: TopicLoadBalancer | None,
         service_load_balancer: ServiceLoadBalancer | None,
 ) -> PeerSelector:
-    round_robin_load_balancer = RoundRobinLoadBalancer()
+    least_recent_load_balancer = LeastRecentLoadBalancer()
 
     default_topic_load_balancer = GroupingTopicLoadBalancer(
         group_key=node_name_group_key,
-        load_balancer=round_robin_load_balancer,
+        load_balancer=least_recent_load_balancer,
     )
 
     return PeerSelector(
         topology_manager,
         topic_load_balancer=topic_load_balancer or default_topic_load_balancer,
-        service_load_balancer=service_load_balancer or round_robin_load_balancer,
+        service_load_balancer=service_load_balancer or least_recent_load_balancer,
     )
 
 
