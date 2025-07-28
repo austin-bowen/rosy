@@ -1,6 +1,6 @@
 from collections.abc import Collection
 from dataclasses import dataclass, field
-from uuid import UUID, uuid4
+from uuid import UUID, uuid1
 
 from rosy.network import get_hostname
 from rosy.types import Host, Port, Service, Topic
@@ -28,7 +28,7 @@ NodeUUID = UUID
 class NodeId:
     name: NodeName
     hostname: Host = field(default_factory=get_hostname)
-    uuid: NodeUUID = field(default_factory=uuid4)
+    uuid: NodeUUID = field(default_factory=uuid1)
 
     def __str__(self) -> str:
         name = repr(self.name) if ' ' in self.name else self.name
