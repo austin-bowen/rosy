@@ -97,11 +97,9 @@ class LeastRecentLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
         # we ensure that any ties between new nodes will be broken randomly,
         # while still ensuring new nodes will be chosen first.
         t0 = time_func()
-
-        def random_time() -> float:
-            return t0 - self.rng.random()
-
-        self._last_used: defaultdict[NodeId, float | int] = defaultdict(random_time)
+        self._last_used: defaultdict[NodeId, float | int] = defaultdict(
+            lambda: t0 * self.rng.random(),
+        )
 
     def choose_nodes(self, nodes: list[MeshNodeSpec], topic: Topic) -> list[MeshNodeSpec]:
         return [self._get_least_recent_node(nodes)] if nodes else []
