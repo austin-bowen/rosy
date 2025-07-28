@@ -1,11 +1,12 @@
+import time
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from itertools import chain, groupby
 from random import Random
 from typing import Any
 
-from rosy.specs import MeshNodeSpec
+from rosy.specs import MeshNodeSpec, NodeId
 from rosy.types import Service, Topic
 
 GroupKey = Callable[[MeshNodeSpec], Any]
@@ -106,3 +107,42 @@ class RoundRobinLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
         i = self._service_counter[service] % len(nodes)
         self._service_counter[service] += 1
         return nodes[i]
+
+
+class LeastRecentLoadBalancer(TopicLoadBalancer, ServiceLoadBalancer):
+    """Chooses the node that has been least recently chosen."""
+
+    def __init__(
+            self,
+            time_func: Callable[[], float | int] = time.monotonic_ns,
+            rng: Random = None,
+    ):
+        self.time_func = time_func
+        self.rng = rng or Random()
+
+        # By defaulting the last used time to a random value before the current time,
+        # we ensure that any ties between new nodes will be broken randomly,
+        # while still ensuring new nodes will be chosen first.
+        t0 = time_func()
+
+        def random_time() -> float:
+            return t0 - self.rng.random()
+
+        self._last_used: defaultdict[NodeId, float | int] = defaultdict(random_time)
+
+    def choose_nodes(self, nodes: list[MeshNodeSpec], topic: Topic) -> list[MeshNodeSpec]:
+        return [self._get_least_recent_node(nodes)] if nodes else []
+
+    def choose_node(self, nodes: list[MeshNodeSpec], service: Service) -> MeshNodeSpec | None:
+        return self._get_least_recent_node(nodes) if nodes else None
+
+    def _get_least_recent_node(self, nodes: list[MeshNodeSpec]) -> MeshNodeSpec:
+        last_used_times = (self._last_used[node.id] for node in nodes)
+
+        node, _ = min(
+            zip(nodes, last_used_times),
+            key=lambda i: i[1],
+        )
+
+        self._last_used[node.id] = self.time_func()
+        return node

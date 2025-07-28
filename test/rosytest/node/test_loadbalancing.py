@@ -1,8 +1,10 @@
+import time
 from random import Random
 from unittest.mock import call, create_autospec
 
 from rosy.node.loadbalancing import (
     GroupingTopicLoadBalancer,
+    LeastRecentLoadBalancer,
     NoopTopicLoadBalancer,
     RandomLoadBalancer,
     RoundRobinLoadBalancer,
@@ -131,6 +133,41 @@ class TestRoundRobinLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest)
 
     def _choose_node(self, service: Service) -> MeshNodeSpec:
         return self.load_balancer.choose_node(self.nodes, service)
+
+
+class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
+    load_balancer: LeastRecentLoadBalancer
+
+    def setup_method(self):
+        self.nodes = [
+            mock_node('node0'),
+            mock_node('node1'),
+            mock_node('node2'),
+        ]
+
+        self.load_balancer = LeastRecentLoadBalancer()
+
+    def test_default_time_func_is_monotonic_ns(self):
+        load_balancer = LeastRecentLoadBalancer()
+        assert load_balancer.time_func is time.monotonic_ns
+
+    def test_choose_methods_pick_least_recent(self):
+        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        assert len(nodes) == 1
+        node0 = nodes[0]
+
+        node1 = self.load_balancer.choose_node(self.nodes, 'any_service')
+
+        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        assert len(nodes) == 1
+        node2 = nodes[0]
+
+        selected_nodes = {node0, node1, node2}
+        assert selected_nodes == set(self.nodes)
+
+        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node0
+        assert self.load_balancer.choose_nodes(self.nodes, 'any_topic') == [node1]
+        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node2
 
 
 def mock_node(name: str = None):
