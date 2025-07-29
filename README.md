@@ -113,7 +113,7 @@ pip install git+https://github.com/austin-bowen/rosy.git
 
 ## Commands
 
-These commands attempt to mirror the [`ros2` ROS commands](https://docs.ros.org/en/rolling/Concepts/Basic/About-Command-Line-Tools.html). Use the `--help` flag on any command to see all options.
+These commands mirror the [`ros2` ROS commands](https://docs.ros.org/en/rolling/Concepts/Basic/About-Command-Line-Tools.html). Use the `--help` flag on any command to see all options.
 
 ### `$ rosy` or `rosy coordinator`
 
@@ -142,8 +142,6 @@ Tool for recording and playing back messages. The options are:
 - `record <topics>`: Record messages on the given topic(s) to a file. By default, a file named `record_<datetime>.bag` will be created in the current directory.
 - `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
 - `info`: Print information about a bag file. By default, the most recent bag file in the current directory will be used.
-
-Use the `--help` arg on any of those sub-commands to see all options.
 
 ### `$ python -m rosy.demo.speedtest {send,recv}`
 
