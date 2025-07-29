@@ -143,7 +143,7 @@ Tool for recording and playing back messages. The options are:
 - `play`: Play back messages from a bag file, with the same timing between messages as when they were recorded. By default, the most recent bag file in the current directory will be played back.
 - `info`: Print information about a bag file. By default, the most recent bag file in the current directory will be used.
 
-### `$ python -m rosy.demo.speedtest {send,recv}`
+### `$ rosy speedtest {send,recv}`
 
 Performs a speed test sending and receiving topic messages.
 
