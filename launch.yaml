@@ -20,8 +20,6 @@ coordinator:
   port: 7679
   # Authentication key. Default: None
   authkey: authkey
-  # Log heartbeats from clients. Default: False
-  log_heartbeats: false
 
   # Do not start the coordinator. Default: false
   disabled: false

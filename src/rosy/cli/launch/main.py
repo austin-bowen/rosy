@@ -99,10 +99,6 @@ def start_coordinator(
         args.extend(authkey_arg)
         node_args.extend(authkey_arg)
 
-    log_heartbeats = config.get('log_heartbeats', False)
-    if log_heartbeats:
-        args.append('--log-heartbeats')
-
     if not disabled and is_enabled(config):
         _print(f"Starting coordinator: {args}")
         pm.popen(args)

@@ -1,18 +1,21 @@
+import logging
 from argparse import ArgumentParser, Namespace
 
 from rosy.argparse import add_authkey_arg
 from rosy.asyncio import forever
+from rosy.cli.utils import add_log_arg
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from rosy.coordinator.server import build_mesh_coordinator_server
 from rosy.types import ServerHost
 
 
 async def coordinator_main(args: Namespace) -> None:
+    logging.basicConfig(level=args.log)
+
     server = build_mesh_coordinator_server(
         host=args.host,
         port=args.port,
         authkey=args.authkey,
-        log_heartbeats=args.log_heartbeats,
     )
 
     try:
@@ -57,3 +60,5 @@ def add_coordinator_command(subparsers) -> None:
         '--log-heartbeats', action='store_true',
         help='Log heartbeats from nodes.',
     )
+
+    add_log_arg(parser, default='INFO')

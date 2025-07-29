@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from asyncio import StreamReader
 from codecs import StreamWriter
@@ -11,6 +12,8 @@ from rosy.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNode
 from rosy.rpc import ObjectIORPC, RPC
 from rosy.specs import MeshNodeSpec, MeshTopologySpec, NodeId
 from rosy.types import Port, ServerHost
+
+logger = logging.getLogger(__name__)
 
 
 class MeshCoordinatorServer(ABC):
@@ -25,12 +28,10 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             start_stream_server,
             build_rpc,
             authenticator: Authenticator,
-            log_heartbeats: bool,
     ):
         self.start_stream_server = start_stream_server
         self.build_rpc = build_rpc
         self.authenticator = authenticator
-        self.log_heartbeats = log_heartbeats
 
         self._node_clients: dict[RPC, NodeId | None] = {}
         self._nodes: dict[NodeId, MeshNodeSpec] = {}
@@ -40,7 +41,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 
     async def _handle_connection(self, reader: StreamReader, writer: StreamWriter) -> None:
         peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
-        print(f'New connection from: {peer_name}')
+        logger.debug(f'New connection from: {peer_name}')
 
         await self.authenticator.authenticate(reader, writer)
 
@@ -51,7 +52,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         try:
             await rpc.run_forever()
         except (ConnectionResetError, EOFError):
-            print(f'Client disconnected: {peer_name}')
+            logger.debug(f'Client disconnected: {peer_name}')
         finally:
             try:
                 await self._remove_node(rpc)
@@ -62,8 +63,7 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
         if request == b'get_topology':
             return self._get_mesh_topology()
         elif request == b'ping':
-            if self.log_heartbeats:
-                print(f'Received heartbeat from {peer_name}')
+            logger.debug(f'Received heartbeat from: {peer_name}')
             return b'pong'
         elif isinstance(request, RegisterNodeRequest):
             return await self._handle_register_node(request, rpc)
@@ -79,11 +79,18 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             request: RegisterNodeRequest,
             rpc: RPC,
     ) -> RegisterNodeResponse:
-        print(f'Got register node request: {request}')
+        logger.debug(f'Got register node request: {request}')
 
         node_spec = request.node_spec
+        node_is_new = node_spec.id not in self._nodes
         self._node_clients[rpc] = node_spec.id
         self._nodes[node_spec.id] = node_spec
+
+        if node_is_new:
+            logger.info(f'Node registered: {node_spec.id}')
+            logger.info(f'Total nodes: {len(self._nodes)}')
+        else:
+            logger.debug(f'Node re-registered: {node_spec.id}')
 
         await self._broadcast_topology()
 
@@ -95,17 +102,19 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
             return
 
         self._nodes.pop(node_id, None)
+        logger.info(f'Node removed: {node_id}')
+        logger.info(f'Total nodes: {len(self._nodes)}')
+
         await self._broadcast_topology()
 
     async def _broadcast_topology(self) -> None:
-        print(f'\nBroadcasting topology to {len(self._nodes)} nodes...')
+        logger.debug(f'Broadcasting topology to {len(self._nodes)} nodes...')
         if not self._nodes:
             return
 
         mesh_topology = self._get_mesh_topology()
-        print('Mesh nodes:')
         for node in mesh_topology.nodes:
-            print(f'- {node.id}: {node}')
+            logger.debug(f'- {node.id}: {node}')
 
         message = MeshTopologyBroadcast(mesh_topology)
 
@@ -120,7 +129,6 @@ def build_mesh_coordinator_server(
         port: Port = DEFAULT_COORDINATOR_PORT,
         authkey: AuthKey = None,
         authenticator: Authenticator = None,
-        log_heartbeats: bool = False,
 ) -> MeshCoordinatorServer:
     async def start_stream_server(cb):
         return await asyncio.start_server(cb, host=host, port=port)
@@ -137,5 +145,4 @@ def build_mesh_coordinator_server(
         start_stream_server,
         build_rpc,
         authenticator,
-        log_heartbeats,
     )

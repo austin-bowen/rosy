@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from asyncio import Lock, open_connection, wait_for
 from collections.abc import Awaitable, Callable
@@ -12,6 +13,8 @@ from rosy.specs import MeshNodeSpec, MeshTopologySpec
 from rosy.types import Host, Port
 
 MeshTopologyBroadcastHandler = Callable[[MeshTopologyBroadcast], Awaitable[None]]
+
+logger = logging.getLogger(__name__)
 
 
 class MeshCoordinatorClient(ABC):
@@ -65,7 +68,7 @@ class RPCMeshCoordinatorClient(MeshCoordinatorClient):
         if isinstance(data, MeshTopologyBroadcast):
             await self.mesh_topology_broadcast_handler(data)
         else:
-            print(f'Received unknown message={data}')
+            logger.error(f'Received unknown message={data}')
 
 
 MeshCoordinatorClientBuilder = Callable[[], Awaitable[MeshCoordinatorClient]]
@@ -132,9 +135,8 @@ class ReconnectMeshCoordinatorClient(MeshCoordinatorClient):
         try:
             await self._call_client_method('register_node', node_spec)
         except Exception as e:
-            print(
-                f'[coordinator client] Failed to register node. '
-                f'Registration will be retried. {e!r}'
+            logger.error(
+                f'Failed to register node. Registration will be retried. {e!r}'
             )
 
     async def _call_client_method(self, method: str, *args, **kwargs):
@@ -156,13 +158,13 @@ class ReconnectMeshCoordinatorClient(MeshCoordinatorClient):
             try:
                 await self.send_heartbeat()
             except Exception as e:
-                print(f'[coordinator client] Heartbeat failed: {e!r}')
+                logger.error(f'Heartbeat failed: {e!r}')
                 error = True
             else:
                 error = False
 
             if prev_error and not error:
-                print('[coordinator client] Connection to coordinator restored.')
+                logger.info('Connection to coordinator restored.')
 
                 if self._node_spec:
                     await self.register_node(self._node_spec)
