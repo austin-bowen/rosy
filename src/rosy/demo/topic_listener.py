@@ -7,7 +7,7 @@ from rosy import build_node
 async def main():
     logging.basicConfig(level='WARNING')
 
-    node = await build_node('receiver')
+    node = await build_node('topic_listener')
     await node.listen('some-topic', callback)
     await node.forever()
 

@@ -20,23 +20,23 @@ Here are some simplified examples. See the linked files for the full code.
 
 ### Example: Sending messages using Topics
 
-[rosy/demo/**sender.py**](src/rosy/demo/sender.py):
+[rosy/demo/**topic_sender.py**](src/rosy/demo/topic_sender.py):
 
 ```python
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='sender')
+    node = await rosy.build_node(name='topic_sender')
     await node.send('some-topic', 'hello', name='world')
 ```
 
-[rosy/demo/**receiver.py**](src/rosy/demo/receiver.py):
+[rosy/demo/**topic_listener.py**](src/rosy/demo/topic_listener.py):
 
 ```python
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='receiver')
+    node = await rosy.build_node(name='topic_listener')
     await node.listen('some-topic', callback)
     await node.forever()
 

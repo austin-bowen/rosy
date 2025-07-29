@@ -7,7 +7,7 @@ from rosy import build_node
 async def main():
     logging.basicConfig(level='WARNING')
 
-    node = await build_node(name='sender')
+    node = await build_node(name='topic_sender')
     await node.send('some-topic', 'hello', name='world')
 
 
