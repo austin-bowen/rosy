@@ -1,41 +1,20 @@
 import asyncio
 import logging
-from argparse import Namespace
 
-from rosy import build_node_from_args
-from rosy.argparse import get_node_arg_parser
-from rosy.cli.utils import add_log_arg
+from rosy import build_node
 
 
-async def main(args: Namespace):
-    logging.basicConfig(level=args.log)
+async def main():
+    logging.basicConfig(level='WARNING')
 
-    node = await build_node_from_args(args=args)
-
-    async def handle_message(topic, *args_, **kwargs_):
-        print(f'Received topic={topic!r} args={args_!r} kwargs={kwargs_!r}')
-
-    for topic in args.topics:
-        await node.listen(topic, handle_message)
-
-    print(f'Listening to topics: {args.topics}')
+    node = await build_node('receiver')
+    await node.listen('some-topic', callback)
     await node.forever()
 
 
-def parse_args() -> Namespace:
-    parser = get_node_arg_parser(default_node_name='receiver')
-
-    parser.add_argument(
-        '--topics', '-t',
-        nargs='+',
-        default=['some-topic'],
-        help='The topics to listen to. Default: %(default)s',
-    )
-
-    add_log_arg(parser, default='INFO')
-
-    return parser.parse_args()
+async def callback(topic, message: str, name: str = None):
+    print(f'Received "{message} {name}" on topic={topic}')
 
 
 if __name__ == '__main__':
-    asyncio.run(main(parse_args()))
+    asyncio.run(main())

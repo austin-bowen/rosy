@@ -41,16 +41,24 @@ async def main():
     await node.forever()
 
 async def callback(topic, message, name=None):
-    print(f'receiver got "{message} {name}" on topic={topic}')
+    print(f'Received "{message} {name}" on topic={topic}')
 ```
 
 **Terminal:**
 
 ```bash
-$ rosy &  # Start the coordinator node
-$ python -m rosy.demo.receiver &
+# Terminal 1
+$ rosy
+Started rosy coordinator on :7679
+
+# Terminal 2
+$ python -m rosy.demo.receiver
+
+# Terminal 3
 $ python -m rosy.demo.sender
-receiver got "hello world" on topic=some-topic
+
+# Terminal 2
+Received "hello world" on topic=some-topic
 ```
 
 ### Example: Calling Services
@@ -74,6 +82,7 @@ import rosy
 async def main():
     node = await rosy.build_node(name='server')
     await node.add_service('multiply', multiply)
+    await node.forever()
 
 async def multiply(a, b):
     return a * b
