@@ -52,10 +52,10 @@ $ rosy
 Started rosy coordinator on :7679
 
 # Terminal 2
-$ python -m rosy.demo.receiver
+$ python -m rosy.demo.topic_listener
 
 # Terminal 3
-$ python -m rosy.demo.sender
+$ python -m rosy.demo.topic_sender
 
 # Terminal 2
 Received "hello world" on topic=some-topic
@@ -63,29 +63,46 @@ Received "hello world" on topic=some-topic
 
 ### Example: Calling Services
 
-**Client:**
+[rosy/demo/**service_caller.py**](src/rosy/demo/service_caller.py):
 
 ```python
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='client')
-    response = await node.call('multiply', 2, 2)
-    assert response == 4
+    node = await rosy.build_node(name='service_caller')
+    print('Calculating 2 * 2...')
+    result = await node.call('multiply', 2, 2)
+    print(f'Result: {result}')
 ```
 
-**Server:**
+[rosy/demo/**service_provider.py**](src/rosy/demo/service_provider.py):
 
 ```python
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='server')
+    node = await rosy.build_node(name='service_provider')
     await node.add_service('multiply', multiply)
     await node.forever()
 
-async def multiply(a, b):
+async def multiply(service, a, b):
     return a * b
+```
+
+**Terminal:**
+
+```bash
+# Terminal 1
+$ rosy
+Started rosy coordinator on :7679
+
+# Terminal 2
+$ python -m rosy.demo.service_provider
+
+# Terminal 3
+$ python -m rosy.demo.service_caller
+Calculating 2 * 2...
+Result: 4
 ```
 
 ## Installation
@@ -127,10 +144,6 @@ Tool for recording and playing back messages. The options are:
 - `info`: Print information about a bag file. By default, the most recent bag file in the current directory will be used.
 
 Use the `--help` arg on any of those sub-commands to see all options.
-
-### `$ python -m rosy.demo.{sender,receiver}`
-
-Example sender and receiver nodes. These are also useful for sanity checking and testing your own nodes.
 
 ### `$ python -m rosy.demo.speedtest {send,recv}`
 

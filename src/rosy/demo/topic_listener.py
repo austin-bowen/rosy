@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from rosy import build_node
+from rosy.types import Topic
 
 
 async def main():
@@ -12,7 +13,7 @@ async def main():
     await node.forever()
 
 
-async def callback(topic, message: str, name: str = None):
+async def callback(topic: Topic, message: str, name: str = None):
     print(f'Received "{message} {name}" on topic={topic}')
 
 
