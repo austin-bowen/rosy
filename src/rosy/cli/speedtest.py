@@ -7,6 +7,43 @@ from rosy.argparse import add_authkey_arg, add_coordinator_arg
 from rosy.types import Topic
 
 
+async def speedtest_main(args: Namespace) -> None:
+    load_balancer = 'default' if args.enable_load_balancer else None
+
+    node = await build_node(
+        name=f'speed-test/{args.role}',
+        coordinator_host=args.coordinator.host,
+        coordinator_port=args.coordinator.port,
+        allow_unix_connections=not args.disable_unix,
+        allow_tcp_connections=not args.disable_tcp,
+        data_codec=args.codec,
+        authkey=args.authkey,
+        topic_load_balancer=load_balancer,
+        service_load_balancer=load_balancer,
+    )
+
+    speed_tester = SpeedTest(node)
+
+    topic = args.topic
+
+    if args.role == 'recv':
+        await speed_tester.receive(topic)
+    elif args.role == 'send':
+        print('Waiting for listeners...')
+        await node.wait_for_listener(topic)
+
+        print(f'Running speed test for {args.seconds}s '
+              f'with message_size={args.message_size}...')
+        mps = await speed_tester.measure_mps(
+            topic,
+            message_size=args.message_size,
+            duration=args.seconds,
+        )
+        print(f'[{node}] mps={round(mps)}')
+    else:
+        raise ValueError(f'Invalid role={args.role}')
+
+
 class SpeedTest:
     def __init__(self, node: Node):
         self.node = node
@@ -86,46 +123,12 @@ class SpeedTest:
                 print(f'[{self.node}] Avg latency: {avg_latency}s')
 
 
-async def main() -> None:
-    args = _parse_args()
-
-    load_balancer = 'default' if args.enable_load_balancer else None
-
-    node = await build_node(
-        name=f'speed-test/{args.role}',
-        coordinator_host=args.coordinator.host,
-        coordinator_port=args.coordinator.port,
-        allow_unix_connections=not args.disable_unix,
-        allow_tcp_connections=not args.disable_tcp,
-        data_codec=args.codec,
-        authkey=args.authkey,
-        topic_load_balancer=load_balancer,
-        service_load_balancer=load_balancer,
+def add_speedtest_command(subparsers) -> None:
+    parser: ArgumentParser = subparsers.add_parser(
+        'speedtest',
+        description='Run a speed test between two nodes.',
+        help='Run a speed test',
     )
-
-    speed_tester = SpeedTest(node)
-
-    topic = args.topic
-
-    if args.role == 'recv':
-        await speed_tester.receive(topic)
-    elif args.role == 'send':
-        print('Waiting for listeners...')
-        await node.wait_for_listener(topic)
-
-        print(f'Running speed test for {args.seconds}s...')
-        mps = await speed_tester.measure_mps(
-            topic,
-            message_size=args.message_size,
-            duration=args.seconds,
-        )
-        print(f'[{node}] mps={round(mps)}')
-    else:
-        raise ValueError(f'Invalid role={args.role}')
-
-
-def _parse_args() -> Namespace:
-    parser = ArgumentParser()
 
     parser.add_argument(
         'role', choices=('send', 'recv'),
@@ -163,9 +166,3 @@ def _parse_args() -> Namespace:
         '--disable-tcp', action='store_true',
         help='Disable TCP sockets for inter-node connections.',
     )
-
-    return parser.parse_args()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
