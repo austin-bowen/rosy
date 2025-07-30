@@ -73,6 +73,9 @@ class TcpServerProvider(ServerProvider):
             for socket in server.sockets
         ]
 
+        # Sort IPv4 before IPv6
+        conn_specs.sort(key=lambda spec: spec.family)
+
         return server, conn_specs
 
 

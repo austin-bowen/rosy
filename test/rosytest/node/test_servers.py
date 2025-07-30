@@ -33,8 +33,8 @@ class TestTcpServerProvider:
         expected_server = create_autospec(Server)
 
         expected_server.sockets = [
-            mock_socket(1234, socket.AF_INET),
             mock_socket(5678, socket.AF_INET6),
+            mock_socket(1234, socket.AF_INET),
         ]
 
         start_server_mock.return_value = expected_server

@@ -36,8 +36,8 @@ class PeerConnectionBuilder:
         for conn_spec in conn_specs:
             try:
                 reader_writer = await self._get_connection(conn_spec)
-            except ConnectionError as e:
-                logger.exception(f'Error connecting to {conn_spec}', exc_info=e)
+            except (ConnectionError, IOError) as e:
+                logger.error(f'Error connecting to {conn_spec}: {e!r}')
                 continue
 
             if reader_writer is not None:
