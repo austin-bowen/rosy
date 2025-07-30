@@ -19,20 +19,19 @@ class ServerProvider(ABC):
     async def start_server(
             self,
             client_connected_cb,
-    ) -> tuple[Server, ConnectionSpec]:
+    ) -> tuple[Server, list[ConnectionSpec]]:
         """Raises ``UnsupportedProviderError`` if not supported on the system."""
         ...  # pragma: no cover
 
 
-class PortScanTcpServerProvider(ServerProvider):
+class TcpServerProvider(ServerProvider):
     """Starts a TCP server on the first available port."""
 
     def __init__(
             self,
             server_host: ServerHost,
             client_host: Host,
-            start_port: Port = 49152,
-            max_ports: Port = 1024,
+            port: Port = 0,
             **kwargs,
     ):
         """
@@ -41,10 +40,9 @@ class PortScanTcpServerProvider(ServerProvider):
                 The interface(s) that the server will listen on.
             client_host:
                 The host that clients will use to connect to the server.
-            start_port:
-                The port to start scanning for an open port.
-            max_ports:
-                Maximum number of ports to scan.
+            port:
+                The port to start the server on. If set to 0, the server will
+                choose an available port automatically.
             kwargs:
                 Additional keyword arguments will be passed to the
                 ``asyncio.start_server`` call.
@@ -52,39 +50,30 @@ class PortScanTcpServerProvider(ServerProvider):
 
         self.server_host = server_host
         self.client_host = client_host
-        self.start_port = start_port
-        self.max_ports = max_ports
+        self.port = port
         self.kwargs = kwargs
-
-    @property
-    def end_port(self) -> int:
-        return self.start_port + self.max_ports - 1
 
     async def start_server(
             self,
             client_connected_cb,
-    ) -> tuple[Server, ConnectionSpec]:
-        last_error = None
-
-        for port in range(self.start_port, self.end_port + 1):
-            try:
-                server = await asyncio.start_server(
-                    client_connected_cb,
-                    host=self.server_host,
-                    port=port,
-                    **self.kwargs,
-                )
-            except OSError as e:
-                last_error = e
-            else:
-                conn_spec = IpConnectionSpec(self.client_host, port)
-                return server, conn_spec
-
-        raise OSError(
-            f'Unable to start a server on any port in range '
-            f'{self.start_port}-{self.end_port}. '
-            f'Last error: {last_error!r}'
+    ) -> tuple[Server, list[ConnectionSpec]]:
+        server = await asyncio.start_server(
+            client_connected_cb,
+            host=self.server_host,
+            port=self.port,
+            **self.kwargs,
         )
+
+        conn_specs = [
+            IpConnectionSpec(
+                self.client_host,
+                port=socket.getsockname()[1],
+                family=socket.family,
+            )
+            for socket in server.sockets
+        ]
+
+        return server, conn_specs
 
 
 class TmpUnixServerProvider(ServerProvider):
@@ -92,7 +81,7 @@ class TmpUnixServerProvider(ServerProvider):
 
     def __init__(
             self,
-            prefix: str | None = 'mesh-node-server.',
+            prefix: str | None = 'rosy-node-server.',
             suffix: str | None = '.sock',
             dir=None,
             **kwargs,
@@ -119,7 +108,7 @@ class TmpUnixServerProvider(ServerProvider):
     async def start_server(
             self,
             client_connected_cb,
-    ) -> tuple[Server, ConnectionSpec]:
+    ) -> tuple[Server, list[ConnectionSpec]]:
         with tempfile.NamedTemporaryFile(
                 prefix=self.prefix,
                 suffix=self.suffix,
@@ -134,7 +123,7 @@ class TmpUnixServerProvider(ServerProvider):
 
         conn_spec = UnixConnectionSpec(path=path)
 
-        return server, conn_spec
+        return server, [conn_spec]
 
 
 class ServersManager:
@@ -160,12 +149,12 @@ class ServersManager:
 
         for provider in self.server_providers:
             try:
-                server, connection_spec = await provider.start_server(client_connected_cb)
+                server, connection_specs = await provider.start_server(client_connected_cb)
             except UnsupportedProviderError as e:
                 logger.exception(f'Failed to start server using provider={provider}', exc_info=e)
             else:
-                logger.debug(f'Started node server with connection_spec={connection_spec}')
-                self._connection_specs.append(connection_spec)
+                logger.debug(f'Started node server with connection_specs={connection_specs}')
+                self._connection_specs.extend(connection_specs)
 
         if not self._connection_specs:
             raise RuntimeError('Unable to start any server with the given server providers.')

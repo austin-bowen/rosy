@@ -1,5 +1,6 @@
 from collections.abc import Collection
 from dataclasses import dataclass, field
+from socket import AddressFamily
 from uuid import UUID, uuid1
 
 from rosy.network import get_hostname
@@ -10,6 +11,7 @@ from rosy.types import Host, Port, Service, Topic
 class IpConnectionSpec:
     host: Host
     port: Port
+    family: AddressFamily
 
 
 @dataclass

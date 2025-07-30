@@ -1,3 +1,4 @@
+import socket
 from unittest.mock import AsyncMock, call, create_autospec
 
 import pytest
@@ -207,7 +208,7 @@ class TestNode:
 
     @pytest.mark.asyncio
     async def test_register(self):
-        connection_specs = [IpConnectionSpec('host', 1234)]
+        connection_specs = [IpConnectionSpec('host', 1234, family=socket.AF_INET)]
         self.servers_manager.connection_specs = connection_specs
 
         topics = {'topic1', 'topic2'}

@@ -27,7 +27,7 @@ from rosy.node.loadbalancing import (
     node_name_group_key,
 )
 from rosy.node.peer import PeerConnectionBuilder, PeerConnectionManager, PeerSelector
-from rosy.node.servers import PortScanTcpServerProvider, ServerProvider, ServersManager, TmpUnixServerProvider
+from rosy.node.servers import TcpServerProvider, ServerProvider, ServersManager, TmpUnixServerProvider
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.codec import ServiceRequestCodec, ServiceResponseCodec
 from rosy.node.service.handlermanager import ServiceHandlerManager
@@ -190,7 +190,7 @@ def build_server_providers(
         if not node_client_host:
             node_client_host = get_lan_hostname()
 
-        provider = PortScanTcpServerProvider(node_server_host, node_client_host)
+        provider = TcpServerProvider(node_server_host, node_client_host)
         server_providers.append(provider)
 
     if not server_providers:

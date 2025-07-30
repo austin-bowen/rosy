@@ -56,6 +56,7 @@ class PeerConnectionBuilder:
             return await open_connection(
                 host=conn_spec.host,
                 port=conn_spec.port,
+                family=conn_spec.family,
             )
         elif isinstance(conn_spec, UnixConnectionSpec):
             if conn_spec.host != self.host:

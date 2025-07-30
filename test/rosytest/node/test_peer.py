@@ -1,3 +1,4 @@
+import socket
 from unittest.mock import call, create_autospec, patch
 
 import pytest
@@ -48,13 +49,17 @@ class TestPeerConnectionBuilder:
         writer = create_autospec(Writer)
         open_connection_mock.return_value = reader, writer
 
-        conn_spec = IpConnectionSpec('host', 8080)
+        conn_spec = IpConnectionSpec('host', 8080, family=socket.AF_INET)
 
         result = await self.conn_builder.build([conn_spec])
 
         assert result == (reader, writer)
 
-        open_connection_mock.assert_awaited_once_with(host='host', port=8080)
+        open_connection_mock.assert_awaited_once_with(
+            host='host',
+            port=8080,
+            family=socket.AF_INET,
+        )
         self.authenticator.authenticate.assert_awaited_once_with(reader, writer)
 
     @pytest.mark.asyncio
@@ -92,8 +97,8 @@ class TestPeerConnectionBuilder:
         ]
 
         conn_specs = [
-            IpConnectionSpec('host1', 8080),
-            IpConnectionSpec('host2', 8080),
+            IpConnectionSpec('host1', 8080, family=socket.AF_INET),
+            IpConnectionSpec('host2', 8080, family=socket.AF_INET6),
         ]
 
         result = await self.conn_builder.build(conn_specs)
@@ -101,8 +106,8 @@ class TestPeerConnectionBuilder:
         assert result == (reader, writer)
 
         assert open_connection_mock.call_args_list == [
-            call(host='host1', port=8080),
-            call(host='host2', port=8080),
+            call(host='host1', port=8080, family=socket.AF_INET),
+            call(host='host2', port=8080, family=socket.AF_INET6),
         ]
         self.authenticator.authenticate.assert_awaited_once_with(reader, writer)
 
@@ -114,16 +119,16 @@ class TestPeerConnectionBuilder:
         ]
 
         conn_specs = [
-            IpConnectionSpec('host1', 8080),
-            IpConnectionSpec('host2', 8080),
+            IpConnectionSpec('host1', 8080, family=socket.AF_INET),
+            IpConnectionSpec('host2', 8080, family=socket.AF_INET6),
         ]
 
         with pytest.raises(ConnectionError, match='Could not connect to any connection spec'):
             await self.conn_builder.build(conn_specs)
 
         assert open_connection_mock.call_args_list == [
-            call(host='host1', port=8080),
-            call(host='host2', port=8080),
+            call(host='host1', port=8080, family=socket.AF_INET),
+            call(host='host2', port=8080, family=socket.AF_INET6),
         ]
         self.authenticator.authenticate.assert_not_awaited()
 

@@ -1,14 +1,15 @@
+import socket
 from asyncio import Server
 from collections.abc import Callable
-from unittest.mock import ANY, AsyncMock, call, create_autospec, patch
+from unittest.mock import ANY, AsyncMock, Mock, create_autospec, patch
 
 import pytest
 
 from rosy.asyncio import Reader, Writer
 from rosy.node.servers import (
-    PortScanTcpServerProvider,
     ServerProvider,
     ServersManager,
+    TcpServerProvider,
     TmpUnixServerProvider,
     UnsupportedProviderError,
     _close_on_return,
@@ -16,62 +17,50 @@ from rosy.node.servers import (
 from rosy.specs import IpConnectionSpec, UnixConnectionSpec
 
 
-class TestPortScanTcpServerProvider:
+class TestTcpServerProvider:
     def setup_method(self):
-        self.provider = PortScanTcpServerProvider(
+        self.provider = TcpServerProvider(
             server_host='server-host',
             client_host='client-host',
         )
 
-    def test_start_port(self):
-        assert self.provider.start_port == 49152
-
-    def test_max_ports(self):
-        assert self.provider.max_ports == 1024
-
-    def test_end_port(self):
-        assert self.provider.end_port == 49152 + 1024 - 1
+    def test_default_port_is_0(self):
+        assert self.provider.port == 0
 
     @patch('rosy.node.servers.asyncio.start_server')
     @pytest.mark.asyncio
-    async def test_start_server_uses_first_available_port(self, start_server_mock):
+    async def test_start_server(self, start_server_mock):
         expected_server = create_autospec(Server)
 
-        start_server_mock.side_effect = [
-            OSError('Address already in use'),
-            OSError('Address already in use'),
-            expected_server,
+        expected_server.sockets = [
+            mock_socket(1234, socket.AF_INET),
+            mock_socket(5678, socket.AF_INET6),
         ]
+
+        start_server_mock.return_value = expected_server
 
         client_connected_cb = create_autospec(Callable)
 
-        server, conn_spec = await self.provider.start_server(client_connected_cb)
+        server, conn_specs = await self.provider.start_server(client_connected_cb)
 
         assert server is expected_server
-        assert conn_spec == IpConnectionSpec('client-host', 49154)
-
-        def expected_call(port: int) -> call:
-            return call(
-                client_connected_cb,
-                host='server-host',
-                port=port,
-            )
-
-        assert start_server_mock.call_args_list == [
-            expected_call(49152),
-            expected_call(49153),
-            expected_call(49154),
+        assert conn_specs == [
+            IpConnectionSpec('client-host', 1234, family=socket.AF_INET),
+            IpConnectionSpec('client-host', 5678, family=socket.AF_INET6),
         ]
 
-    @patch('rosy.node.servers.asyncio.start_server')
-    @pytest.mark.asyncio
-    async def test_start_server_raises_OSError_if_no_ports_available(self, start_server_mock):
-        start_server_mock.side_effect = OSError('Address already in use')
+        start_server_mock.assert_awaited_once_with(
+            client_connected_cb,
+            host='server-host',
+            port=0,
+        )
 
-        client_connected_cb = create_autospec(Callable)
 
-        with pytest.raises(OSError):
-            await self.provider.start_server(client_connected_cb)
+def mock_socket(port: int, family: socket.AddressFamily) -> socket.socket:
+    mock_sock = Mock(socket.socket)
+    mock_sock.getsockname.return_value = (..., port)
+    mock_sock.family = family
+    return mock_sock
 
 
 class TestTmpUnixServerProvider:
@@ -86,7 +75,7 @@ class TestTmpUnixServerProvider:
 
         client_connected_cb = create_autospec(Callable)
 
-        server, conn_spec = await self.provider.start_server(client_connected_cb)
+        server, conn_specs = await self.provider.start_server(client_connected_cb)
 
         start_unix_server_mock.assert_called_once_with(
             client_connected_cb,
@@ -95,7 +84,7 @@ class TestTmpUnixServerProvider:
         sock_path = start_unix_server_mock.call_args[1]['path']
 
         assert server is expected_server
-        assert conn_spec == UnixConnectionSpec(sock_path)
+        assert conn_specs == [UnixConnectionSpec(sock_path)]
 
     @patch('rosy.node.servers.asyncio.start_unix_server')
     @pytest.mark.asyncio
@@ -128,7 +117,7 @@ class TestServersManager:
         for provider, server, conn_spec in zip(
                 self.server_providers, servers, self.conn_specs
         ):
-            provider.start_server.return_value = (server, conn_spec)
+            provider.start_server.return_value = (server, [conn_spec])
 
         self.client_connected_cb = create_autospec(Callable)
 
