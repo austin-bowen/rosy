@@ -1,6 +1,6 @@
 [project]
 name = "rosy"
-version = "0.7.0"
+version = "0.7.1"
 description = "It's not ROS, but it is ROS-y! Simple, fast inter-process message passing for distributed Python processes"
 authors = [
     {name = "Austin Bowen", email = "austin.bowen.314@gmail.com"}
