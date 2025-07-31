@@ -108,7 +108,7 @@ Result: 4
 ## Installation
 
 ```bash
-pip install git+https://github.com/austin-bowen/rosy.git
+pip install rosy
 ```
 
 ## Commands
