@@ -73,7 +73,7 @@ class HMACAuthenticator(Authenticator):
                 reader.readexactly(n),
                 timeout=self.timeout,
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             raise AuthenticationError(f'Timeout after {self.timeout}s waiting for authkey.')
         except IncompleteReadError as e:
             raise AuthenticationError(e)

@@ -1,4 +1,6 @@
+import asyncio
 import secrets
+from asyncio import IncompleteReadError
 from unittest.mock import AsyncMock, Mock, call
 
 import pytest
@@ -113,6 +115,30 @@ class TestHMACAuthenticator:
             call(self.hmac_to_client),
         ])
         assert self.writer.drain.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_authenticate_should_raise_AuthenticationError_when_read_timeout_occurs(self):
+        async def readexactly(n):
+            await asyncio.sleep(1)
+
+        self.reader.readexactly.side_effect = readexactly
+
+        auth = HMACAuthenticator(
+            self.authkey,
+            challenge_length=self.challenge_length,
+            timeout=0.01,
+            get_random_bytes=self.get_random_bytes,
+        )
+
+        with pytest.raises(AuthenticationError):
+            await auth.authenticate(self.reader, self.writer)
+
+    @pytest.mark.asyncio
+    async def test_authenticate_should_raise_AuthenticationError_when_IncompleteReadError_occurs(self):
+        self.reader.readexactly.side_effect = IncompleteReadError(b'', self.challenge_length)
+
+        with pytest.raises(AuthenticationError):
+            await self.auth.authenticate(self.reader, self.writer)
 
 
 class TestOptionalAuthkeyAuthenticator:
