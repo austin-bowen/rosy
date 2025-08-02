@@ -1,14 +1,20 @@
 import asyncio
+import logging
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
+from rosy import build_node_from_args
+from rosy.argparse import add_node_name_arg
 from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
-from rosy import Node
 from rosy.utils import require
 
 
-async def play(node: Node, args: Namespace) -> None:
+async def play(args: Namespace) -> None:
+    logging.basicConfig(level=args.log)
+
+    node = await build_node_from_args(args=args)
+
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
     print(f'Playing back messages from "{bag_file_path}"...')
@@ -70,6 +76,8 @@ def add_play_args(subparsers) -> None:
         action='store_true',
         help='Do not log data from sent messages to the console.',
     )
+
+    add_node_name_arg(parser, default='rosy bag play')
 
 
 async def _wait_for_next_send(

@@ -135,7 +135,7 @@ def add_authkey_arg(
         default=default,
         type=lambda arg: arg.encode(),
         help='Authentication key to use for new connections between all nodes in the mesh. '
-             'Should ideally be >= 32 characters. Default: %(default)s',
+             'Default: %(default)s',
     )
 
 

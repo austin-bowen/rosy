@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 
 from rosy import build_node_from_args
-from rosy.argparse import add_node_args
+from rosy.argparse import add_node_name_arg
 from rosy.cli.topic.utils import print_args_and_kwargs
 from rosy.cli.utils import add_log_arg
 from rosy.types import Topic
@@ -46,7 +46,7 @@ def add_echo_command(subparsers) -> None:
 
     add_log_arg(parser)
 
-    add_node_args(
+    add_node_name_arg(
         parser,
-        default_node_name='rosy topic echo',
+        default='rosy topic echo',
     )

@@ -1,13 +1,19 @@
 import asyncio
+import logging
 import pickle
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
-from rosy import Node
+from rosy import build_node_from_args
+from rosy.argparse import add_node_name_arg
 
 
-async def record(node: Node, args: Namespace) -> None:
+async def record(args: Namespace) -> None:
+    logging.basicConfig(level=args.log)
+
+    node = await build_node_from_args(args=args)
+
     bag_file_path = args.output or get_bag_file_path()
 
     with open(bag_file_path, 'wb') as bag_file:
@@ -56,6 +62,8 @@ def add_record_args(subparsers) -> None:
         action='store_true',
         help='Disable logging of "." when a new message is received.'
     )
+
+    add_node_name_arg(parser, default='rosy bag record')
 
     parser.add_argument(
         'topics',

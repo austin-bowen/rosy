@@ -5,7 +5,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 
 from rosy import build_node_from_args
-from rosy.argparse import add_node_args
+from rosy.argparse import add_node_name_arg
 from rosy.cli.topic.send import parse_args_and_kwargs
 from rosy.cli.topic.utils import print_args_and_kwargs
 from rosy.cli.utils import add_log_arg
@@ -109,7 +109,7 @@ or follow the format:
 
     add_log_arg(parser)
 
-    add_node_args(
+    add_node_name_arg(
         parser,
-        default_node_name='rosy service call',
+        default='rosy service call',
     )
