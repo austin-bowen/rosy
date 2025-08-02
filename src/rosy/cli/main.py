@@ -10,6 +10,7 @@ from rosy.cli.node.main import add_node_command, node_main
 from rosy.cli.service.main import add_service_command, service_main
 from rosy.cli.speedtest import add_speedtest_command, speedtest_main
 from rosy.cli.topic.main import add_topic_command, topic_main
+from rosy.version import __version__
 
 _command_to_main = {
     'coordinator': coordinator_main,
@@ -56,6 +57,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     add_coordinator_arg(parser)
     add_authkey_arg(parser)
+
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version=f'%(prog)s {__version__}',
+    )
 
     subparsers = parser.add_subparsers(
         title='commands',

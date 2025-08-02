@@ -3,7 +3,6 @@ import time
 from argparse import ArgumentParser, Namespace
 
 from rosy import Node, build_node
-from rosy.argparse import add_authkey_arg, add_coordinator_arg
 from rosy.types import Topic
 
 
@@ -134,8 +133,6 @@ def add_speedtest_command(subparsers) -> None:
         'role', choices=('send', 'recv'),
         help='Role of the node: sender or receiver.',
     )
-    add_coordinator_arg(parser)
-    add_authkey_arg(parser)
     parser.add_argument(
         '--seconds', type=float, default=10.,
         help='How long to run the speed test in seconds. Default: %(default)s',
