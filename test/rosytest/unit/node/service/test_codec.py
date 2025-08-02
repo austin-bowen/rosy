@@ -4,7 +4,7 @@ import pytest
 
 from rosy.node.service.codec import ServiceRequestCodec, ServiceResponseCodec
 from rosy.node.service.types import ServiceRequest, ServiceResponse
-from rosytest.test_codec import CodecTest
+from rosytest.unit.test_codec import CodecTest
 
 
 class TestServiceRequestCodec(CodecTest):

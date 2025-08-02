@@ -11,7 +11,7 @@ from rosy.codec import (
     MsgpackCodec,
     PickleCodec,
     SequenceCodec, VariableLengthIntCodec, )
-from rosytest.calltracker import CallTracker
+from rosytest.unit.calltracker import CallTracker
 
 
 class CodecTest:

@@ -4,7 +4,7 @@ import pytest
 
 from rosy.node.topic.codec import TopicMessageCodec
 from rosy.node.topic.types import TopicMessage
-from rosytest.test_codec import CodecTest
+from rosytest.unit.test_codec import CodecTest
 
 
 class TestTopicMessageCodec(CodecTest):

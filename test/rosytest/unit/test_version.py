@@ -1,4 +1,4 @@
-from pathlib import Path
+from rosytest.util import REPO_ROOT
 
 
 def test_pyproject_version_matches_rosy_version():
@@ -10,7 +10,7 @@ def test_pyproject_version_matches_rosy_version():
 
 
 def _get_pyproject_version() -> str:
-    pyproject_path = Path(__file__).parent.parent.parent / 'pyproject.toml'
+    pyproject_path = REPO_ROOT / 'pyproject.toml'
 
     with open(pyproject_path, 'r') as f:
         for line in f:
