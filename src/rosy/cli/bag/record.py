@@ -7,6 +7,7 @@ from pathlib import Path
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_name_arg
+from rosy.cli.utils import add_log_arg
 
 
 async def record(args: Namespace) -> None:
@@ -63,6 +64,7 @@ def add_record_args(subparsers) -> None:
         help='Disable logging of "." when a new message is received.'
     )
 
+    add_log_arg(parser)
     add_node_name_arg(parser, default='rosy bag record')
 
     parser.add_argument(

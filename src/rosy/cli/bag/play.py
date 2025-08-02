@@ -7,6 +7,8 @@ from pathlib import Path
 from rosy import build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
+from rosy.cli.topic.utils import print_args_and_kwargs
+from rosy.cli.utils import add_log_arg
 from rosy.utils import require
 
 
@@ -36,10 +38,10 @@ async def play(args: Namespace) -> None:
         await node.send(topic, *args_, **kwargs_)
 
         if not args.no_log:
-            if args.no_log_data:
-                print(f'[{instant}] {topic}')
-            else:
-                print(f'[{instant}] {topic}: args={args_}; kwargs={kwargs_}')
+            print(f'[{instant}] topic={topic!r}')
+            if not args.no_log_args:
+                print_args_and_kwargs(args_, kwargs_)
+                print()
 
 
 def add_play_args(subparsers) -> None:
@@ -72,11 +74,12 @@ def add_play_args(subparsers) -> None:
     )
 
     parser.add_argument(
-        '--no-log-data',
+        '--no-log-args',
         action='store_true',
-        help='Do not log data from sent messages to the console.',
+        help='Do not log args/kwargs from sent messages to the console.',
     )
 
+    add_log_arg(parser)
     add_node_name_arg(parser, default='rosy bag play')
 
 

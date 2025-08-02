@@ -6,7 +6,6 @@ from rosy.cli.bag.record import add_record_args, record
 
 
 async def bag_main(args: Namespace):
-    print(args)
     if args.bag_command == 'record':
         await record(args)
     elif args.bag_command == 'play':
