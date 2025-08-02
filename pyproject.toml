@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [tool.poetry.group.test.dependencies]
+pexpect = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
