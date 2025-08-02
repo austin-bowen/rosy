@@ -7,8 +7,7 @@ from pathlib import Path
 from rosy import build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
-from rosy.cli.topic.utils import print_args_and_kwargs
-from rosy.cli.utils import add_log_arg
+from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 from rosy.utils import require
 
 

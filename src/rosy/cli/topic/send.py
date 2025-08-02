@@ -11,8 +11,7 @@ from typing import Any
 
 from rosy import build_node_from_args
 from rosy.argparse import add_node_name_arg
-from rosy.cli.topic.utils import print_args_and_kwargs
-from rosy.cli.utils import add_log_arg
+from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 
 
 async def send_main(args: Namespace):
