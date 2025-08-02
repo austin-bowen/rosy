@@ -61,6 +61,13 @@ class TestNode:
         self.coordinator_client.register_node.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_start_on_started_node_raises_RuntimeError(self):
+        await self.node.start()
+
+        with pytest.raises(RuntimeError, match='Node is already started.'):
+            await self.node.start()
+
+    @pytest.mark.asyncio
     async def test_send(self):
         await self.node.send('topic', 'arg', key='value')
 
