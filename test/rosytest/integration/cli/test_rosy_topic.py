@@ -4,7 +4,7 @@ from rosytest.integration.cli.utils import rosy_cli
 
 
 class TestRosyTopic:
-    def test_send_and_echo(self, custom_coordinator):
+    def test_send_once_and_echo(self, custom_coordinator):
         with rosy_cli(
                 'topic',
                 'send',
@@ -17,6 +17,7 @@ class TestRosyTopic:
             with rosy_cli('topic', 'echo', 'test') as echo_proc:
                 echo_proc.expect_exact("Listening to topics: ['test']\n")
 
+                send_proc.expect(r'\[.*\]\n')  # Timestamp header
                 send_proc.expect_exact([
                     "Sending to topic='test'\n",
                     "args:\n",
@@ -24,7 +25,9 @@ class TestRosyTopic:
                     "kwargs:\n",
                 ])
                 send_proc.expect(r"  timestamp=\d+\.\d+\n")
+                send_proc.expect_exact(EOF)
 
+                echo_proc.expect(r'\[.*\]\n')  # Timestamp header
                 echo_proc.expect_exact([
                     "topic='test'\n",
                     "args:\n",
@@ -32,6 +35,24 @@ class TestRosyTopic:
                     "kwargs:\n",
                 ])
                 echo_proc.expect(r"  timestamp\=\d+\.\d+\n")
+
+    def test_send_multiple(self, custom_coordinator):
+        with (
+            rosy_cli('topic', 'echo', 'test'),
+            rosy_cli(
+                'topic',
+                'send',
+                '--interval',
+                '0.1',
+                'test',
+            ) as send_proc,
+        ):
+            for _ in range(2):
+                send_proc.expect(r'\[.*\]\n')  # Timestamp header
+                send_proc.expect_exact([
+                    "Sending to topic='test'\n",
+                    "\n",
+                ])
 
     def test_list(self, custom_coordinator):
         with (
