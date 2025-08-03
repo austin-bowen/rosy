@@ -1,29 +1,37 @@
+from pexpect import EOF
+
 from rosytest.integration.cli.utils import rosy_cli
 
 
 class TestRosyTopic:
     def test_send_and_echo(self, custom_coordinator):
-        with (
-            rosy_cli('topic', 'echo', 'test') as echo_proc,
-            rosy_cli('topic', 'send', 'test', "'arg'", "key='value'") as send_proc,
-        ):
-            echo_proc.expect_exact("Listening to topics: ['test']\n")
+        with rosy_cli(
+                'topic',
+                'send',
+                'test',
+                "'arg'",
+                "timestamp=call:time.time()",
+        ) as send_proc:
+            send_proc.expect_exact('Waiting for listeners...\n')
 
-            send_proc.expect_exact([
-                "Sending to topic='test'\n",
-                "args:\n",
-                "  0: 'arg'\n",
-                "kwargs:\n",
-                "  key='value'\n",
-            ])
+            with rosy_cli('topic', 'echo', 'test') as echo_proc:
+                echo_proc.expect_exact("Listening to topics: ['test']\n")
 
-            echo_proc.expect_exact([
-                "topic='test'\n",
-                "args:\n",
-                "  0: 'arg'\n",
-                "kwargs:\n",
-                "  key='value'\n",
-            ])
+                send_proc.expect_exact([
+                    "Sending to topic='test'\n",
+                    "args:\n",
+                    "  0: 'arg'\n",
+                    "kwargs:\n",
+                ])
+                send_proc.expect(r"  timestamp=\d+\.\d+\n")
+
+                echo_proc.expect_exact([
+                    "topic='test'\n",
+                    "args:\n",
+                    "  0: 'arg'\n",
+                    "kwargs:\n",
+                ])
+                echo_proc.expect(r"  timestamp\=\d+\.\d+\n")
 
     def test_list(self, custom_coordinator):
         with (
@@ -39,3 +47,10 @@ class TestRosyTopic:
                     'test2\n',
                     'test3\n',
                 ])
+
+    def test_send_raises_ValueError_when_kwargs_before_args(self):
+        with rosy_cli('topic', 'send', 'test', "key='value'", "'arg'") as send_proc:
+            send_proc.expect_exact([
+                """ValueError: Positional argument "'arg'" must come before the keyword arguments.\n""",
+                EOF,
+            ])
