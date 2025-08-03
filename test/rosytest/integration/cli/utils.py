@@ -1,29 +1,30 @@
-import subprocess
-from re import match
+import signal
+from collections.abc import Generator
+from contextlib import contextmanager
+
+from pexpect.popen_spawn import PopenSpawn
+
+TEST_COORDINATOR_PORT: int = 7680
+TEST_AUTHKEY: str = 'testing'
 
 
-def assert_rosy_output_matches(
-        *args: str,
-        pattern: str,
-        check: bool = True,
-) -> None:
-    result = run_rosy(*args, check=check)
-    assert match(pattern, result.stdout), (
-        f'Output did not match pattern: {pattern}\n'
-        f'Output was: {result.stdout}'
+@contextmanager
+def rosy_cli(*args: str, timeout: float | None = 3) -> Generator[PopenSpawn]:
+    process = PopenSpawn(
+        [
+            'env',
+            'PYTHONUNBUFFERED=1',
+            'rosy',
+            f'--coordinator=:{TEST_COORDINATOR_PORT}',
+            '--authkey=testing',
+            *args,
+        ],
+        timeout=timeout,
+        encoding='utf-8',
     )
 
-
-def run_rosy(*args: str, check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(
-        ['rosy', *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=check,
-        text=True,
-    )
-
-    if check:
-        assert not result.stderr
-
-    return result
+    try:
+        yield process
+    finally:
+        # Emulate Ctrl+C
+        process.kill(signal.SIGINT)

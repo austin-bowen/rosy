@@ -1,7 +1,6 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.argparse import add_authkey_arg, add_coordinator_arg
 from rosy.cli.utils import add_log_arg, get_mesh_topology
 
 
@@ -28,6 +27,3 @@ def add_list_command(subparsers) -> None:
     )
 
     add_log_arg(parser)
-
-    add_coordinator_arg(parser)
-    add_authkey_arg(parser)

@@ -1,10 +1,7 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.argparse import add_authkey_arg, add_coordinator_arg
-from rosy.authentication import optional_authkey_authenticator
 from rosy.cli.utils import add_log_arg, get_mesh_topology
-from rosy.coordinator.client import build_coordinator_client
 
 
 async def list_main(args: Namespace):
@@ -30,6 +27,3 @@ def add_list_command(subparsers) -> None:
     )
 
     add_log_arg(parser)
-
-    add_coordinator_arg(parser)
-    add_authkey_arg(parser)
