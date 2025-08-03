@@ -2,7 +2,7 @@ from rosytest.integration.cli.utils import rosy_cli
 
 
 class TestRosyTopic:
-    def test_send_and_echo(self, coordinator):
+    def test_send_and_echo(self, custom_coordinator):
         with (
             rosy_cli('topic', 'echo', 'test') as echo_proc,
             rosy_cli('topic', 'send', 'test', "'arg'", "key='value'") as send_proc,
@@ -25,7 +25,7 @@ class TestRosyTopic:
                 "  key='value'\n",
             ])
 
-    def test_list(self, coordinator):
+    def test_list(self, custom_coordinator):
         with (
             rosy_cli('topic', 'echo', 'test1', 'test2') as echo_proc1,
             rosy_cli('topic', 'echo', 'test2', 'test3') as echo_proc2,

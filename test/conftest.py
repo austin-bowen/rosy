@@ -8,14 +8,18 @@ from rosytest.integration.cli.utils import (
 
 
 @pytest.fixture(scope='session')
-def coordinator():
+def default_coordinator():
+    with rosy_cli('coordinator') as process:
+        process.expect('Started rosy coordinator')
+        yield process
+
+
+@pytest.fixture(scope='session')
+def custom_coordinator():
     with rosy_cli(
             'coordinator',
             f'--port={TEST_COORDINATOR_PORT}',
             f'--authkey={TEST_AUTHKEY}',
     ) as process:
-        process.expect_exact(
-            f'Started rosy coordinator on :{TEST_COORDINATOR_PORT}\n',
-        )
-
+        process.expect('Started rosy coordinator')
         yield process

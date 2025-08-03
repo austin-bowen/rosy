@@ -10,6 +10,7 @@ async def main():
 
     node = await build_node('service_provider')
     await node.add_service('multiply', multiply)
+    print('Started service...')
     await node.forever()
 
 

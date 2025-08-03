@@ -99,6 +99,7 @@ Started rosy coordinator on :7679
 
 # Terminal 2
 $ python -m rosy.demo.service_provider
+Started service...
 
 # Terminal 3
 $ python -m rosy.demo.service_caller

@@ -1,6 +1,7 @@
 import signal
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
+from subprocess import TimeoutExpired
 
 from pexpect.popen_spawn import PopenSpawn
 
@@ -8,18 +9,43 @@ TEST_COORDINATOR_PORT: int = 7680
 TEST_AUTHKEY: str = 'testing'
 
 
+def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
+    """
+    Runs the `rosy` command with args setup to use the custom test coordinator.
+    """
+
+    return run(
+        'env',
+        'PYTHONUNBUFFERED=1',
+        'rosy',
+        f'--coordinator=:{TEST_COORDINATOR_PORT}',
+        f'--authkey={TEST_AUTHKEY}',
+        *args,
+    )
+
+
+def python_module(module: str, *args: str) -> AbstractContextManager[PopenSpawn]:
+    return run(
+        'python',
+        '-u',
+        '-m',
+        module,
+        *args,
+    )
+
+
 @contextmanager
-def rosy_cli(*args: str, timeout: float | None = 3) -> Generator[PopenSpawn]:
+def run(cmd: str, *args: str) -> Generator[PopenSpawn]:
+    """
+    Context manager for running a command with arguments.
+
+    If the command is still running when the context exits,
+    it will send a SIGINT (Ctrl+C) to terminate it gracefully.
+    """
+
     process = PopenSpawn(
-        [
-            'env',
-            'PYTHONUNBUFFERED=1',
-            'rosy',
-            f'--coordinator=:{TEST_COORDINATOR_PORT}',
-            '--authkey=testing',
-            *args,
-        ],
-        timeout=timeout,
+        [cmd, *args],
+        timeout=3,
         encoding='utf-8',
     )
 
@@ -30,4 +56,8 @@ def rosy_cli(*args: str, timeout: float | None = 3) -> Generator[PopenSpawn]:
             # Emulate Ctrl+C
             process.kill(signal.SIGINT)
 
-        process.wait()
+        try:
+            process.proc.wait(timeout=3)
+        except TimeoutExpired:
+            process.kill(signal.SIGKILL)
+            process.wait()
