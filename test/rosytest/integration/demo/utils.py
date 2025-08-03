@@ -4,19 +4,15 @@ from contextlib import contextmanager
 
 from pexpect.popen_spawn import PopenSpawn
 
-TEST_COORDINATOR_PORT: int = 7680
-TEST_AUTHKEY: str = 'testing'
-
 
 @contextmanager
-def rosy_cli(*args: str, timeout: float | None = 3) -> Generator[PopenSpawn]:
+def python_module(*args: str, timeout: float | None = 3) -> Generator[PopenSpawn]:
     process = PopenSpawn(
         [
             'env',
             'PYTHONUNBUFFERED=1',
-            'rosy',
-            f'--coordinator=:{TEST_COORDINATOR_PORT}',
-            '--authkey=testing',
+            'python',
+            '-m',
             *args,
         ],
         timeout=timeout,

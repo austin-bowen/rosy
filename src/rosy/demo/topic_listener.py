@@ -10,6 +10,7 @@ async def main():
 
     node = await build_node('topic_listener')
     await node.listen('some-topic', callback)
+    print('Listening...')
     await node.forever()
 
 
