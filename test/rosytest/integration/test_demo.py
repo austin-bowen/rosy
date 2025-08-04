@@ -3,7 +3,7 @@ from pexpect import EOF
 from rosytest.integration.cli.utils import python_module
 
 
-def test_demo_topic_sender_and_listener(default_coordinator):
+def test_demo_topic_sender_and_listener(coordinator):
     with python_module('rosy.demo.topic_listener') as listener_proc:
         listener_proc.expect_exact('Listening...\n')
 
@@ -15,7 +15,7 @@ def test_demo_topic_sender_and_listener(default_coordinator):
         )
 
 
-def test_demo_service_caller_and_provider(default_coordinator):
+def test_demo_service_caller_and_provider(coordinator):
     with python_module('rosy.demo.service_provider') as provider_proc:
         provider_proc.expect_exact('Started service...\n')
 

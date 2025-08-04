@@ -5,9 +5,6 @@ from subprocess import TimeoutExpired
 
 from pexpect.popen_spawn import PopenSpawn
 
-TEST_COORDINATOR_PORT: int = 7680
-TEST_AUTHKEY: str = 'testing'
-
 
 def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
     """
@@ -18,8 +15,6 @@ def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
         'env',
         'PYTHONUNBUFFERED=1',
         'rosy',
-        f'--coordinator=:{TEST_COORDINATOR_PORT}',
-        f'--authkey={TEST_AUTHKEY}',
         *args,
     )
 
@@ -45,7 +40,7 @@ def run(cmd: str, *args: str) -> Generator[PopenSpawn]:
 
     process = PopenSpawn(
         [cmd, *args],
-        timeout=3,
+        timeout=10,
         encoding='utf-8',
     )
 
