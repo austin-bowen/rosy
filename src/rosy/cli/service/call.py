@@ -13,6 +13,9 @@ from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 async def call_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
+    # Sanity check
+    parse_args_and_kwargs(args.args)
+
     node = await build_node_from_args(args=args)
 
     service = node.get_service(args.service)
