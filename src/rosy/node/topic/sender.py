@@ -1,10 +1,15 @@
-from rosy.asyncio import log_error, many
+import logging
+
+from rosy.asyncio import many
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.peer import PeerConnectionManager, PeerSelector
 from rosy.node.topic.types import TopicMessage
 from rosy.node.types import Args, KWArgs
 from rosy.specs import MeshNodeSpec
 from rosy.types import Buffer, Topic
+from rosy.utils import ALLOWED_EXCEPTIONS
+
+logger = logging.getLogger(__name__)
 
 
 class TopicSender:
@@ -29,13 +34,20 @@ class TopicSender:
         data = await self.node_message_codec.encode_topic_message(message)
 
         await many([
-            log_error(self._send_to_one(n, data))
+            self._send_to_one(n, data)
             for n in nodes
         ])
 
     async def _send_to_one(self, node: MeshNodeSpec, data: Buffer) -> None:
-        connection = await self.connection_manager.get_connection(node)
+        try:
+            connection = await self.connection_manager.get_connection(node)
 
-        async with connection.writer as writer:
-            writer.write(data)
-            await writer.drain()
+            async with connection.writer as writer:
+                writer.write(data)
+                await writer.drain()
+        except ALLOWED_EXCEPTIONS:
+            raise
+        except Exception as e:
+            logger.error(
+                f'Error sending topic message to node={node.id}: {e!r}',
+            )
