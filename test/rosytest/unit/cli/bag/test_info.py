@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
+
 import pytest
 
-from rosy.cli.bag.info import get_human_readable_size
+from rosy.cli.bag.info import BagInfo, get_human_readable_size
 
 
 @pytest.mark.parametrize("size,expected", [
@@ -15,3 +17,32 @@ from rosy.cli.bag.info import get_human_readable_size
 ])
 def test_get_human_readable_size(size: int, expected: tuple[int, str]):
     assert get_human_readable_size(size) == expected
+
+
+start = datetime(2025, 1, 1, 0, 0, 0)
+end = datetime(2025, 1, 2, 0, 0, 0)
+dt = timedelta(days=1)
+
+
+@pytest.mark.parametrize('start, end, expected', [
+    (start, end, dt),
+    (start, None, None),
+    (None, end, None),
+    (None, None, None),
+])
+def test_BagInfo_duration(
+        start: datetime | None,
+        end: datetime | None,
+        expected: timedelta | None,
+):
+    bag_info = BagInfo(
+        path=...,
+        start=start,
+        end=end,
+        size=...,
+        size_unit=...,
+        messages=...,
+        topics=...,
+    )
+
+    assert bag_info.duration == expected

@@ -81,8 +81,8 @@ def get_human_readable_size(size: int) -> tuple[int, str]:
 @dataclass
 class BagInfo:
     path: Path
-    start: datetime
-    end: datetime
+    start: datetime | None
+    end: datetime | None
     size: int
     size_unit: str
     messages: int
