@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from asyncio import StreamReader
 from codecs import StreamWriter
 
-from rosy.asyncio import close_ignoring_errors, many
+from rosy.asyncio import close_ignoring_errors
 from rosy.authentication import AuthKey, Authenticator, optional_authkey_authenticator
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from rosy.objectio import CodecObjectReader, CodecObjectWriter, ObjectIO
@@ -12,6 +12,7 @@ from rosy.reqres import MeshTopologyBroadcast, RegisterNodeRequest, RegisterNode
 from rosy.rpc import ObjectIORPC, RPC
 from rosy.specs import MeshNodeSpec, MeshTopologySpec, NodeId
 from rosy.types import Port, ServerHost
+from rosy.utils import ALLOWED_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +119,18 @@ class RPCMeshCoordinatorServer(MeshCoordinatorServer):
 
         message = MeshTopologyBroadcast(mesh_topology)
 
-        await many(
-            node_client.send_message(message)
+        [
+            await self._send_message(node_client, message)
             for node_client in self._node_clients.keys()
-        )
+        ]
+
+    async def _send_message(self, client: RPC, message: MeshTopologyBroadcast) -> None:
+        try:
+            await client.send_message(message)
+        except ALLOWED_EXCEPTIONS:
+            raise
+        except Exception as e:
+            logger.error(f'Error sending message to client: {e!r}')
 
 
 def build_mesh_coordinator_server(

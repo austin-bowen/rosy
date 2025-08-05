@@ -1,6 +1,5 @@
 import logging
 
-from rosy.asyncio import many
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.peer import PeerConnectionManager, PeerSelector
 from rosy.node.topic.types import TopicMessage
@@ -33,10 +32,10 @@ class TopicSender:
         message = TopicMessage(topic, args, kwargs)
         data = await self.node_message_codec.encode_topic_message(message)
 
-        await many([
-            self._send_to_one(n, data)
+        [
+            await self._send_to_one(n, data)
             for n in nodes
-        ])
+        ]
 
     async def _send_to_one(self, node: MeshNodeSpec, data: Buffer) -> None:
         try:

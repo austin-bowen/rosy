@@ -1,9 +1,7 @@
 import asyncio
-import traceback
-from asyncio import Lock, Task
-from collections.abc import Awaitable, Iterable, Sized
+from asyncio import Lock
 from io import BytesIO
-from typing import Protocol, Type, TypeVar
+from typing import Protocol, TypeVar
 
 from rosy.types import Buffer
 
@@ -23,47 +21,6 @@ async def close_ignoring_errors(writer: 'Writer') -> None:
 async def forever():
     """Never returns."""
     await asyncio.Future()
-
-
-async def many(
-        awaitables: Iterable[Awaitable[T]],
-        base_exception: Type[E] = Exception,
-) -> list[T | E]:
-    """
-    Await multiple awaitables in parallel and returns their results.
-
-    Exceptions of type ``base_exception`` are caught and returned
-    in the results list. Traces are printed to stderr.
-
-    This is a bit faster and nicer to use than ``asyncio.gather``.
-    In the case there is only a single awaitable, it is awaited
-    directly rather than creating and awaiting a new task.
-    """
-
-    if not isinstance(awaitables, Sized):
-        awaitables = list(awaitables)
-
-    if len(awaitables) == 1:
-        try:
-            return [await awaitables[0]]
-        except base_exception as e:
-            traceback.print_exc()
-            return [e]
-
-    tasks = [
-        a if isinstance(a, Task) else asyncio.create_task(a)
-        for a in awaitables
-    ]
-
-    results = []
-    for task in tasks:
-        try:
-            results.append(await task)
-        except base_exception as e:
-            traceback.print_exc()
-            results.append(e)
-
-    return results
 
 
 def noop():
