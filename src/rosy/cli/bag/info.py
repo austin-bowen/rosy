@@ -77,7 +77,6 @@ def get_human_readable_size(size: int) -> tuple[int, str]:
     return round(size), 'GB'
 
 
-
 @dataclass
 class BagInfo:
     path: Path
