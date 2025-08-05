@@ -3,7 +3,7 @@ from collections.abc import Callable
 from urllib.parse import urlparse
 
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from rosy.types import Endpoint, Port
+from rosy.types import Endpoint, Port, ServerHost
 
 
 def get_node_arg_parser(
@@ -153,3 +153,11 @@ def endpoint_arg(default_port: Port = None) -> Callable[[str], Endpoint]:
         return Endpoint(host, port)
 
     return wrapped
+
+
+def server_host_arg(arg: str) -> ServerHost:
+    if arg == 'None':
+        return None
+
+    hosts = arg.split(',')
+    return hosts if len(hosts) > 1 else hosts[0]

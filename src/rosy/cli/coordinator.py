@@ -1,12 +1,11 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.argparse import add_authkey_arg
+from rosy.argparse import add_authkey_arg, server_host_arg
 from rosy.asyncio import forever
 from rosy.cli.utils import add_log_arg
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_HOST, DEFAULT_COORDINATOR_PORT
 from rosy.coordinator.server import build_mesh_coordinator_server
-from rosy.types import ServerHost
 
 
 async def coordinator_main(args: Namespace) -> None:
@@ -55,11 +54,3 @@ def add_coordinator_command(subparsers) -> None:
     )
 
     add_log_arg(parser, default='INFO')
-
-
-def server_host_arg(arg: str) -> ServerHost:
-    if arg == 'None':
-        return None
-
-    hosts = arg.split(',')
-    return hosts if len(hosts) > 1 else hosts[0]
