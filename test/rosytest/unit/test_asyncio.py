@@ -3,7 +3,7 @@ from unittest.mock import create_autospec
 
 import pytest
 
-from rosy.asyncio import BufferReader, LockableWriter, Writer, close_ignoring_errors, noop
+from rosy.asyncio import BufferReader, BufferWriter, LockableWriter, Writer, close_ignoring_errors, noop
 
 
 class TestCloseIgnoringErrors:
@@ -108,3 +108,34 @@ class TestBufferReader:
     async def test_readuntil_is_not_implemented(self):
         with pytest.raises(NotImplementedError):
             await self.reader.readuntil(b' ')
+
+
+class TestBufferWriter:
+    def setup_method(self):
+        self.writer = BufferWriter()
+
+    def test_write(self):
+        self.writer.write(b'test')
+        self.writer.write(b' data')
+        assert bytes(self.writer) == b'test data'
+
+    @pytest.mark.asyncio
+    async def test_drain_is_noop(self):
+        assert await self.writer.drain() is None
+
+    def test_close_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.writer.close()
+
+    def test_is_closing_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.writer.is_closing()
+
+    @pytest.mark.asyncio
+    async def test_wait_closed_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            await self.writer.wait_closed()
+
+    def test_get_extra_info_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            self.writer.get_extra_info('name')

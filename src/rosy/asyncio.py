@@ -120,13 +120,13 @@ class BufferWriter(bytearray, Buffer, Writer):
         pass
 
     def close(self) -> None:
-        pass
+        raise NotImplementedError()
 
     def is_closing(self) -> bool:
-        pass
+        raise NotImplementedError()
 
     async def wait_closed(self) -> None:
-        pass
+        raise NotImplementedError()
 
     def get_extra_info(self, name: str, default=None):
         raise NotImplementedError()
