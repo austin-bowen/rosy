@@ -1,5 +1,5 @@
 import asyncio
-from asyncio import Lock
+from asyncio import IncompleteReadError, Lock
 from io import BytesIO
 from typing import Protocol, TypeVar
 
@@ -102,7 +102,10 @@ class BufferReader(Reader):
 
     async def readexactly(self, n: int) -> bytes:
         data = self._data.read(n)
-        assert len(data) == n
+
+        if len(data) < n:
+            raise IncompleteReadError(data, n)
+
         return data
 
     async def readuntil(self, separator: bytes) -> bytes:

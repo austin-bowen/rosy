@@ -1,8 +1,9 @@
+from asyncio import IncompleteReadError
 from unittest.mock import create_autospec
 
 import pytest
 
-from rosy.asyncio import LockableWriter, Writer, close_ignoring_errors, noop
+from rosy.asyncio import BufferReader, LockableWriter, Writer, close_ignoring_errors, noop
 
 
 class TestCloseIgnoringErrors:
@@ -86,3 +87,24 @@ class TestLockableWriter:
         self.writer.get_extra_info.return_value = 'info'
         assert self.lockable_writer.get_extra_info('name') == 'info'
         self.writer.get_extra_info.assert_called_once_with('name', None)
+
+
+class TestBufferReader:
+    def setup_method(self):
+        self.reader = BufferReader(b'test data')
+
+    @pytest.mark.asyncio
+    async def test_readexactly(self):
+        assert await self.reader.readexactly(4) == b'test'
+        assert await self.reader.readexactly(4) == b' dat'
+
+        with pytest.raises(IncompleteReadError) as exc:
+            await self.reader.readexactly(10)
+
+        assert exc.value.partial == b'a'
+        assert exc.value.expected == 10
+
+    @pytest.mark.asyncio
+    async def test_readuntil_is_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            await self.reader.readuntil(b' ')
