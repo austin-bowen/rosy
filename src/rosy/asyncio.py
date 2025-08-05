@@ -20,7 +20,7 @@ async def close_ignoring_errors(writer: 'Writer') -> None:
 
 async def forever():
     """Never returns."""
-    await asyncio.Future()
+    await asyncio.Future()  # pragma: no cover
 
 
 def noop():

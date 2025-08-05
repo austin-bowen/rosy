@@ -3,7 +3,7 @@ from asyncio import Lock, open_connection, open_unix_connection
 from collections.abc import Iterable
 from typing import NamedTuple
 
-from rosy.asyncio import LockableWriter, Reader, Writer
+from rosy.asyncio import LockableWriter, Reader, Writer, close_ignoring_errors
 from rosy.authentication import Authenticator
 from rosy.network import get_hostname
 from rosy.node.loadbalancing import ServiceLoadBalancer, TopicLoadBalancer
@@ -19,8 +19,7 @@ class PeerConnection(NamedTuple):
     writer: LockableWriter
 
     async def close(self) -> None:
-        self.writer.close()
-        await self.writer.wait_closed()
+        await close_ignoring_errors(self.writer)
 
     def is_closing(self) -> bool:
         return self.writer.is_closing()
