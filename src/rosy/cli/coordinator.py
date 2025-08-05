@@ -36,13 +36,6 @@ def add_coordinator_command(subparsers) -> None:
         help='(Default) Start the rosy coordinator',
     )
 
-    def server_host_arg(arg: str) -> ServerHost:
-        if arg == 'None':
-            return None
-
-        hosts = arg.split(',')
-        return hosts if len(hosts) > 1 else hosts[0]
-
     parser.add_argument(
         '--host', default=DEFAULT_COORDINATOR_HOST, type=server_host_arg,
         help='Comma-separated list of host(s) to bind to. '
@@ -62,3 +55,11 @@ def add_coordinator_command(subparsers) -> None:
     )
 
     add_log_arg(parser, default='INFO')
+
+
+def server_host_arg(arg: str) -> ServerHost:
+    if arg == 'None':
+        return None
+
+    hosts = arg.split(',')
+    return hosts if len(hosts) > 1 else hosts[0]
