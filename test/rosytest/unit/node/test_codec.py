@@ -42,6 +42,7 @@ class TestNodeMessageCodec:
         )
 
         self.codec = build_node_message_codec(
+            request_id_bytes=2,
             data_codec=LengthPrefixedStringCodec(FixedLengthIntCodec(length=1)),
         )
 
