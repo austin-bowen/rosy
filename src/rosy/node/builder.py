@@ -95,6 +95,44 @@ async def build_node(
         start: bool = True,
         **kwargs,
 ) -> Node:
+    """Builds a ROSY node.
+
+    Args:
+        name: Name of the node. Does not need to be unique; multiple nodes
+            with the same name can be part of the same mesh. Topic messages
+            will be sent to nodes of the same name in a round-robin fashion,
+            by default, according to the value of `topic_load_balancer`.
+            This makes horizontal scaling easy; just start the same node
+            multiple times.
+        coordinator_host: Hostname of the coordinator. Defaults to 'localhost'.
+        coordinator_port: Port of the coordinator. Defaults to 7679.
+        coordinator_reconnect_timeout: Time in seconds to wait before
+            reconnecting to the coordinator. Defaults to 5.0.
+        allow_unix_connections: Whether to allow connections to the node over
+            Unix sockets. Defaults to True.
+        allow_tcp_connections: Whether to allow connections to the node over
+            TCP sockets. Defaults to True.
+        node_server_host: Hostname to use for the node's server. If not given,
+            the node will listen on all available network interfaces.
+        node_client_host: Hostname that other nodes will use to connect to this
+            node. If not given, defaults to the machine's mDNS hostname, e.g.
+            "<hostname>.local".
+        data_codec: A codec to use for serializing and deserializing data
+            between nodes. Can be one of 'pickle', 'json', or 'msgpack';
+            or, a custom Codec instance. Defaults to 'pickle'.
+        authkey: Authentication key that nodes will use to authenticate each
+            other. Defaults to None (no authentication).
+        authenticator: An authenticator to use for the node. If not given, the
+            node will use an authenticator according to the value of `authkey`.
+        topic_load_balancer: A load balancer to use for distributing topic
+            messages. Defaults to a least-recently-used load balancer.
+        service_load_balancer: A load balancer to use for distributing service
+            requests. Defaults to a least-recently-used load balancer.
+        start: Whether to start the node immediately. Defaults to True.
+            If False, the user must call `await node.start()` before the node
+            will be ready to use.
+    """
+
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
     coordinator_client = await build_coordinator_client(
