@@ -27,7 +27,7 @@ from rosy.node.loadbalancing import (
     node_name_group_key,
 )
 from rosy.node.peer import PeerConnectionBuilder, PeerConnectionManager, PeerSelector
-from rosy.node.servers import TcpServerProvider, ServerProvider, ServersManager, TmpUnixServerProvider
+from rosy.node.servers import ServerProvider, ServersManager, TcpServerProvider, TmpUnixServerProvider
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.codec import ServiceRequestCodec, ServiceResponseCodec
 from rosy.node.service.handlermanager import ServiceHandlerManager
@@ -39,6 +39,8 @@ from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
 from rosy.specs import NodeId
 from rosy.types import Data, Host, Port, ServerHost
+
+DataCodecArg = Codec[Data] | Literal['pickle', 'json', 'msgpack']
 
 
 async def build_node_from_args(
@@ -85,7 +87,7 @@ async def build_node(
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
         node_client_host: Host = None,
-        data_codec: Codec[Data] | Literal['pickle', 'json', 'msgpack'] = 'pickle',
+        data_codec: DataCodecArg = 'pickle',
         authkey: bytes = None,
         authenticator: Authenticator = None,
         topic_load_balancer: TopicLoadBalancer = None,
@@ -102,6 +104,21 @@ async def build_node(
         reconnect_timeout=coordinator_reconnect_timeout,
     )
 
+    topic_listener_manager = TopicListenerManager()
+    service_handler_manager = ServiceHandlerManager()
+    node_message_codec = build_node_message_codec(data_codec)
+
+    servers_manager = build_servers_manager(
+        allow_unix_connections,
+        allow_tcp_connections,
+        node_server_host,
+        node_client_host,
+        authenticator,
+        topic_listener_manager,
+        service_handler_manager,
+        node_message_codec,
+    )
+
     topology_manager = MeshTopologyManager()
 
     peer_selector = build_peer_selector(
@@ -114,40 +131,7 @@ async def build_node(
         PeerConnectionBuilder(authenticator),
     )
 
-    if data_codec == 'pickle':
-        data_codec = pickle_codec
-    elif data_codec == 'json':
-        data_codec = json_codec
-    elif data_codec == 'msgpack':
-        data_codec = msgpack_codec
-
-    node_message_codec = build_node_message_codec(data_codec)
-
     topic_sender = TopicSender(peer_selector, connection_manager, node_message_codec)
-
-    topic_listener_manager = TopicListenerManager()
-    topic_message_handler = TopicMessageHandler(topic_listener_manager)
-
-    service_handler_manager = ServiceHandlerManager()
-    service_request_handler = ServiceRequestHandler(
-        service_handler_manager,
-        node_message_codec,
-    )
-
-    client_handler = ClientHandler(
-        authenticator,
-        node_message_codec,
-        topic_message_handler,
-        service_request_handler,
-    )
-
-    server_providers = build_server_providers(
-        allow_unix_connections,
-        allow_tcp_connections,
-        node_server_host,
-        node_client_host,
-    )
-    servers_manager = ServersManager(server_providers, client_handler.handle_client)
 
     request_id_bytes = 2  # Codec uses 2 bytes for request ID
     service_caller = ServiceCaller(
@@ -173,6 +157,97 @@ async def build_node(
         await node.start()
 
     return node
+
+
+def build_node_message_codec(
+        data_codec: DataCodecArg,
+) -> NodeMessageCodec:
+    data_codec = build_data_codec(data_codec)
+
+    short_string_codec = LengthPrefixedStringCodec(
+        len_prefix_codec=FixedLengthIntCodec(length=1)
+    )
+
+    short_int_codec = FixedLengthIntCodec(length=1)
+
+    args_codec: SequenceCodec[Data] = SequenceCodec(
+        len_header_codec=short_int_codec,
+        item_codec=data_codec,
+    )
+
+    kwargs_codec: DictCodec[str, Data] = DictCodec(
+        len_header_codec=short_int_codec,
+        key_codec=short_string_codec,
+        value_codec=data_codec,
+    )
+
+    request_id_codec = FixedLengthIntCodec(length=2)
+
+    return NodeMessageCodec(
+        topic_message_codec=TopicMessageCodec(
+            topic_codec=short_string_codec,
+            args_codec=args_codec,
+            kwargs_codec=kwargs_codec,
+        ),
+        service_request_codec=ServiceRequestCodec(
+            request_id_codec,
+            service_codec=short_string_codec,
+            args_codec=args_codec,
+            kwargs_codec=kwargs_codec,
+        ),
+        service_response_codec=ServiceResponseCodec(
+            request_id_codec,
+            data_codec=data_codec,
+            error_codec=LengthPrefixedStringCodec(
+                len_prefix_codec=FixedLengthIntCodec(length=2),
+            )
+        ),
+    )
+
+
+def build_data_codec(data_codec: DataCodecArg) -> Codec[Data]:
+    if data_codec == 'pickle':
+        return pickle_codec
+    elif data_codec == 'json':
+        return json_codec
+    elif data_codec == 'msgpack':
+        return msgpack_codec
+    else:
+        return data_codec
+
+
+def build_servers_manager(
+        allow_unix_connections: bool,
+        allow_tcp_connections: bool,
+        node_server_host: ServerHost,
+        node_client_host: Host | None,
+        authenticator: Authenticator,
+        topic_listener_manager: TopicListenerManager,
+        service_handler_manager: ServiceHandlerManager,
+        node_message_codec: NodeMessageCodec,
+) -> ServersManager:
+    topic_message_handler = TopicMessageHandler(topic_listener_manager)
+
+    service_request_handler = ServiceRequestHandler(
+        service_handler_manager,
+        node_message_codec,
+    )
+
+    client_handler = ClientHandler(
+        authenticator,
+        node_message_codec,
+        topic_message_handler,
+        service_request_handler,
+    )
+
+    server_providers = build_server_providers(
+        allow_unix_connections,
+        allow_tcp_connections,
+        node_server_host,
+        node_client_host,
+    )
+
+    return ServersManager(server_providers, client_handler.handle_client)
 
 
 def build_server_providers(
@@ -215,48 +290,4 @@ def build_peer_selector(
         topology_manager,
         topic_load_balancer=topic_load_balancer or default_topic_load_balancer,
         service_load_balancer=service_load_balancer or least_recent_load_balancer,
-    )
-
-
-def build_node_message_codec(
-        data_codec: Codec[Data],
-) -> NodeMessageCodec:
-    short_string_codec = LengthPrefixedStringCodec(
-        len_prefix_codec=FixedLengthIntCodec(length=1)
-    )
-
-    short_int_codec = FixedLengthIntCodec(length=1)
-
-    args_codec: SequenceCodec[Data] = SequenceCodec(
-        len_header_codec=short_int_codec,
-        item_codec=data_codec,
-    )
-
-    kwargs_codec: DictCodec[str, Data] = DictCodec(
-        len_header_codec=short_int_codec,
-        key_codec=short_string_codec,
-        value_codec=data_codec,
-    )
-
-    request_id_codec = FixedLengthIntCodec(length=2)
-
-    return NodeMessageCodec(
-        topic_message_codec=TopicMessageCodec(
-            topic_codec=short_string_codec,
-            args_codec=args_codec,
-            kwargs_codec=kwargs_codec,
-        ),
-        service_request_codec=ServiceRequestCodec(
-            request_id_codec,
-            service_codec=short_string_codec,
-            args_codec=args_codec,
-            kwargs_codec=kwargs_codec,
-        ),
-        service_response_codec=ServiceResponseCodec(
-            request_id_codec,
-            data_codec=data_codec,
-            error_codec=LengthPrefixedStringCodec(
-                len_prefix_codec=FixedLengthIntCodec(length=2),
-            )
-        ),
     )
