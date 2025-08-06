@@ -144,7 +144,9 @@ async def build_node(
 
     topic_listener_manager = TopicListenerManager()
     service_handler_manager = ServiceHandlerManager()
-    node_message_codec = build_node_message_codec(data_codec)
+
+    request_id_bytes = 2
+    node_message_codec = build_node_message_codec(request_id_bytes, data_codec)
 
     servers_manager = build_servers_manager(
         allow_unix_connections,
@@ -171,7 +173,6 @@ async def build_node(
 
     topic_sender = TopicSender(peer_selector, connection_manager, node_message_codec)
 
-    request_id_bytes = 2  # Codec uses 2 bytes for request ID
     service_caller = ServiceCaller(
         peer_selector,
         connection_manager,
@@ -198,6 +199,7 @@ async def build_node(
 
 
 def build_node_message_codec(
+        request_id_bytes: int,
         data_codec: DataCodecArg,
 ) -> NodeMessageCodec:
     data_codec = build_data_codec(data_codec)
@@ -219,7 +221,7 @@ def build_node_message_codec(
         value_codec=data_codec,
     )
 
-    request_id_codec = FixedLengthIntCodec(length=2)
+    request_id_codec = FixedLengthIntCodec(length=request_id_bytes)
 
     return NodeMessageCodec(
         topic_message_codec=TopicMessageCodec(
