@@ -1,16 +1,14 @@
 import asyncio
 import gzip
 import logging
-import os
 import pickle
 import socket
 from abc import ABC, abstractmethod
 
 from zeroconf import ServiceBrowser, ServiceInfo, ServiceStateChange, Zeroconf
 
-from rosy.asyncio import forever
 from rosy.discovery.base import NodeDiscovery, TopologyChangedCallback
-from rosy.specs import IpConnectionSpec, MeshNodeSpec, MeshTopologySpec, NodeId
+from rosy.specs import MeshNodeSpec, MeshTopologySpec
 
 DEFAULT_SERVICE_TYPE = "_rosy._tcp.local."
 
