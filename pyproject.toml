@@ -6,16 +6,18 @@ authors = [
     {name = "Austin Bowen", email = "austin.bowen.314@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = "<4,>=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "msgpack",
     "orjson",
     "PyYAML",
+    "zeroconf",
 ]
 
 [tool.poetry.group.test.dependencies]
+black = "*"
 pexpect = "*"
 pytest = "*"
 pytest-asyncio = "*"
