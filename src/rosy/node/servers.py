@@ -2,16 +2,25 @@ import asyncio
 import logging
 import tempfile
 from abc import ABC, abstractmethod
-from asyncio import Server, StreamReader, StreamWriter
+from asyncio import StreamReader, StreamWriter
 from collections.abc import Awaitable, Callable, Iterable
+from pathlib import Path
+from typing import Protocol
 
 from rosy.asyncio import Reader, Writer
 from rosy.specs import ConnectionSpec, IpConnectionSpec, UnixConnectionSpec
 from rosy.types import Host, Port, ServerHost
+from rosy.utils import ALLOWED_EXCEPTIONS
 
 ClientConnectedCallback = Callable[[Reader, Writer], Awaitable[None]]
 
 logger = logging.getLogger(__name__)
+
+
+class Server(Protocol):
+    def close(self) -> None: ...
+
+    async def wait_closed(self) -> None: ...
 
 
 class ServerProvider(ABC):
@@ -123,10 +132,35 @@ class TmpUnixServerProvider(ServerProvider):
             server = await asyncio.start_unix_server(client_connected_cb, path=path, **self.kwargs)
         except NotImplementedError as e:
             raise UnsupportedProviderError(self, repr(e))
+        else:
+            server = _UnixServer(server, path)
 
         conn_spec = UnixConnectionSpec(path=path)
 
         return server, [conn_spec]
+
+
+class _UnixServer(Server):
+    """
+    This is a wrapper that ensures that the Unix socket file is deleted
+    when the server is closed. This will not be necessary once Python 3.13
+    is the minimum supported version, which is when `cleanup_socket=True`
+    was added to `asyncio.start_unix_server()`.
+    """
+
+    def __init__(self, server: asyncio.Server, path: str):
+        self.server = server
+        self.path = Path(path)
+
+    def close(self) -> None:
+        self.server.close()
+
+    async def wait_closed(self) -> None:
+        try:
+            await self.server.wait_closed()
+        finally:
+            self.path.unlink(missing_ok=True)
+
 
 
 class ServersManager:
@@ -134,10 +168,13 @@ class ServersManager:
             self,
             server_providers: Iterable[ServerProvider],
             client_connected_cb: ClientConnectedCallback,
+            stop_servers_timeout: float = 1.0,
     ):
         self.server_providers = server_providers
         self.client_connected_cb = client_connected_cb
+        self.stop_servers_timeout = stop_servers_timeout
 
+        self._servers: list[Server] = []
         self._connection_specs: list[ConnectionSpec] = []
 
     @property
@@ -157,10 +194,21 @@ class ServersManager:
                 logger.exception(f'Failed to start server using provider={provider}', exc_info=e)
             else:
                 logger.debug(f'Started node server with connection_specs={connection_specs}')
+                self._servers.append(server)
                 self._connection_specs.extend(connection_specs)
 
         if not self._connection_specs:
             raise RuntimeError('Unable to start any server with the given server providers.')
+
+    async def stop_servers(self) -> None:
+        for server in self._servers:
+            try:
+                server.close()
+                await asyncio.wait_for(server.wait_closed(), timeout=self.stop_servers_timeout )
+            except ALLOWED_EXCEPTIONS:
+                raise
+            except Exception as e:
+                logger.error(f'Failed to close server {server!r}: {e!r}')
 
 
 class UnsupportedProviderError(Exception):
