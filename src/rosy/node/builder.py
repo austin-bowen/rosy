@@ -16,6 +16,7 @@ from rosy.codec import (
 )
 from rosy.coordinator.client import build_coordinator_client
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
+from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
 from rosy.network import get_lan_hostname
 from rosy.node.clienthandler import ClientHandler
 from rosy.node.codec import NodeMessageCodec
@@ -135,6 +136,9 @@ async def build_node(
 
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
+    discovery = ZeroconfNodeDiscovery()
+
+    # TODO Remove this
     coordinator_client = await build_coordinator_client(
         coordinator_host,
         coordinator_port,
@@ -182,7 +186,7 @@ async def build_node(
 
     node = Node(
         id=NodeId(name),
-        coordinator_client=coordinator_client,
+        discovery=discovery,
         servers_manager=servers_manager,
         topology_manager=topology_manager,
         connection_manager=connection_manager,

@@ -41,7 +41,7 @@ class TestNode:
 
     def test_constructor_sets_up_coordinator_client(self):
         self.coordinator_client.set_broadcast_handler.assert_called_once_with(
-            self.node._handle_topology_broadcast,
+            self.node._handle_new_topology,
         )
 
     def test_id_property_is_read_only(self):
@@ -255,7 +255,7 @@ class TestNode:
         ]
         self.topology_manager.get_removed_nodes.return_value = removed_nodes
 
-        assert await self.node._handle_topology_broadcast(broadcast) is None
+        assert await self.node._handle_new_topology(broadcast) is None
 
         self.topology_manager.set_topology.assert_called_once_with(broadcast.mesh_topology)
         assert self.connection_manager.close_connection.call_args_list == [

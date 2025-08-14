@@ -1,9 +1,13 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Awaitable, Callable
 
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
+from rosy.utils import ALLOWED_EXCEPTIONS
 
 TopologyChangedCallback = Callable[[MeshTopologySpec], Awaitable[None]]
+
+logger = logging.getLogger(__name__)
 
 
 class NodeDiscovery(ABC):
@@ -36,5 +40,15 @@ class NodeDiscovery(ABC):
     async def unregister_node(self, node: MeshNodeSpec) -> None: ...
 
     async def _call_topology_changed_callback(self) -> None:
-        if self.topology_changed_callback is not None:
+        if self.topology_changed_callback is None:
+            return
+
+        try:
             await self.topology_changed_callback(self.topology)
+        except ALLOWED_EXCEPTIONS:
+            raise
+        except Exception as e:
+            logger.exception(
+                'Error calling topology changed callback',
+                exc_info=e,
+            )
