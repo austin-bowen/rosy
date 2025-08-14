@@ -37,7 +37,6 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         self._rng = rng or Random()
 
         self._service_name_to_node: dict[str, MeshNodeSpec] = {}
-        self._topology = MeshTopologySpec(nodes=self._service_name_to_node.values())
 
         self._node_monitors: dict[str, asyncio.Task] = {}
 
@@ -45,7 +44,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
 
     @property
     def topology(self) -> MeshTopologySpec:
-        return self._topology
+        nodes = list(self._service_name_to_node.values())
+        return MeshTopologySpec(nodes)
 
     async def start(self) -> None:
         self._browser = ServiceBrowser(
