@@ -1,8 +1,8 @@
-from argparse import ArgumentParser, Namespace
+import asyncio
+from argparse import ArgumentParser
 from typing import Iterable
 
-from rosy.authentication import optional_authkey_authenticator
-from rosy.coordinator.client import build_coordinator_client
+from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
 from rosy.specs import MeshTopologySpec
 
 
@@ -14,17 +14,10 @@ def add_log_arg(parser: ArgumentParser, default: str = 'WARNING') -> None:
     )
 
 
-async def get_mesh_topology(args: Namespace) -> MeshTopologySpec:
-    authenticator = optional_authkey_authenticator(args.authkey)
-
-    coordinator_client = await build_coordinator_client(
-        host=args.coordinator.host,
-        port=args.coordinator.port,
-        authenticator=authenticator,
-        reconnect_timeout=None,
-    )
-
-    return await coordinator_client.get_topology()
+async def get_mesh_topology() -> MeshTopologySpec:
+    async with ZeroconfNodeDiscovery() as discovery:
+        await asyncio.sleep(1)
+        return discovery.topology
 
 
 def print_args_and_kwargs(args: Iterable, kwargs: dict) -> None:

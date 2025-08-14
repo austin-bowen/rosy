@@ -11,13 +11,12 @@ from rosy.types import Topic
 async def echo_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
-    node = await build_node_from_args(args=args)
+    async with await build_node_from_args(args=args) as node:
+        for topic in args.topics:
+            await node.listen(topic, handle_message)
 
-    for topic in args.topics:
-        await node.listen(topic, handle_message)
-
-    print(f'Listening to topics: {args.topics}')
-    await node.forever()
+        print(f'Listening to topics: {args.topics}')
+        await node.forever()
 
 
 async def handle_message(topic: Topic, *args, **kwargs):
