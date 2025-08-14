@@ -4,6 +4,7 @@ import logging
 import pickle
 import socket
 from abc import ABC, abstractmethod
+from random import Random
 
 from zeroconf import ServiceBrowser, ServiceInfo, ServiceStateChange, Zeroconf
 
@@ -11,6 +12,7 @@ from rosy.discovery.base import NodeDiscovery, TopologyChangedCallback
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
 
 DEFAULT_SERVICE_TYPE = "_rosy._tcp.local."
+DEFAULT_TTL: int = 30
 
 logger = logging.getLogger(__name__)
 
@@ -24,19 +26,26 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         service_type: str = DEFAULT_SERVICE_TYPE,
         zc: Zeroconf = None,
         node_spec_codec: "NodeSpecCodec" = None,
+        ttl: int = DEFAULT_TTL,
+        rng: Random = None,
     ) -> None:
         self.topology_changed_callback = topology_changed_callback
         self._service_type = service_type
         self._zc = zc or Zeroconf()
         self._node_spec_codec = node_spec_codec or GzipPickleNodeSpecCodec()
+        self._ttl = ttl
+        self._rng = rng or Random()
 
         self._service_name_to_node: dict[str, MeshNodeSpec] = {}
+        self._topology = MeshTopologySpec(nodes=self._service_name_to_node.values())
+
+        self._node_monitors: dict[str, asyncio.Task] = {}
 
         self._browser: ServiceBrowser | None = None
 
     @property
     def topology(self) -> MeshTopologySpec:
-        return MeshTopologySpec(nodes=self._service_name_to_node.values())
+        return self._topology
 
     async def start(self) -> None:
         self._browser = ServiceBrowser(
@@ -52,24 +61,29 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
             await asyncio.to_thread(self._zc.close)
 
     async def register_node(self, node: MeshNodeSpec) -> None:
-        info = self._get_service_info(node)
+        logger.debug(f"Registering node: {node}")
+        info = self._build_service_info(node)
         await (await self._zc.async_register_service(info))
 
     async def update_node(self, node: MeshNodeSpec) -> None:
-        info = self._get_service_info(node)
+        logger.debug(f"Updating node: {node}")
+        info = self._build_service_info(node)
         await (await self._zc.async_update_service(info))
 
     async def unregister_node(self, node: MeshNodeSpec) -> None:
-        info = self._get_service_info(node)
+        logger.debug(f"Unregistering node: {node}")
+        info = self._build_service_info(node)
         await (await self._zc.async_unregister_service(info))
 
-    def _get_service_info(self, node: MeshNodeSpec) -> ServiceInfo:
+    def _build_service_info(self, node: MeshNodeSpec) -> ServiceInfo:
         return ServiceInfo(
             type_=self._service_type,
             name=f"{node.id.uuid}.{self._service_type}",
             port=0,
             properties=self._node_spec_codec.encode(node),
             server=get_mdns_fqdn(),
+            host_ttl=self._ttl,
+            other_ttl=self._ttl,
         )
 
     def _on_service_state_change(
@@ -80,6 +94,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         state_change: ServiceStateChange,
     ) -> None:
         """Called by the ServiceBrowser thread."""
+
+        logger.debug(f"Service state change: {state_change.name} {name!r}")
 
         future = asyncio.run_coroutine_threadsafe(
             self._async_on_service_state_change(name, state_change),
@@ -93,23 +109,64 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         state_change: ServiceStateChange,
     ) -> None:
         if state_change in (ServiceStateChange.Added, ServiceStateChange.Updated):
-            await self._add_node(name)
+            await self._start_monitoring_node(name)
         elif state_change == ServiceStateChange.Removed:
             await self._remove_node(name)
 
-    async def _add_node(self, name: str) -> None:
-        info = await self._zc.async_get_service_info(self._service_type, name)
-        if info is None:
-            logger.error(f"Failed to get service info for: {name!r}")
-            await self._remove_node(name)
+    async def _start_monitoring_node(self, name: str) -> None:
+        await self._stop_monitoring_node(name)
+        self._node_monitors[name] = asyncio.create_task(self._monitor_node(name))
+
+    async def _stop_monitoring_node(self, name: str) -> None:
+        existing_monitor = self._node_monitors.pop(name, None)
+        if existing_monitor is None:
             return
 
-        self._service_name_to_node[name] = self._node_spec_codec.decode(info.text)
-        await self._call_topology_changed_callback()
+        existing_monitor.cancel()
+        try:
+            await existing_monitor
+        except asyncio.CancelledError:
+            pass
+
+    async def _monitor_node(self, name: str) -> None:
+        try:
+            while await self._check_node(name):
+                sleep_time = self._ttl + 1 + self._rng.random()
+                await asyncio.sleep(sleep_time)
+        finally:
+            self._node_monitors.pop(name, None)
+
+    async def _check_node(self, name: str) -> bool:
+        assert asyncio.current_task() is self._node_monitors[name]
+
+        logger.debug(f"Getting service info for: {name!r}")
+        info = await self._zc.async_get_service_info(self._service_type, name)
+
+        if info is None:
+            logger.error(f"Failed to get service info for: {name!r}")
+            asyncio.create_task(self._remove_node(name))
+            return False
+
+        node = self._node_spec_codec.decode(info.text)
+
+        existing_node = self._service_name_to_node.get(name)
+        if node != existing_node:
+            if existing_node is None:
+                logger.debug(f"Discovered node on mesh: {node}")
+            else:
+                logger.debug(f"Node updated: {node}")
+
+            self._service_name_to_node[name] = node
+            await self._call_topology_changed_callback()
+
+        return True
 
     async def _remove_node(self, name: str) -> None:
+        await self._stop_monitoring_node(name)
+
         node = self._service_name_to_node.pop(name, None)
         if node is not None:
+            logger.debug(f"Node left mesh: {node.id}")
             await self._call_topology_changed_callback()
 
 
