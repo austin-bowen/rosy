@@ -40,6 +40,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
 
         self._node_monitors: dict[str, asyncio.Task] = {}
 
+        self._service_info_lock = asyncio.Lock()
+
         self._browser: ServiceBrowser | None = None
 
     @property
@@ -140,7 +142,7 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         assert asyncio.current_task() is self._node_monitors[name]
 
         logger.debug(f"Getting service info for: {name!r}")
-        info = await self._zc.async_get_service_info(self._service_type, name)
+        info = await asyncio.shield(self._get_service_info(name))
 
         if info is None:
             logger.error(f"Failed to get service info for: {name!r}")
@@ -160,6 +162,10 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
             await self._call_topology_changed_callback()
 
         return True
+
+    async def _get_service_info(self, name: str) -> ServiceInfo | None:
+        async with self._service_info_lock:
+            return await self._zc.async_get_service_info(self._service_type, name)
 
     async def _remove_node(self, name: str) -> None:
         await self._stop_monitoring_node(name)
