@@ -5,11 +5,11 @@ from rosy import build_node
 
 
 async def main():
-    logging.basicConfig(level='WARNING')
+    logging.basicConfig(level="WARNING")
 
-    node = await build_node(name='topic_sender')
-    await node.send('some-topic', 'hello', name='world')
+    async with await build_node(name="topic_sender") as node:
+        await node.send("some-topic", "hello", name="world")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

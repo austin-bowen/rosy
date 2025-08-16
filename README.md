@@ -29,8 +29,8 @@ Here are some simplified examples. See the linked files for the full code.
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='topic_sender')
-    await node.send('some-topic', 'hello', name='world')
+    async with await rosy.build_node(name="topic_sender") as node:
+        await node.send("some-topic", "hello", name="world")
 ```
 
 [rosy/demo/**topic_listener.py**](src/rosy/demo/topic_listener.py):
@@ -39,9 +39,9 @@ async def main():
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='topic_listener')
-    await node.listen('some-topic', callback)
-    await node.forever()
+    async with await rosy.build_node(name="topic_listener") as node:
+        await node.listen("some-topic", callback)
+        await node.forever()
 
 async def callback(topic, message, name=None):
     print(f'Received "{message} {name}" on topic={topic}')
@@ -69,10 +69,10 @@ Received "hello world" on topic=some-topic
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='service_caller')
-    print('Calculating 2 * 2...')
-    result = await node.call('multiply', 2, 2)
-    print(f'Result: {result}')
+    async with await rosy.build_node(name="service_caller") as node:
+        print("Calculating 2 * 2...")
+        result = await node.call("multiply", 2, 2)
+        print(f"Result: {result}")
 ```
 
 [rosy/demo/**service_provider.py**](src/rosy/demo/service_provider.py):
@@ -81,9 +81,9 @@ async def main():
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='service_provider')
-    await node.add_service('multiply', multiply)
-    await node.forever()
+    async with await rosy.build_node(name="service_provider") as node:
+        await node.add_service("multiply", multiply)
+        await node.forever()
 
 async def multiply(service, a, b):
     return a * b
