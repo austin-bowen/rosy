@@ -121,6 +121,26 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
             await self._remove_node(name)
 
     async def _start_monitoring_node(self, name: str) -> None:
+        """
+        Why do we need to monitor the node? Why not just rely on the service
+        state change events?
+
+        Under normal circumstances, when a node exits, it will broadcast a
+        notification, in which case a service state change event will be
+        triggered immediately, and all is well.
+
+        However, if a node dies unexpectedly and does not perform this cleanup
+        step, or if there is a network failure between the nodes, `zeroconf`
+        will not "pick this up" for a long time, like up to 18 minutes.
+        Unfortunately, this is by design, and cannot be changed.
+
+        To work around this, we periodically retrieve the node's service info,
+        shortly after its TTL period. If the node is still alive, it should've
+        already re-broadcast itself; otherwise, the TTL will have expired, and
+        when we try to retrieve the service info again, it will be `None`,
+        thus indicating that the node has left the mesh.
+        """
+
         await self._stop_monitoring_node(name)
         self._node_monitors[name] = asyncio.create_task(self._monitor_node(name))
 
