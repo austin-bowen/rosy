@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import sys
 
 from rosy.argparse import add_domain_id_arg
 from rosy.cli.bag.main import add_bag_command, bag_main
@@ -38,6 +39,10 @@ def main() -> None:
 
 async def _main():
     parser = get_arg_parser()
+
+    if len(sys.argv) <= 1:
+        parser.print_help()
+        parser.exit(2)
 
     args = parser.parse_args()
 
