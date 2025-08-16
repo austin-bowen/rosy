@@ -33,9 +33,9 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
     ) -> None:
         if authkey:
             authkey = hash_domain_id(authkey.decode())
-            parts = service_type.split('.')
-            parts[0] += f'-{authkey}'
-            service_type = '.'.join(parts)
+            parts = service_type.split(".")
+            parts[0] += f"-{authkey}"
+            service_type = ".".join(parts)
 
         self.topology_changed_callback = topology_changed_callback
         self._service_type = service_type
