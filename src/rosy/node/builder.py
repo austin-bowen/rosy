@@ -14,8 +14,6 @@ from rosy.codec import (
     msgpack_codec,
     pickle_codec,
 )
-from rosy.coordinator.client import build_coordinator_client
-from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
 from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
 from rosy.network import get_lan_hostname
 from rosy.node.clienthandler import ClientHandler
@@ -39,7 +37,7 @@ from rosy.node.topic.messagehandler import TopicMessageHandler
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
 from rosy.specs import NodeId
-from rosy.types import Data, Host, Port, ServerHost
+from rosy.types import Data, Host, ServerHost
 
 DataCodecArg = Codec[Data] | Literal['pickle', 'json', 'msgpack']
 
@@ -81,9 +79,6 @@ async def build_node_from_args(
 
 async def build_node(
         name: str,
-        coordinator_host: Host = 'localhost',
-        coordinator_port: Port = DEFAULT_COORDINATOR_PORT,
-        coordinator_reconnect_timeout: float | None = 5.0,
         allow_unix_connections: bool = True,
         allow_tcp_connections: bool = True,
         node_server_host: ServerHost = None,
@@ -105,10 +100,6 @@ async def build_node(
             by default, according to the value of `topic_load_balancer`.
             This makes horizontal scaling easy; just start the same node
             multiple times.
-        coordinator_host: Hostname of the coordinator. Defaults to 'localhost'.
-        coordinator_port: Port of the coordinator. Defaults to 7679.
-        coordinator_reconnect_timeout: Time in seconds to wait before
-            reconnecting to the coordinator. Defaults to 5.0.
         allow_unix_connections: Whether to allow connections to the node over
             Unix sockets. Defaults to True.
         allow_tcp_connections: Whether to allow connections to the node over
@@ -137,14 +128,6 @@ async def build_node(
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
     discovery = ZeroconfNodeDiscovery(authkey=authkey)
-
-    # TODO Remove this
-    coordinator_client = await build_coordinator_client(
-        coordinator_host,
-        coordinator_port,
-        authenticator,
-        reconnect_timeout=coordinator_reconnect_timeout,
-    )
 
     topic_listener_manager = TopicListenerManager()
     service_handler_manager = ServiceHandlerManager()
