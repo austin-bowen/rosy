@@ -1,5 +1,5 @@
 import asyncio
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from typing import Iterable
 
 from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
@@ -14,8 +14,8 @@ def add_log_arg(parser: ArgumentParser, default: str = 'WARNING') -> None:
     )
 
 
-async def get_mesh_topology() -> MeshTopologySpec:
-    async with ZeroconfNodeDiscovery() as discovery:
+async def get_mesh_topology(args: Namespace) -> MeshTopologySpec:
+    async with ZeroconfNodeDiscovery(args.domain_id) as discovery:
         await asyncio.sleep(1)
         return discovery.topology
 

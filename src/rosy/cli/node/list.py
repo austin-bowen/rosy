@@ -8,7 +8,7 @@ from rosy.specs import MeshNodeSpec
 async def list_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
-    topology = await get_mesh_topology()
+    topology = await get_mesh_topology(args)
 
     nodes = sorted(topology.nodes, key=lambda n: n.id)
 

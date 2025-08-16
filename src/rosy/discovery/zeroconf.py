@@ -11,34 +11,25 @@ from zeroconf import ServiceBrowser, ServiceInfo, ServiceStateChange, Zeroconf
 
 from rosy.discovery.base import NodeDiscovery, TopologyChangedCallback
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
+from rosy.types import DomainId
 
-DEFAULT_SERVICE_TYPE = "_rosy._tcp.local."
 DEFAULT_TTL: int = 30
 
 logger = logging.getLogger(__name__)
 
 
 class ZeroconfNodeDiscovery(NodeDiscovery):
-    topology_changed_callback: TopologyChangedCallback | None
-
     def __init__(
         self,
+        domain_id: DomainId,
         topology_changed_callback: TopologyChangedCallback = None,
-        authkey: bytes = None,
-        service_type: str = DEFAULT_SERVICE_TYPE,
         zc: Zeroconf = None,
         node_spec_codec: "NodeSpecCodec" = None,
         ttl: int = DEFAULT_TTL,
         rng: Random = None,
     ) -> None:
-        if authkey:
-            authkey = hash_domain_id(authkey.decode())
-            parts = service_type.split(".")
-            parts[0] += f"-{authkey}"
-            service_type = ".".join(parts)
-
+        self._service_type = build_service_type(domain_id)
         self.topology_changed_callback = topology_changed_callback
-        self._service_type = service_type
         self._zc = zc or Zeroconf()
         self._node_spec_codec = node_spec_codec or GzipPickleNodeSpecCodec()
         self._ttl = ttl
@@ -194,6 +185,11 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         if node is not None:
             logger.debug(f"Node left mesh: {node.id}")
             await self._call_topology_changed_callback()
+
+
+def build_service_type(domain_id: DomainId) -> str:
+    domain_id = hash_domain_id(domain_id)
+    return f"_rosy-{domain_id}._tcp.local."
 
 
 def hash_domain_id(domain_id: str, digest_size: int = 5) -> str:

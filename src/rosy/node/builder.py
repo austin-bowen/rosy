@@ -3,7 +3,10 @@ from typing import Literal
 
 from rosy import Node
 from rosy.argparse import get_node_arg_parser
-from rosy.authentication import Authenticator, optional_authkey_authenticator
+from rosy.authentication import (
+    Authenticator,
+    NoAuthenticator,
+)
 from rosy.codec import (
     Codec,
     DictCodec,
@@ -42,7 +45,8 @@ from rosy.node.topic.messagehandler import TopicMessageHandler
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
 from rosy.specs import NodeId
-from rosy.types import Data, Host, ServerHost
+from rosy.types import Data, DomainId, Host, ServerHost
+from rosy.utils import get_domain_id
 
 DataCodecArg = Codec[Data] | Literal["pickle", "json", "msgpack"]
 
@@ -84,13 +88,12 @@ async def build_node_from_args(
 
 async def build_node(
     name: str,
+    domain_id: DomainId = None,
     allow_unix_connections: bool = True,
     allow_tcp_connections: bool = True,
     node_server_host: ServerHost = None,
     node_client_host: Host = None,
     data_codec: DataCodecArg = "pickle",
-    authkey: bytes = None,
-    authenticator: Authenticator = None,
     topic_load_balancer: TopicLoadBalancer = None,
     service_load_balancer: ServiceLoadBalancer = None,
     start: bool = True,
@@ -105,6 +108,9 @@ async def build_node(
             by default, according to the value of `topic_load_balancer`.
             This makes horizontal scaling easy; just start the same node
             multiple times.
+        domain_id: Domain ID of the node. Nodes must be in the same domain
+            to connect to each other. If not given, defaults to the
+            `ROSY_DOMAIN_ID` environment variable, or 'default' if not set.
         allow_unix_connections: Whether to allow connections to the node over
             Unix sockets. Defaults to True.
         allow_tcp_connections: Whether to allow connections to the node over
@@ -117,10 +123,6 @@ async def build_node(
         data_codec: A codec to use for serializing and deserializing data
             between nodes. Can be one of 'pickle', 'json', or 'msgpack';
             or, a custom Codec instance. Defaults to 'pickle'.
-        authkey: Authentication key that nodes will use to authenticate each
-            other. Defaults to None (no authentication).
-        authenticator: An authenticator to use for the node. If not given, the
-            node will use an authenticator according to the value of `authkey`.
         topic_load_balancer: A load balancer to use for distributing topic
             messages. Defaults to a least-recently-used load balancer.
         service_load_balancer: A load balancer to use for distributing service
@@ -130,9 +132,10 @@ async def build_node(
             will be ready to use.
     """
 
-    authenticator = authenticator or optional_authkey_authenticator(authkey)
+    authenticator = NoAuthenticator()
 
-    discovery = ZeroconfNodeDiscovery(authkey=authkey)
+    domain_id = domain_id or get_domain_id()
+    discovery = ZeroconfNodeDiscovery(domain_id=domain_id)
 
     topic_listener_manager = TopicListenerManager()
     service_handler_manager = ServiceHandlerManager()
