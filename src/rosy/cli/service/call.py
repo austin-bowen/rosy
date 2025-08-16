@@ -4,7 +4,7 @@ import logging
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
 
-from rosy import build_node_from_args
+from rosy import Node, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.topic.send import parse_args_and_kwargs
 from rosy.cli.utils import add_log_arg, print_args_and_kwargs
@@ -16,8 +16,11 @@ async def call_main(args: Namespace):
     # Sanity check
     parse_args_and_kwargs(args.args)
 
-    node = await build_node_from_args(args=args)
+    async with await build_node_from_args(args=args) as node:
+        await _call_main(args, node)
 
+
+async def _call_main(args: Namespace, node: Node) -> None:
     service = node.get_service(args.service)
 
     async def call_once():

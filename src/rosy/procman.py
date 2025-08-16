@@ -26,7 +26,7 @@ class ProcessManager:
 
             with ProcessManager() as pm:
                 pm.popen('ls -l', shell=True)
-                pm.popen(['rosy', 'coordinator'])
+                pm.popen(['rosy', 'topic', 'echo', 'my_topic'])
                 pm.popen(['python', 'script.py'])
 
         Args:

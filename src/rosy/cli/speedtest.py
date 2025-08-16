@@ -11,12 +11,10 @@ async def speedtest_main(args: Namespace) -> None:
 
     node = await build_node(
         name=f'speed-test/{args.role}',
-        coordinator_host=args.coordinator.host,
-        coordinator_port=args.coordinator.port,
+        domain_id=args.domain_id,
         allow_unix_connections=not args.disable_unix,
         allow_tcp_connections=not args.disable_tcp,
         data_codec=args.codec,
-        authkey=args.authkey,
         topic_load_balancer=load_balancer,
         service_load_balancer=load_balancer,
     )

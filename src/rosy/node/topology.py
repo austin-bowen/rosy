@@ -1,7 +1,11 @@
+import logging
 from collections import defaultdict
 
+from rosy.node.peer.connection import PeerConnectionManager
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
 from rosy.types import Service, Topic
+
+logger = logging.getLogger(__name__)
 
 
 class MeshTopologyManager:
@@ -16,8 +20,8 @@ class MeshTopologyManager:
     def topology(self) -> MeshTopologySpec:
         return self._topology
 
-    def set_topology(self, value: MeshTopologySpec) -> None:
-        self._topology = value
+    def set_topology(self, topology: MeshTopologySpec) -> None:
+        self._topology = topology
 
         self._cache_topic_nodes()
         self._cache_service_nodes()
@@ -47,8 +51,8 @@ class MeshTopologyManager:
         return self._service_nodes_cache[service]
 
     def get_removed_nodes(
-            self,
-            new_topology: MeshTopologySpec,
+        self,
+        new_topology: MeshTopologySpec,
     ) -> list[MeshNodeSpec]:
         """
         Returns a list of nodes that were removed in the new topology.
@@ -56,7 +60,31 @@ class MeshTopologyManager:
 
         new_node_ids = {node.id for node in new_topology.nodes}
 
-        return [
-            node for node in self.topology.nodes
-            if node.id not in new_node_ids
-        ]
+        return [node for node in self.topology.nodes if node.id not in new_node_ids]
+
+
+class TopologyChangedHandler:
+    def __init__(
+        self,
+        topology_manager: MeshTopologyManager,
+        connection_manager: PeerConnectionManager,
+    ):
+        self.topology_manager = topology_manager
+        self.connection_manager = connection_manager
+
+    async def __call__(self, new_topology: MeshTopologySpec) -> None:
+        logger.debug(
+            f"Received mesh topology broadcast with "
+            f"{len(new_topology.nodes)} nodes."
+        )
+
+        removed_nodes = self.topology_manager.get_removed_nodes(new_topology)
+        logger.debug(
+            f"Removed {len(removed_nodes)} nodes: "
+            f"{[str(node.id) for node in removed_nodes]}"
+        )
+
+        self.topology_manager.set_topology(new_topology)
+
+        for node in removed_nodes:
+            await self.connection_manager.close_connection(node)

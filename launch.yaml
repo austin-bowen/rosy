@@ -6,35 +6,15 @@
 #   my_node:
 #     command: python my_node.py
 
-# The coordinator section is completely optional.
-# It will be started with default settings before nodes are started.
-coordinator:
-  # Host for server to bind to. Default: "" (listen on all interfaces)
-  host: ""
-  # Hostname that clients (i.e. nodes) use to find the coordinator.
-  # Change this to the hostname of the machine running the coordinator
-  # if you will have nodes running on different machines.
-  # Default: localhost
-  client_host: localhost
-  # Port for server to bind to. Default: 7679
-  port: 7679
-  # Authentication key. Default: None
-  authkey: authkey
+# [Optional] If set, the `ROSY_DOMAIN_ID` environment variable will be set to
+# this value for all nodes.
+domain_id: default
 
-  # Do not start the coordinator. Default: false
-  disabled: false
-  # Only start the coordinator on this host. Default: Machine's hostname
-  on_host: hostname
-  # Seconds to wait after starting the coordinator. Default: 1.0
-  post_delay: 1.0
 # [REQUIRED] Nodes to start
 nodes:
   name1:
     # [REQUIRED] Command to run to start the node.
-    # Some arguments will be automatically appended to this command:
-    # - `--name <name>`
-    # - `--coordinator <client_host>:<port>`, if set in the "coordinator" section.
-    # - `--authkey <authkey>`, if set in the "coordinator" section.
+    # The `--name <name>` arg will be automatically appended to this command.
     command:
       - python
       - -m

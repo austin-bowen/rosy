@@ -4,7 +4,7 @@ from rosytest.integration.cli.utils import python_module, rosy_cli
 
 
 class TestRosyService:
-    def test_call(self, coordinator):
+    def test_call(self):
         with rosy_cli(
                 'service',
                 'call',
@@ -28,7 +28,7 @@ class TestRosyService:
                     EOF,
                 ])
 
-    def test_call_multiple(self, coordinator):
+    def test_call_multiple(self):
         with (
             python_module('rosy.demo.service_provider'),
             rosy_cli(
@@ -52,7 +52,7 @@ class TestRosyService:
                     "\n",
                 ])
 
-    def test_list(self, coordinator):
+    def test_list(self):
         with python_module('rosy.demo.service_provider') as provider_proc:
             provider_proc.expect_exact('Started service...\n')
 

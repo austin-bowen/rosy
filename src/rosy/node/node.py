@@ -1,32 +1,36 @@
 import asyncio
 import logging
+from enum import Enum
 from functools import wraps
 from typing import NamedTuple
 
 from rosy.asyncio import forever
-from rosy.coordinator.client import MeshCoordinatorClient
-from rosy.node.peer import PeerConnectionManager
+from rosy.discovery.base import NodeDiscovery
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.handlermanager import ServiceHandlerManager
 from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
-from rosy.reqres import MeshTopologyBroadcast
 from rosy.specs import MeshNodeSpec, NodeId
 from rosy.types import Data, Service, ServiceCallback, Topic, TopicCallback
 
 logger = logging.getLogger(__name__)
 
 
+class State(Enum):
+    INITD = 'initialized'
+    STARTED = 'started'
+    STOPPED = 'stopped'
+
+
 class Node:
     def __init__(
             self,
             id: NodeId,
-            coordinator_client: MeshCoordinatorClient,
+            discovery: NodeDiscovery,
             servers_manager: ServersManager,
             topology_manager: MeshTopologyManager,
-            connection_manager: PeerConnectionManager,
             topic_sender: TopicSender,
             topic_listener_manager: TopicListenerManager,
             service_caller: ServiceCaller,
@@ -41,18 +45,15 @@ class Node:
         """
 
         self._id = id
-        self.coordinator_client = coordinator_client
+        self.discovery = discovery
         self.servers_manager = servers_manager
         self.topology_manager = topology_manager
-        self.connection_manager = connection_manager
         self.topic_sender = topic_sender
         self.topic_listener_manager = topic_listener_manager
         self.service_caller = service_caller
         self.service_handler_manager = service_handler_manager
 
-        self._started: bool = False
-
-        coordinator_client.set_broadcast_handler(self._handle_topology_broadcast)
+        self._state: State = State.INITD
 
     @property
     def id(self) -> NodeId:
@@ -61,22 +62,43 @@ class Node:
     def __str__(self) -> str:
         return str(self.id)
 
+    async def __aenter__(self) -> 'Node':
+        if self._state is State.INITD:
+            await self.start()
+
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self._state is State.STARTED:
+            await self.stop()
+
     async def start(self) -> None:
         """
-        Start the node by starting the servers and registering with the coordinator.
+        Start the node by starting the servers and registering with the mesh.
         """
 
-        if self._started:
-            raise RuntimeError('Node is already started.')
+        if self._state is not State.INITD:
+            raise RuntimeError('Node was already started.')
 
+        self._state = State.STARTED
         logger.info(f'Starting node {self.id}')
 
-        logger.debug('Starting servers')
+        await self.discovery.start()
         await self.servers_manager.start_servers()
+        await self.register(first_time=True)
 
-        await self.register()
+    async def stop(self) -> None:
+        if self._state is State.STOPPED:
+            logger.warning(f'Attempted to stop node {self.id}, but it is already stopped.')
+            return
 
-        self._started = True
+        self._state = State.STOPPED
+        logger.info(f'Stopping node {self.id}')
+
+        try:
+            await self.discovery.stop()
+        finally:
+            await self.servers_manager.stop_servers()
 
     async def send(self, topic: Topic, *args: Data, **kwargs: Data) -> None:
         """Send a message on a topic, with optional arguments and keyword arguments."""
@@ -215,9 +237,9 @@ class Node:
 
         return ServiceProxy(self, service)
 
-    async def register(self) -> None:
+    async def register(self, first_time: bool = False) -> None:
         """
-        Register the node with the coordinator.
+        Register the node with the mesh.
 
         This is done automatically when the node is started,
         and when topics or services are added or removed,
@@ -225,9 +247,13 @@ class Node:
         """
 
         node_spec = self._build_node_spec()
-        logger.info('Registering node with coordinator')
+        logger.info('Registering node with mesh')
         logger.debug(f'node_spec={node_spec}')
-        await self.coordinator_client.register_node(node_spec)
+
+        if first_time:
+            await self.discovery.register_node(node_spec)
+        else:
+            await self.discovery.update_node(node_spec)
 
     def _build_node_spec(self) -> MeshNodeSpec:
         return MeshNodeSpec(
@@ -236,25 +262,6 @@ class Node:
             topics=self.topic_listener_manager.keys,
             services=self.service_handler_manager.keys,
         )
-
-    async def _handle_topology_broadcast(self, broadcast: MeshTopologyBroadcast) -> None:
-        new_topology = broadcast.mesh_topology
-
-        logger.debug(
-            f'Received mesh topology broadcast with '
-            f'{len(new_topology.nodes)} nodes.'
-        )
-
-        removed_nodes = self.topology_manager.get_removed_nodes(new_topology)
-        logger.debug(
-            f'Removed {len(removed_nodes)} nodes: '
-            f'{[str(node.id) for node in removed_nodes]}'
-        )
-
-        self.topology_manager.set_topology(new_topology)
-
-        for node in removed_nodes:
-            await self.connection_manager.close_connection(node)
 
     async def forever(self) -> None:
         """

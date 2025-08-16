@@ -1,7 +1,6 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.argparse import add_authkey_arg, add_coordinator_arg
 from rosy.cli.utils import add_log_arg, get_mesh_topology
 from rosy.specs import MeshNodeSpec
 

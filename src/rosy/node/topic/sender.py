@@ -1,7 +1,8 @@
 import logging
 
 from rosy.node.codec import NodeMessageCodec
-from rosy.node.peer import PeerConnectionManager, PeerSelector
+from rosy.node.peer.connection import PeerConnectionManager
+from rosy.node.peer.selector import PeerSelector
 from rosy.node.topic.types import TopicMessage
 from rosy.node.types import Args, KWArgs
 from rosy.specs import MeshNodeSpec

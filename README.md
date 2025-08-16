@@ -1,4 +1,4 @@
-# rosy
+# rosy 🌹
 
 > It's not ROS... but it *is* ROS-y!
 
@@ -6,11 +6,14 @@
 
 `rosy` allows sending messages between nodes in two different ways:
 1. **Topics**: Unidirectional, "fire and forget" messages that are sent from a node to all nodes listening to that topic.
-2. **Services**: Bidirectional, request-response messages that allow a node to get a response from any node hosting the service being called.
+2. **Services**: Bidirectional, request-response messages that allow a node to get a response from any node hosting the service.
 
 Messages can contain any Python data that is serializable by `pickle` (default), `json`, or `msgpack`. Alternatively, you can even provide your own custom codec.
 
-Nodes can run on a single machine, or be distributed across multiple machines on a network. As long as they can talk to the coordinator node, they can figure out how to talk to each other. Nodes will automatically reconnect to the coordinator and other nodes if they lose connection.
+Nodes can...
+- Run on a single machine, or be distributed across multiple machines on a local network.
+- Automatically discover each other using the [Zeroconf](https://en.wikipedia.org/wiki/Zeroconf) protocol.
+- Automatically reconnect to each other if they lose connection.
 
 `rosy` also has simple load balancing: if multiple nodes of the same name are listening to a topic, then messages will be sent to them in a round-robin fashion. (The load balancing strategy can be changed or disabled if desired.)
 
@@ -26,8 +29,8 @@ Here are some simplified examples. See the linked files for the full code.
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='topic_sender')
-    await node.send('some-topic', 'hello', name='world')
+    async with await rosy.build_node(name="topic_sender") as node:
+        await node.send("some-topic", "hello", name="world")
 ```
 
 [rosy/demo/**topic_listener.py**](src/rosy/demo/topic_listener.py):
@@ -36,9 +39,9 @@ async def main():
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='topic_listener')
-    await node.listen('some-topic', callback)
-    await node.forever()
+    async with await rosy.build_node(name="topic_listener") as node:
+        await node.listen("some-topic", callback)
+        await node.forever()
 
 async def callback(topic, message, name=None):
     print(f'Received "{message} {name}" on topic={topic}')
@@ -48,17 +51,13 @@ async def callback(topic, message, name=None):
 
 ```bash
 # Terminal 1
-$ rosy
-Started rosy coordinator on :7679
-
-# Terminal 2
 $ python -m rosy.demo.topic_listener
 Listening...
 
-# Terminal 3
+# Terminal 2
 $ python -m rosy.demo.topic_sender
 
-# Terminal 2
+# Terminal 1
 Received "hello world" on topic=some-topic
 ```
 
@@ -70,10 +69,10 @@ Received "hello world" on topic=some-topic
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='service_caller')
-    print('Calculating 2 * 2...')
-    result = await node.call('multiply', 2, 2)
-    print(f'Result: {result}')
+    async with await rosy.build_node(name="service_caller") as node:
+        print("Calculating 2 * 2...")
+        result = await node.call("multiply", 2, 2)
+        print(f"Result: {result}")
 ```
 
 [rosy/demo/**service_provider.py**](src/rosy/demo/service_provider.py):
@@ -82,9 +81,9 @@ async def main():
 import rosy
 
 async def main():
-    node = await rosy.build_node(name='service_provider')
-    await node.add_service('multiply', multiply)
-    await node.forever()
+    async with await rosy.build_node(name="service_provider") as node:
+        await node.add_service("multiply", multiply)
+        await node.forever()
 
 async def multiply(service, a, b):
     return a * b
@@ -94,14 +93,10 @@ async def multiply(service, a, b):
 
 ```bash
 # Terminal 1
-$ rosy
-Started rosy coordinator on :7679
-
-# Terminal 2
 $ python -m rosy.demo.service_provider
 Started service...
 
-# Terminal 3
+# Terminal 2
 $ python -m rosy.demo.service_caller
 Calculating 2 * 2...
 Result: 4
@@ -117,9 +112,9 @@ pip install rosy
 
 These commands mirror the [`ros2` ROS commands](https://docs.ros.org/en/rolling/Concepts/Basic/About-Command-Line-Tools.html). Use the `--help` flag on any command to see all options.
 
-### `$ rosy` or `rosy coordinator`
+### `$ rosy`
 
-Start the coordinator node. By default, it will listen on port `7679` on all interfaces.
+Display help for all commands.
 
 ### `$ rosy node list`
 
@@ -135,7 +130,7 @@ List all services, or call a service.
 
 ### `$ rosy launch [config]`
 
-Launch a coordinator and several nodes all at once. `config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/rosy/demo/launch.yaml) for a runnable example.
+Launch several nodes all at once. `config` defaults to `launch.yaml`. Check out the [template `launch.yaml`](launch.yaml) for all options, or the [demo `launch.yaml`](src/rosy/demo/launch.yaml) for a runnable example.
 
 ### `$ rosy bag {record,play,info}`
 
@@ -170,28 +165,36 @@ A mesh is a collection of "nodes" that can send messages to each other. A messag
 
 ### How does it work?
 
-A special "coordinator" node maintains the current mesh topology, and makes sure all nodes in the mesh know about each other. The mesh topology is a list of nodes in the mesh, their connection details, and topics they are listening to. When a new node is created, it registers itself with the coordinator, which then adds it to the mesh topology; when a node disconnects, it is removed from the mesh topology. When any change is made to the mesh topology, the coordinator node broadcasts the new mesh topology to all nodes on the mesh.
+The nodes use the [Zeroconf](https://en.wikipedia.org/wiki/Zeroconf) protocol to discover each other and share their supported connection specifications, topics they are listening to, and services they are providing. Each node maintains the current "mesh topology" of all other nodes in the mesh.
 
 When a node needs to send a message, it uses the mesh topology to find all currently listening nodes, connects to them, and sends the message.
 
+### Domain IDs
+
+Nodes will only form a mesh and communicate with other nodes sharing the same "domain ID". The default domain ID is "default".
+
+If you want to have multiple, independent meshes on the same network (e.g. you have multiple robots), you can use a different domain ID for each mesh. Here are some examples:
+
+```python
+await rosy.build_node(..., domain_id="my-domain")
+```
+
+```bash
+# The rosy CLI has a dedicated argument
+$ rosy --domain-id my-domain ...
+```
+
+```bash
+# Or you can set the ROSY_DOMAIN_ID environment variable
+$ ROSY_DOMAIN_ID=my-domain rosy ...
+```
+
 ### Guarantees
 
-`rosy` only guarantees that messages will be received in the order in which they were sent from a *single* node. It is possible for messages sent from different nodes to be received out of order.
+`rosy` only guarantees that topic messages and service requests will be received in the order in which they were sent from a *single* node. It is possible for messages sent from different nodes to be received out of order.
 
-It does **not** guarantee message delivery; there are no delivery confirmations, and if a message fails to be sent to a node (e.g. due to network failure), it will not be retried.
+It does **not** guarantee topic message delivery; there are no delivery confirmations, and if a message fails to be sent to a node (e.g. due to network failure), it will not be retried.
 
 ### Security
 
-Security is not a primary concern of `rosy`. Messages are sent in plaintext (unencrypted) for speed, and by default, there is no authentication of nodes on the mesh.
-
-There is optional authentication support to ensure all nodes on the mesh are allowed to be there. This is done using symmetric HMAC challenge-response. The coordinator will authenticate all nodes before adding them to the mesh, and all nodes will authenticate each other before connecting. This could come in handy when e.g. running multiple meshes on the same network, to avoid accidentally connecting a node to the wrong mesh.
-
-Simply provide the `--authkey=...` argument when starting the coordinator, and ensure the `authkey=b'...'` argument is provided to `build_node(...)`, e.g.
-
-```bash
-$ rosy --authkey my-secret-key
-```
-
-```python
-node = await rosy.build_node(name='my-node', authkey=b'my-secret-key')
-```
+Security is not a primary concern of `rosy`. Messages are sent unencrypted for speed and simplicity, and there is no authentication of nodes on the mesh.

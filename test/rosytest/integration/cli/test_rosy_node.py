@@ -61,14 +61,14 @@ class TestRosyNode:
 
 
 @pytest.fixture(scope='class')
-def topic_listener(coordinator):
+def topic_listener():
     with rosy_cli('topic', 'echo', 'test') as echo_proc:
         echo_proc.expect_exact("Listening to topics: ['test']\n")
         yield
 
 
 @pytest.fixture(scope='class')
-def service_provider(coordinator):
+def service_provider():
     with python_module('rosy.demo.service_provider') as provider_proc:
         provider_proc.expect_exact('Started service...\n')
         yield

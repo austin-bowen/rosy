@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from rosy.asyncio import LockableWriter, Reader, Writer
-from rosy.authentication import Authenticator
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.service.requesthandler import ServiceRequestHandler
 from rosy.node.service.types import ServiceRequest
@@ -15,12 +14,10 @@ logger = logging.getLogger(__name__)
 class ClientHandler:
     def __init__(
             self,
-            authenticator: Authenticator,
             node_message_codec: NodeMessageCodec,
             topic_message_handler: TopicMessageHandler,
             service_request_handler: ServiceRequestHandler,
     ):
-        self.authenticator = authenticator
         self.node_message_codec = node_message_codec
         self.topic_message_handler = topic_message_handler
         self.service_request_handler = service_request_handler
@@ -29,7 +26,6 @@ class ClientHandler:
         peer_name = writer.get_extra_info('peername') or writer.get_extra_info('sockname')
         logger.debug(f'New connection from: {peer_name}')
 
-        await self.authenticator.authenticate(reader, writer)
         writer = LockableWriter(writer)
 
         while True:

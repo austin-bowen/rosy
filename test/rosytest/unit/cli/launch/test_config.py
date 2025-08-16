@@ -10,8 +10,7 @@ from rosy.cli.launch.config import is_enabled, load_config
 def test_load_config():
     with tempfile.NamedTemporaryFile() as f:
         f.write(b"""
-coordinator:
-  disabled: true
+domain_id: my_domain
 nodes:
   my_node:
     command: python my_node.py
@@ -22,9 +21,7 @@ nodes:
         result = load_config(path)
 
     assert result == dict(
-        coordinator=dict(
-            disabled=True,
-        ),
+        domain_id='my_domain',
         nodes=dict(
             my_node=dict(
                 command='python my_node.py',

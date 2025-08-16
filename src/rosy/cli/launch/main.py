@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from time import sleep
@@ -5,6 +6,7 @@ from time import sleep
 from rosy.cli.launch.args import ProcessArgs
 from rosy.cli.launch.config import is_enabled, load_config
 from rosy.procman import ProcessManager
+from rosy.types import DomainId
 
 
 async def launch_main(args: Namespace) -> None:
@@ -17,14 +19,15 @@ async def launch_main(args: Namespace) -> None:
     _print('Press Ctrl+C to stop all nodes.')
 
     with ProcessManager() as pm:
-        node_args = start_coordinator(config, args.no_coordinator, pm)
+        domain_id = config.get('domain_id')
+        node_env = get_node_env(domain_id)
 
         nodes = config['nodes']
         for node_name, node_config in nodes.items():
             if node_name in args.exclude:
                 continue
 
-            start_node(node_name, node_config, node_args, pm)
+            start_node(node_name, node_config, node_env, pm)
 
         try:
             pm.wait()
@@ -48,12 +51,6 @@ def add_launch_command(subparsers) -> None:
     )
 
     parser.add_argument(
-        '--no-coordinator',
-        action='store_true',
-        help="Don't start the coordinator",
-    )
-
-    parser.add_argument(
         '-e', '--exclude',
         nargs='+',
         default=[],
@@ -61,60 +58,19 @@ def add_launch_command(subparsers) -> None:
     )
 
 
-def start_coordinator(
-        config: dict,
-        disabled: bool,
-        pm: ProcessManager,
-) -> list[str]:
-    """
-    Start the coordinator (if not disabled), and return a list of coordinator
-    arguments to pass to nodes.
-    """
+def get_node_env(domain_id: DomainId | None) -> dict[str, str]:
+    env = dict(os.environ)
 
-    node_args = []
+    if domain_id is not None:
+        env["ROSY_DOMAIN_ID"] = domain_id
 
-    config = config.get('coordinator', {})
-
-    args = ['rosy', 'coordinator']
-
-    host = config.get('host')
-    if host is not None:
-        args.extend(['--host', host])
-
-    port = config.get('port')
-    if port is not None:
-        args.extend(['--port', str(port)])
-
-    client_host = config.get('client_host')
-    if client_host or port:
-        coordinator_arg = (client_host or '')
-        if port:
-            coordinator_arg += f':{port}'
-
-        node_args.extend(['--coordinator', coordinator_arg])
-
-    authkey = config.get('authkey')
-    if authkey is not None:
-        authkey_arg = ['--authkey', authkey]
-        args.extend(authkey_arg)
-        node_args.extend(authkey_arg)
-
-    if not disabled and is_enabled(config):
-        _print(f"Starting coordinator: {args}")
-        pm.popen(args)
-
-        delay = config.get('post_delay', 1)
-        sleep(delay)
-    else:
-        _print('Not starting coordinator.')
-
-    return node_args
+    return env
 
 
 def start_node(
         name: str,
         config: dict,
-        coordinator_args: list[str],
+        env: dict[str, str],
         pm: ProcessManager,
 ) -> None:
     if not is_enabled(config):
@@ -126,7 +82,6 @@ def start_node(
     command = config['command']
     command = ProcessArgs(command)
     command.extend(['--name', name])
-    command.extend(coordinator_args)
     command = command.args
 
     default_shell = isinstance(command, str)
@@ -135,7 +90,7 @@ def start_node(
     number = config.get('number', 1)
     for i in range(number):
         _print(f'Starting node {name!r} ({i + 1}/{number}): {command}')
-        pm.popen(command, shell=shell)
+        pm.popen(command, shell=shell, env=env)
 
     delay = config.get('post_delay', 0)
     sleep(delay)

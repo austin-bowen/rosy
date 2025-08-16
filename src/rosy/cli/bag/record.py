@@ -5,7 +5,7 @@ from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
-from rosy import build_node_from_args
+from rosy import Node, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.utils import add_log_arg
 
@@ -13,8 +13,11 @@ from rosy.cli.utils import add_log_arg
 async def record(args: Namespace) -> None:
     logging.basicConfig(level=args.log)
 
-    node = await build_node_from_args(args=args)
+    async with await build_node_from_args(args=args) as node:
+        await _record_main(args, node)
 
+
+async def _record_main(args: Namespace, node: Node) -> None:
     bag_file_path = args.output or get_bag_file_path()
 
     with open(bag_file_path, 'wb') as bag_file:
