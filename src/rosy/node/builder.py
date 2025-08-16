@@ -136,7 +136,7 @@ async def build_node(
 
     authenticator = authenticator or optional_authkey_authenticator(authkey)
 
-    discovery = ZeroconfNodeDiscovery()
+    discovery = ZeroconfNodeDiscovery(authkey=authkey)
 
     # TODO Remove this
     coordinator_client = await build_coordinator_client(

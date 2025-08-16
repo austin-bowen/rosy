@@ -1,5 +1,6 @@
 import asyncio
 import gzip
+import hashlib
 import logging
 import pickle
 import socket
@@ -23,12 +24,19 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
     def __init__(
         self,
         topology_changed_callback: TopologyChangedCallback = None,
+        authkey: bytes = None,
         service_type: str = DEFAULT_SERVICE_TYPE,
         zc: Zeroconf = None,
         node_spec_codec: "NodeSpecCodec" = None,
         ttl: int = DEFAULT_TTL,
         rng: Random = None,
     ) -> None:
+        if authkey:
+            authkey = hash_domain_id(authkey.decode())
+            parts = service_type.split('.')
+            parts[0] += f'-{authkey}'
+            service_type = '.'.join(parts)
+
         self.topology_changed_callback = topology_changed_callback
         self._service_type = service_type
         self._zc = zc or Zeroconf()
@@ -37,11 +45,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         self._rng = rng or Random()
 
         self._service_name_to_node: dict[str, MeshNodeSpec] = {}
-
         self._node_monitors: dict[str, asyncio.Task] = {}
-
         self._service_info_lock = asyncio.Lock()
-
         self._browser: ServiceBrowser | None = None
 
     @property
@@ -174,6 +179,16 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         if node is not None:
             logger.debug(f"Node left mesh: {node.id}")
             await self._call_topology_changed_callback()
+
+
+def hash_domain_id(domain_id: str, digest_size: int = 5) -> str:
+    domain_id = domain_id.encode()
+    domain_id = hashlib.blake2b(
+        domain_id,
+        digest_size=digest_size,
+        usedforsecurity=False,
+    )
+    return domain_id.hexdigest()
 
 
 def get_mdns_fqdn() -> str:
