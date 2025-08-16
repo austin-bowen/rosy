@@ -12,6 +12,7 @@ from rosy.node.servers import (
     TcpServerProvider,
     TmpUnixServerProvider,
     UnsupportedProviderError,
+    _UnixServer,
     _close_on_return,
 )
 from rosy.specs import IpConnectionSpec, UnixConnectionSpec
@@ -83,7 +84,8 @@ class TestTmpUnixServerProvider:
         )
         sock_path = start_unix_server_mock.call_args[1]['path']
 
-        assert server is expected_server
+        assert isinstance(server, _UnixServer)
+        assert server.server is expected_server
         assert conn_specs == [UnixConnectionSpec(sock_path)]
 
     @patch('rosy.node.servers.asyncio.start_unix_server')

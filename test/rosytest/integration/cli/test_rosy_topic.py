@@ -4,7 +4,7 @@ from rosytest.integration.cli.utils import rosy_cli
 
 
 class TestRosyTopic:
-    def test_send_once_and_echo(self, coordinator):
+    def test_send_once_and_echo(self):
         with rosy_cli(
                 'topic',
                 'send',
@@ -36,7 +36,7 @@ class TestRosyTopic:
                 ])
                 echo_proc.expect(r"  timestamp\=\d+\.\d+\n")
 
-    def test_send_multiple(self, coordinator):
+    def test_send_multiple(self):
         with (
             rosy_cli('topic', 'echo', 'test'),
             rosy_cli(
@@ -54,7 +54,7 @@ class TestRosyTopic:
                     "\n",
                 ])
 
-    def test_list(self, coordinator):
+    def test_list(self):
         with (
             rosy_cli('topic', 'echo', 'test1', 'test2') as echo_proc1,
             rosy_cli('topic', 'echo', 'test2', 'test3') as echo_proc2,

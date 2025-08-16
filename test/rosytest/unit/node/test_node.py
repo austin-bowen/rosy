@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, call, create_autospec
 
 import pytest
 
-from rosy.coordinator.client import MeshCoordinatorClient
+from rosy.discovery.base import NodeDiscovery
 from rosy.node.callbackmanager import CallbackManager
 from rosy.node.node import Node, ServiceProxy, TopicProxy
 from rosy.node.peer import PeerConnectionManager
@@ -11,14 +11,13 @@ from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
-from rosy.reqres import MeshTopologyBroadcast
 from rosy.specs import IpConnectionSpec, MeshNodeSpec, MeshTopologySpec, NodeId
 
 
 class TestNode:
     def setup_method(self):
         self.id = NodeId('node')
-        self.coordinator_client = create_autospec(MeshCoordinatorClient)
+        self.discovery = create_autospec(NodeDiscovery)
         self.servers_manager = create_autospec(ServersManager)
         self.topology_manager = create_autospec(MeshTopologyManager)
         self.connection_manager = create_autospec(PeerConnectionManager)
@@ -29,7 +28,7 @@ class TestNode:
 
         self.node = Node(
             id=self.id,
-            coordinator_client=self.coordinator_client,
+            discovery=self.discovery,
             servers_manager=self.servers_manager,
             topology_manager=self.topology_manager,
             connection_manager=self.connection_manager,
@@ -39,15 +38,14 @@ class TestNode:
             service_handler_manager=self.service_handler_manager,
         )
 
-    def test_constructor_sets_up_coordinator_client(self):
-        self.coordinator_client.set_broadcast_handler.assert_called_once_with(
-            self.node._handle_new_topology,
-        )
+    def test_constructor_sets_up_discovery(self):
+        assert self.discovery.topology_changed_callback == self.node._handle_new_topology
 
     def test_id_property_is_read_only(self):
         assert self.node.id is self.id
 
         with pytest.raises(AttributeError):
+            # noinspection PyPropertyAccess
             self.node.id = NodeId('new_node')
 
     def test_str(self):
@@ -58,13 +56,14 @@ class TestNode:
         await self.node.start()
 
         self.servers_manager.start_servers.assert_awaited_once()
-        self.coordinator_client.register_node.assert_awaited_once()
+        self.discovery.register_node.assert_awaited_once()
+        self.discovery.update_node.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_start_on_started_node_raises_RuntimeError(self):
         await self.node.start()
 
-        with pytest.raises(RuntimeError, match='Node is already started.'):
+        with pytest.raises(RuntimeError, match='Node was already started.'):
             await self.node.start()
 
     @pytest.mark.asyncio
@@ -84,7 +83,7 @@ class TestNode:
         await self.node.listen('topic', callback)
 
         self.topic_listener_manager.set_callback.assert_called_once_with('topic', callback)
-        self.coordinator_client.register_node.assert_awaited_once()
+        self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_stop_listening_to_valid_topic_registers_node(self):
@@ -94,7 +93,7 @@ class TestNode:
         assert await self.node.stop_listening('topic') is None
 
         self.topic_listener_manager.remove_callback.assert_called_once_with('topic')
-        self.coordinator_client.register_node.assert_awaited_once()
+        self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_stop_listening_to_invalid_topic_does_not_register_node(self):
@@ -103,7 +102,7 @@ class TestNode:
         assert await self.node.stop_listening('topic') is None
 
         self.topic_listener_manager.remove_callback.assert_called_once_with('topic')
-        self.coordinator_client.register_node.assert_not_awaited()
+        self.discovery.update_node.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_topic_has_listeners_returns_True(self):
@@ -157,7 +156,7 @@ class TestNode:
         assert await self.node.add_service('service', callback) is None
 
         self.service_handler_manager.set_callback.assert_called_once_with('service', callback)
-        self.coordinator_client.register_node.assert_awaited_once()
+        self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_remove_service_registers_when_valid_service(self):
@@ -167,7 +166,7 @@ class TestNode:
         assert await self.node.remove_service('service') is None
 
         self.service_handler_manager.remove_callback.assert_called_once_with('service')
-        self.coordinator_client.register_node.assert_awaited_once()
+        self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_remove_service_does_not_register_when_invalid_service(self):
@@ -176,7 +175,7 @@ class TestNode:
         assert await self.node.remove_service('service') is None
 
         self.service_handler_manager.remove_callback.assert_called_once_with('service')
-        self.coordinator_client.register_node.assert_not_awaited()
+        self.discovery.update_node.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_service_has_providers_returns_True(self):
@@ -233,7 +232,7 @@ class TestNode:
             services=services,
         )
 
-        self.coordinator_client.register_node.assert_awaited_once_with(expected_spec)
+        self.discovery.update_node.assert_awaited_once_with(expected_spec)
 
     @pytest.mark.asyncio
     async def test_handle_topology_broadcast(self):
@@ -242,10 +241,8 @@ class TestNode:
             node.id = NodeId(name)
             return node
 
-        broadcast = MeshTopologyBroadcast(
-            mesh_topology=create_autospec(MeshTopologySpec),
-        )
-        broadcast.mesh_topology.nodes = [
+        mesh_topology = create_autospec(MeshTopologySpec)
+        mesh_topology.nodes = [
             mock_node('new_node'),
         ]
 
@@ -255,9 +252,9 @@ class TestNode:
         ]
         self.topology_manager.get_removed_nodes.return_value = removed_nodes
 
-        assert await self.node._handle_new_topology(broadcast) is None
+        assert await self.node._handle_new_topology(mesh_topology) is None
 
-        self.topology_manager.set_topology.assert_called_once_with(broadcast.mesh_topology)
+        self.topology_manager.set_topology.assert_called_once_with(mesh_topology)
         assert self.connection_manager.close_connection.call_args_list == [
             call(removed_nodes[0]),
             call(removed_nodes[1]),

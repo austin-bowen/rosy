@@ -4,7 +4,6 @@ from unittest.mock import ANY, create_autospec
 import pytest
 
 from rosy.asyncio import LockableWriter, Reader, Writer
-from rosy.authentication import Authenticator
 from rosy.node.clienthandler import ClientHandler
 from rosy.node.codec import NodeMessageCodec
 from rosy.node.service.requesthandler import ServiceRequestHandler
@@ -20,13 +19,11 @@ class TestClientHandler:
         self.writer = create_autospec(Writer)
         self.writer.get_extra_info.side_effect = lambda key: key
 
-        self.authenticator = create_autospec(Authenticator)
         self.node_message_codec = create_autospec(NodeMessageCodec)
         self.topic_message_handler = create_autospec(TopicMessageHandler)
         self.service_request_handler = create_autospec(ServiceRequestHandler)
 
         self.handler = ClientHandler(
-            self.authenticator,
             self.node_message_codec,
             self.topic_message_handler,
             self.service_request_handler,
@@ -43,7 +40,6 @@ class TestClientHandler:
 
         assert await self.handler.handle_client(self.reader, self.writer) is None
 
-        self.authenticator.authenticate.assert_awaited_once_with(self.reader, self.writer)
         self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(self.reader)
         self.topic_message_handler.handle_message.assert_awaited_once_with(message)
         self.service_request_handler.handle_request.assert_not_awaited()
@@ -68,7 +64,6 @@ class TestClientHandler:
         # yield to allow the task to run.
         await asyncio.sleep(0)
 
-        self.authenticator.authenticate.assert_awaited_once_with(self.reader, self.writer)
         self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(self.reader)
         self.service_request_handler.handle_request.assert_awaited_once_with(message, ANY)
         self.topic_message_handler.handle_message.assert_not_awaited()
@@ -89,7 +84,6 @@ class TestClientHandler:
         with pytest.raises(RuntimeError, match='Unreachable code'):
             await self.handler.handle_client(self.reader, self.writer)
 
-        self.authenticator.authenticate.assert_awaited_once_with(self.reader, self.writer)
         self.node_message_codec.decode_topic_message_or_service_request.assert_called_once_with(self.reader)
         self.service_request_handler.handle_request.assert_not_awaited()
         self.topic_message_handler.handle_message.assert_not_awaited()
