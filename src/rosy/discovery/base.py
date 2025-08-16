@@ -46,6 +46,6 @@ class NodeDiscovery(ABC):
             raise
         except Exception as e:
             logger.exception(
-                'Error calling topology changed callback',
+                "Error calling topology changed callback",
                 exc_info=e,
             )
