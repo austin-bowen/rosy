@@ -1,4 +1,7 @@
+import os
 from asyncio import CancelledError
+
+from rosy.types import DomainId
 
 ALLOWED_EXCEPTIONS = (
     CancelledError,
@@ -6,6 +9,12 @@ ALLOWED_EXCEPTIONS = (
     SystemExit,
     GeneratorExit,
 )
+
+DEFAULT_DOMAIN_ID: DomainId = "default"
+
+
+def get_domain_id(default: DomainId = DEFAULT_DOMAIN_ID) -> DomainId:
+    return os.environ.get("ROSY_DOMAIN_ID", default)
 
 
 def require(result, message: str = None) -> None:

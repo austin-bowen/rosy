@@ -14,6 +14,8 @@ Host = str
 ServerHost = Host | Sequence[Host] | None
 Port = int
 
+DomainId = str
+
 
 @dataclass
 class Endpoint:

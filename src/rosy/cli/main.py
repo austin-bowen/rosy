@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import sys
 
-from rosy.argparse import add_authkey_arg, add_coordinator_arg
+from rosy.argparse import add_domain_id_arg, add_coordinator_arg
 from rosy.cli.bag.main import add_bag_command, bag_main
 from rosy.cli.coordinator import add_coordinator_command, coordinator_main
 from rosy.cli.launch.main import add_launch_command, launch_main
@@ -56,7 +56,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     add_coordinator_arg(parser)
-    add_authkey_arg(parser)
+    add_domain_id_arg(parser)
 
     parser.add_argument(
         '-v', '--version',

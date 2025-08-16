@@ -3,20 +3,21 @@ from collections.abc import Callable
 from urllib.parse import urlparse
 
 from rosy.coordinator.constants import DEFAULT_COORDINATOR_PORT
-from rosy.types import Endpoint, Port, ServerHost
+from rosy.types import DomainId, Endpoint, Port, ServerHost
+from rosy.utils import DEFAULT_DOMAIN_ID, get_domain_id
 
 
 def get_node_arg_parser(
         default_node_name: str = None,
         default_coordinator: Endpoint = None,
-        default_authkey: bytes = None,
+        default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
         **kwargs,
 ) -> ArgumentParser:
     """
     Returns an argument parser with the following node-specific arguments:
     - `--name`
     - `--coordinator HOST[:PORT]`
-    - `--authkey`
+    - `--domain-id`
 
     Args:
         default_node_name:
@@ -24,15 +25,14 @@ def get_node_arg_parser(
         default_coordinator:
             Default coordinator endpoint. If not given, the argument will
             default to `localhost:DEFAULT_COORDINATOR_PORT`.
-        default_authkey:
-            Default authentication key. If not given, the argument will
-            default to `None` (i.e. no auth key).
+        default_domain_id:
+            Default Domain ID.
         **kwargs:
             These are passed to the `ArgumentParser` constructor.
     """
 
     parser = ArgumentParser(**kwargs)
-    add_node_args(parser, default_node_name, default_coordinator, default_authkey)
+    add_node_args(parser, default_node_name, default_coordinator, default_domain_id)
     return parser
 
 
@@ -40,13 +40,13 @@ def add_node_args(
         parser: ArgumentParser,
         default_node_name: str = None,
         default_coordinator: Endpoint = None,
-        default_authkey: bytes = None,
+        default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
 ) -> None:
     """
     Adds node-specific arguments to an argument parser:
     - `--name`
     - `--coordinator HOST[:PORT]`
-    - `--authkey`
+    - `--domain-id`
 
     Args:
         parser:
@@ -56,14 +56,13 @@ def add_node_args(
         default_coordinator:
             Default coordinator endpoint. If not given, the argument will
             default to `localhost:DEFAULT_COORDINATOR_PORT`.
-        default_authkey:
-            Default authentication key. If not given, the argument will
-            default to `None` (i.e. no auth key).
+        default_domain_id:
+            Default Domain ID.
     """
 
     add_node_name_arg(parser, default_node_name)
     add_coordinator_arg(parser, default_coordinator)
-    add_authkey_arg(parser, default_authkey)
+    add_domain_id_arg(parser, default_domain_id)
 
 
 def add_node_name_arg(parser: ArgumentParser, default: str = None) -> None:
@@ -115,27 +114,29 @@ def add_coordinator_arg(
     )
 
 
-def add_authkey_arg(
+def add_domain_id_arg(
         parser: ArgumentParser,
-        default: bytes = None,
+        default: DomainId = DEFAULT_DOMAIN_ID,
 ) -> None:
     """
-    Adds an `--authkey` argument to an argument parser.
+    Adds a `--domain-id` argument to an argument parser.
 
     Args:
         parser:
             Argument parser to which the argument will be added.
         default:
-            Default authentication key. If not given, the argument will
-            default to `None` (i.e. no auth key).
+            Default Domain ID to use if not given and the `ROSY_DOMAIN_ID`
+            environment variable is not set.
     """
 
     parser.add_argument(
-        '--authkey',
-        default=default,
-        type=lambda arg: arg.encode(),
-        help='Authentication key to use for new connections between all nodes in the mesh. '
-             'Default: %(default)s',
+        "--domain-id",
+        default=get_domain_id(default),
+        help="""The Domain ID allows multiple rosy meshes to coexist on the
+        same network. Only nodes with the same domain ID can connect to each
+        other. This can also be set with the `ROSY_DOMAIN_ID` environment
+        variable.
+        Default: %(default)r""",
     )
 
 
