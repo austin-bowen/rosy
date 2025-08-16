@@ -7,7 +7,8 @@ from weakref import WeakKeyDictionary
 
 from rosy.asyncio import Reader
 from rosy.node.codec import NodeMessageCodec
-from rosy.node.peer import PeerConnectionManager, PeerSelector
+from rosy.node.peer.connection import PeerConnectionManager
+from rosy.node.peer.selector import PeerSelector
 from rosy.node.service.types import RequestId, ServiceRequest, ServiceResponse
 from rosy.node.types import Args, KWArgs
 from rosy.types import Data

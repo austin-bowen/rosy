@@ -5,10 +5,14 @@ from typing import NamedTuple
 
 from rosy.asyncio import LockableWriter, Reader, Writer, close_ignoring_errors
 from rosy.network import get_hostname
-from rosy.node.loadbalancing import ServiceLoadBalancer, TopicLoadBalancer
-from rosy.node.topology import MeshTopologyManager
-from rosy.specs import ConnectionSpec, IpConnectionSpec, MeshNodeSpec, NodeId, UnixConnectionSpec
-from rosy.types import Host, Service, Topic
+from rosy.specs import (
+    ConnectionSpec,
+    IpConnectionSpec,
+    MeshNodeSpec,
+    NodeId,
+    UnixConnectionSpec,
+)
+from rosy.types import Host
 
 logger = logging.getLogger(__name__)
 
@@ -28,24 +32,28 @@ class PeerConnectionBuilder:
     def __init__(self, host: Host = None):
         self.host = host or get_hostname()
 
-    async def build(self, conn_specs: Iterable[ConnectionSpec]) -> tuple[Reader, Writer]:
+    async def build(
+        self, conn_specs: Iterable[ConnectionSpec]
+    ) -> tuple[Reader, Writer]:
         reader_writer = None
         for conn_spec in conn_specs:
             try:
                 reader_writer = await self._get_connection(conn_spec)
             except (ConnectionError, IOError) as e:
-                logger.error(f'Error connecting to {conn_spec}: {e!r}')
+                logger.error(f"Error connecting to {conn_spec}: {e!r}")
                 continue
 
             if reader_writer is not None:
                 break
 
         if reader_writer is None:
-            raise ConnectionError('Could not connect to any connection spec')
+            raise ConnectionError("Could not connect to any connection spec")
 
         return reader_writer
 
-    async def _get_connection(self, conn_spec: ConnectionSpec) -> tuple[Reader, Writer] | None:
+    async def _get_connection(
+        self, conn_spec: ConnectionSpec
+    ) -> tuple[Reader, Writer] | None:
         if isinstance(conn_spec, IpConnectionSpec):
             return await open_connection(
                 host=conn_spec.host,
@@ -58,7 +66,7 @@ class PeerConnectionBuilder:
 
             return await open_unix_connection(path=conn_spec.path)
         else:
-            raise ValueError(f'Unrecognized connection spec: {conn_spec}')
+            raise ValueError(f"Unrecognized connection spec: {conn_spec}")
 
 
 class PeerConnectionManager:
@@ -74,7 +82,7 @@ class PeerConnectionManager:
             if connection:
                 return connection
 
-            logger.debug(f'Connecting to node: {node.id}')
+            logger.debug(f"Connecting to node: {node.id}")
             reader, writer = await self.conn_builder.build(node.connection_specs)
 
             writer = LockableWriter(writer)
@@ -98,23 +106,3 @@ class PeerConnectionManager:
         connection = self._connections.pop(node.id, None)
         if connection:
             await connection.close()
-
-
-class PeerSelector:
-    def __init__(
-            self,
-            topology_manager: MeshTopologyManager,
-            topic_load_balancer: TopicLoadBalancer,
-            service_load_balancer: ServiceLoadBalancer,
-    ):
-        self.topology_manager = topology_manager
-        self.topic_load_balancer = topic_load_balancer
-        self.service_load_balancer = service_load_balancer
-
-    def get_nodes_for_topic(self, topic: Topic) -> list[MeshNodeSpec]:
-        peers = self.topology_manager.get_nodes_listening_to_topic(topic)
-        return self.topic_load_balancer.choose_nodes(peers, topic)
-
-    def get_node_for_service(self, service: Service) -> MeshNodeSpec | None:
-        peers = self.topology_manager.get_nodes_providing_service(service)
-        return self.service_load_balancer.choose_node(peers, service)

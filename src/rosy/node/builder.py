@@ -24,7 +24,8 @@ from rosy.node.loadbalancing import (
     TopicLoadBalancer,
     node_name_group_key,
 )
-from rosy.node.peer import PeerConnectionBuilder, PeerConnectionManager, PeerSelector
+from rosy.node.peer.connection import PeerConnectionBuilder, PeerConnectionManager
+from rosy.node.peer.selector import PeerSelector
 from rosy.node.servers import (
     ServerProvider,
     ServersManager,
@@ -39,7 +40,7 @@ from rosy.node.topic.codec import TopicMessageCodec
 from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.messagehandler import TopicMessageHandler
 from rosy.node.topic.sender import TopicSender
-from rosy.node.topology import MeshTopologyManager
+from rosy.node.topology import MeshTopologyManager, TopologyChangedHandler
 from rosy.specs import NodeId
 from rosy.types import Data, DomainId, Host, ServerHost
 from rosy.utils import get_domain_id
@@ -141,14 +142,19 @@ async def build_node(
 
     topology_manager = MeshTopologyManager()
 
+    connection_manager = PeerConnectionManager(
+        PeerConnectionBuilder(),
+    )
+
+    discovery.topology_changed_callback = TopologyChangedHandler(
+        topology_manager,
+        connection_manager,
+    )
+
     peer_selector = build_peer_selector(
         topology_manager,
         topic_load_balancer,
         service_load_balancer,
-    )
-
-    connection_manager = PeerConnectionManager(
-        PeerConnectionBuilder(),
     )
 
     topic_sender = TopicSender(peer_selector, connection_manager, node_message_codec)
@@ -165,7 +171,6 @@ async def build_node(
         discovery=discovery,
         servers_manager=servers_manager,
         topology_manager=topology_manager,
-        connection_manager=connection_manager,
         topic_sender=topic_sender,
         topic_listener_manager=topic_listener_manager,
         service_caller=service_caller,

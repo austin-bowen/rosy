@@ -6,14 +6,13 @@ from typing import NamedTuple
 
 from rosy.asyncio import forever
 from rosy.discovery.base import NodeDiscovery
-from rosy.node.peer import PeerConnectionManager
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.handlermanager import ServiceHandlerManager
 from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
-from rosy.specs import MeshNodeSpec, MeshTopologySpec, NodeId
+from rosy.specs import MeshNodeSpec, NodeId
 from rosy.types import Data, Service, ServiceCallback, Topic, TopicCallback
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,6 @@ class Node:
             discovery: NodeDiscovery,
             servers_manager: ServersManager,
             topology_manager: MeshTopologyManager,
-            connection_manager: PeerConnectionManager,
             topic_sender: TopicSender,
             topic_listener_manager: TopicListenerManager,
             service_caller: ServiceCaller,
@@ -50,15 +48,12 @@ class Node:
         self.discovery = discovery
         self.servers_manager = servers_manager
         self.topology_manager = topology_manager
-        self.connection_manager = connection_manager
         self.topic_sender = topic_sender
         self.topic_listener_manager = topic_listener_manager
         self.service_caller = service_caller
         self.service_handler_manager = service_handler_manager
 
         self._state: State = State.INITD
-
-        discovery.topology_changed_callback = self._handle_new_topology
 
     @property
     def id(self) -> NodeId:
@@ -267,24 +262,6 @@ class Node:
             topics=self.topic_listener_manager.keys,
             services=self.service_handler_manager.keys,
         )
-
-    async def _handle_new_topology(self, new_topology: MeshTopologySpec) -> None:
-        # TODO remove this
-        logger.debug(
-            f'Received mesh topology broadcast with '
-            f'{len(new_topology.nodes)} nodes.'
-        )
-
-        removed_nodes = self.topology_manager.get_removed_nodes(new_topology)
-        logger.debug(
-            f'Removed {len(removed_nodes)} nodes: '
-            f'{[str(node.id) for node in removed_nodes]}'
-        )
-
-        self.topology_manager.set_topology(new_topology)
-
-        for node in removed_nodes:
-            await self.connection_manager.close_connection(node)
 
     async def forever(self) -> None:
         """

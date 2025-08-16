@@ -1,17 +1,16 @@
 import socket
-from unittest.mock import AsyncMock, call, create_autospec
+from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 
 from rosy.discovery.base import NodeDiscovery
 from rosy.node.callbackmanager import CallbackManager
 from rosy.node.node import Node, ServiceProxy, TopicProxy
-from rosy.node.peer import PeerConnectionManager
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager
-from rosy.specs import IpConnectionSpec, MeshNodeSpec, MeshTopologySpec, NodeId
+from rosy.specs import IpConnectionSpec, MeshNodeSpec, NodeId
 
 
 class TestNode:
@@ -20,7 +19,6 @@ class TestNode:
         self.discovery = create_autospec(NodeDiscovery)
         self.servers_manager = create_autospec(ServersManager)
         self.topology_manager = create_autospec(MeshTopologyManager)
-        self.connection_manager = create_autospec(PeerConnectionManager)
         self.topic_sender = create_autospec(TopicSender)
         self.topic_listener_manager = create_autospec(CallbackManager)
         self.service_caller = create_autospec(ServiceCaller)
@@ -31,15 +29,11 @@ class TestNode:
             discovery=self.discovery,
             servers_manager=self.servers_manager,
             topology_manager=self.topology_manager,
-            connection_manager=self.connection_manager,
             topic_sender=self.topic_sender,
             topic_listener_manager=self.topic_listener_manager,
             service_caller=self.service_caller,
             service_handler_manager=self.service_handler_manager,
         )
-
-    def test_constructor_sets_up_discovery(self):
-        assert self.discovery.topology_changed_callback == self.node._handle_new_topology
 
     def test_id_property_is_read_only(self):
         assert self.node.id is self.id
@@ -233,32 +227,6 @@ class TestNode:
         )
 
         self.discovery.update_node.assert_awaited_once_with(expected_spec)
-
-    @pytest.mark.asyncio
-    async def test_handle_topology_broadcast(self):
-        def mock_node(name: str):
-            node = create_autospec(MeshNodeSpec)
-            node.id = NodeId(name)
-            return node
-
-        mesh_topology = create_autospec(MeshTopologySpec)
-        mesh_topology.nodes = [
-            mock_node('new_node'),
-        ]
-
-        removed_nodes = [
-            mock_node('removed_node1'),
-            mock_node('removed_node2'),
-        ]
-        self.topology_manager.get_removed_nodes.return_value = removed_nodes
-
-        assert await self.node._handle_new_topology(mesh_topology) is None
-
-        self.topology_manager.set_topology.assert_called_once_with(mesh_topology)
-        assert self.connection_manager.close_connection.call_args_list == [
-            call(removed_nodes[0]),
-            call(removed_nodes[1]),
-        ]
 
 
 class TestTopicProxy:

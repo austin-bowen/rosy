@@ -4,7 +4,8 @@ import pytest
 
 from rosy.asyncio import LockableWriter
 from rosy.node.codec import NodeMessageCodec
-from rosy.node.peer import PeerConnection, PeerConnectionManager, PeerSelector
+from rosy.node.peer.connection import PeerConnection, PeerConnectionManager
+from rosy.node.peer.selector import PeerSelector
 from rosy.node.service.caller import ServiceCaller, ServiceRequestError, ServiceResponseError
 from rosy.node.service.types import ServiceResponse
 from rosy.specs import MeshNodeSpec
