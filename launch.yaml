@@ -27,6 +27,9 @@ coordinator:
   on_host: hostname
   # Seconds to wait after starting the coordinator. Default: 1.0
   post_delay: 1.0
+# [Optional] If set, the `ROSY_DOMAIN_ID` environment variable will be set to
+# this value for all nodes.
+domain_id: default
 # [REQUIRED] Nodes to start
 nodes:
   name1:
