@@ -51,67 +51,11 @@ def add_launch_command(subparsers) -> None:
     )
 
     parser.add_argument(
-        '--no-coordinator',
-        action='store_true',
-        help="Don't start the coordinator",
-    )
-
-    parser.add_argument(
         '-e', '--exclude',
         nargs='+',
         default=[],
         help='Nodes to exclude from starting',
     )
-
-
-def start_coordinator(
-        config: dict,
-        disabled: bool,
-        pm: ProcessManager,
-) -> list[str]:
-    """
-    Start the coordinator (if not disabled), and return a list of coordinator
-    arguments to pass to nodes.
-    """
-
-    node_args = []
-
-    config = config.get('coordinator', {})
-
-    args = ['rosy', 'coordinator']
-
-    host = config.get('host')
-    if host is not None:
-        args.extend(['--host', host])
-
-    port = config.get('port')
-    if port is not None:
-        args.extend(['--port', str(port)])
-
-    client_host = config.get('client_host')
-    if client_host or port:
-        coordinator_arg = (client_host or '')
-        if port:
-            coordinator_arg += f':{port}'
-
-        node_args.extend(['--coordinator', coordinator_arg])
-
-    authkey = config.get('authkey')
-    if authkey is not None:
-        authkey_arg = ['--authkey', authkey]
-        args.extend(authkey_arg)
-        node_args.extend(authkey_arg)
-
-    if not disabled and is_enabled(config):
-        _print(f"Starting coordinator: {args}")
-        pm.popen(args)
-
-        delay = config.get('post_delay', 1)
-        sleep(delay)
-    else:
-        _print('Not starting coordinator.')
-
-    return node_args
 
 
 def get_node_env(domain_id: DomainId | None) -> dict[str, str]:

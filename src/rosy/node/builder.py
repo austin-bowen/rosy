@@ -71,15 +71,7 @@ async def build_node_from_args(
     if args is None:
         args = get_node_arg_parser(default_node_name).parse_args()
 
-    build_args = vars(args)
-
-    if hasattr(args, "coordinator"):
-        build_args["coordinator_host"] = args.coordinator.host
-        build_args["coordinator_port"] = args.coordinator.port
-
-    build_args.update(kwargs)
-
-    return await build_node(**build_args)
+    return await build_node(**vars(args))
 
 
 async def build_node(

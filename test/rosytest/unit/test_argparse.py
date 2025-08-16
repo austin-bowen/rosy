@@ -2,8 +2,8 @@ from argparse import Namespace
 
 import pytest
 
-from rosy.argparse import get_node_arg_parser, server_host_arg
-from rosy.types import Endpoint, ServerHost
+from rosy.argparse import get_node_arg_parser
+from rosy.types import Endpoint
 
 
 class TestGetNodeArgParser:
@@ -40,13 +40,3 @@ class TestGetNodeArgParser:
         )
         parsed_args = parser.parse_args(args)
         assert parsed_args == expected
-
-
-@pytest.mark.parametrize('arg, expected', [
-    ('', ''),
-    ('None', None),
-    ('host', 'host'),
-    ('host1,host2', ['host1', 'host2']),
-])
-def test_server_host_arg(arg: str, expected: ServerHost):
-    assert server_host_arg(arg) == expected

@@ -79,7 +79,7 @@ class Node:
 
     async def start(self) -> None:
         """
-        Start the node by starting the servers and registering with the coordinator.
+        Start the node by starting the servers and registering with the mesh.
         """
 
         if self._state is not State.INITD:
@@ -244,7 +244,7 @@ class Node:
 
     async def register(self, first_time: bool = False) -> None:
         """
-        Register the node with the coordinator.
+        Register the node with the mesh.
 
         This is done automatically when the node is started,
         and when topics or services are added or removed,
@@ -252,7 +252,7 @@ class Node:
         """
 
         node_spec = self._build_node_spec()
-        logger.info('Registering node with coordinator')
+        logger.info('Registering node with mesh')
         logger.debug(f'node_spec={node_spec}')
 
         if first_time:
