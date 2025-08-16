@@ -3,10 +3,6 @@ from typing import Literal
 
 from rosy import Node
 from rosy.argparse import get_node_arg_parser
-from rosy.authentication import (
-    Authenticator,
-    NoAuthenticator,
-)
 from rosy.codec import (
     Codec,
     DictCodec,
@@ -132,8 +128,6 @@ async def build_node(
             will be ready to use.
     """
 
-    authenticator = NoAuthenticator()
-
     domain_id = domain_id or get_domain_id()
     discovery = ZeroconfNodeDiscovery(domain_id=domain_id)
 
@@ -148,7 +142,6 @@ async def build_node(
         allow_tcp_connections,
         node_server_host,
         node_client_host,
-        authenticator,
         topic_listener_manager,
         service_handler_manager,
         node_message_codec,
@@ -163,7 +156,7 @@ async def build_node(
     )
 
     connection_manager = PeerConnectionManager(
-        PeerConnectionBuilder(authenticator),
+        PeerConnectionBuilder(),
     )
 
     topic_sender = TopicSender(peer_selector, connection_manager, node_message_codec)
@@ -256,7 +249,6 @@ def build_servers_manager(
     allow_tcp_connections: bool,
     node_server_host: ServerHost,
     node_client_host: Host | None,
-    authenticator: Authenticator,
     topic_listener_manager: TopicListenerManager,
     service_handler_manager: ServiceHandlerManager,
     node_message_codec: NodeMessageCodec,
@@ -269,7 +261,6 @@ def build_servers_manager(
     )
 
     client_handler = ClientHandler(
-        authenticator,
         node_message_codec,
         topic_message_handler,
         service_request_handler,

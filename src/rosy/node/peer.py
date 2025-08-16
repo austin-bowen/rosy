@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from typing import NamedTuple
 
 from rosy.asyncio import LockableWriter, Reader, Writer, close_ignoring_errors
-from rosy.authentication import Authenticator
 from rosy.network import get_hostname
 from rosy.node.loadbalancing import ServiceLoadBalancer, TopicLoadBalancer
 from rosy.node.topology import MeshTopologyManager
@@ -26,8 +25,7 @@ class PeerConnection(NamedTuple):
 
 
 class PeerConnectionBuilder:
-    def __init__(self, authenticator: Authenticator, host: Host = None):
-        self.authenticator = authenticator
+    def __init__(self, host: Host = None):
         self.host = host or get_hostname()
 
     async def build(self, conn_specs: Iterable[ConnectionSpec]) -> tuple[Reader, Writer]:
@@ -45,10 +43,7 @@ class PeerConnectionBuilder:
         if reader_writer is None:
             raise ConnectionError('Could not connect to any connection spec')
 
-        reader, writer = reader_writer
-        await self.authenticator.authenticate(reader, writer)
-
-        return reader, writer
+        return reader_writer
 
     async def _get_connection(self, conn_spec: ConnectionSpec) -> tuple[Reader, Writer] | None:
         if isinstance(conn_spec, IpConnectionSpec):
