@@ -8,12 +8,13 @@ from pexpect.popen_spawn import PopenSpawn
 
 def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
     """
-    Runs the `rosy` command with args setup to use the custom test coordinator.
+    Runs the `rosy` command with args setup to use a custom test domain ID.
     """
 
     return run(
         'env',
         'PYTHONUNBUFFERED=1',
+        'ROSY_DOMAIN_ID=test',
         'rosy',
         *args,
     )

@@ -15,7 +15,6 @@ async def speedtest_main(args: Namespace) -> None:
         allow_unix_connections=not args.disable_unix,
         allow_tcp_connections=not args.disable_tcp,
         data_codec=args.codec,
-        authkey=args.authkey,
         topic_load_balancer=load_balancer,
         service_load_balancer=load_balancer,
     )
