@@ -8,10 +8,10 @@ from rosy.utils import DEFAULT_DOMAIN_ID, get_domain_id
 
 
 def get_node_arg_parser(
-        default_node_name: str = None,
-        default_coordinator: Endpoint = None,
-        default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
-        **kwargs,
+    default_node_name: str = None,
+    default_coordinator: Endpoint = None,
+    default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
+    **kwargs,
 ) -> ArgumentParser:
     """
     Returns an argument parser with the following node-specific arguments:
@@ -37,10 +37,10 @@ def get_node_arg_parser(
 
 
 def add_node_args(
-        parser: ArgumentParser,
-        default_node_name: str = None,
-        default_coordinator: Endpoint = None,
-        default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
+    parser: ArgumentParser,
+    default_node_name: str = None,
+    default_coordinator: Endpoint = None,
+    default_domain_id: DomainId = DEFAULT_DOMAIN_ID,
 ) -> None:
     """
     Adds node-specific arguments to an argument parser:
@@ -76,20 +76,24 @@ def add_node_name_arg(parser: ArgumentParser, default: str = None) -> None:
             Default node name. If not given, the argument will be required.
     """
 
-    arg_args = dict(
-        default=default,
-        help='Node name. Default: %(default)s',
-    ) if default is not None else dict(
-        required=True,
-        help='Node name.',
+    arg_args = (
+        dict(
+            default=default,
+            help="Node name. Default: %(default)s",
+        )
+        if default is not None
+        else dict(
+            required=True,
+            help="Node name.",
+        )
     )
 
-    parser.add_argument('--name', **arg_args)
+    parser.add_argument("--name", **arg_args)
 
 
 def add_coordinator_arg(
-        parser: ArgumentParser,
-        default: Endpoint = None,
+    parser: ArgumentParser,
+    default: Endpoint = None,
 ) -> None:
     """
     Adds a `--coordinator HOST[:PORT]` argument to an argument parser.
@@ -103,20 +107,20 @@ def add_coordinator_arg(
     """
 
     if default is None:
-        default = Endpoint('localhost', DEFAULT_COORDINATOR_PORT)
+        default = Endpoint("localhost", DEFAULT_COORDINATOR_PORT)
 
     parser.add_argument(
-        '--coordinator',
+        "--coordinator",
         default=default,
         type=endpoint_arg(default_port=default.port),
-        metavar='HOST[:PORT]',
-        help=f'Coordinator host and port. Default: %(default)s',
+        metavar="HOST[:PORT]",
+        help=f"Coordinator host and port. Default: %(default)s",
     )
 
 
 def add_domain_id_arg(
-        parser: ArgumentParser,
-        default: DomainId = DEFAULT_DOMAIN_ID,
+    parser: ArgumentParser,
+    default: DomainId = DEFAULT_DOMAIN_ID,
 ) -> None:
     """
     Adds a `--domain-id` argument to an argument parser.
@@ -148,7 +152,7 @@ def endpoint_arg(default_port: Port = None) -> Callable[[str], Endpoint]:
     """
 
     def wrapped(arg: str) -> Endpoint:
-        parsed = urlparse(f'//{arg}')
+        parsed = urlparse(f"//{arg}")
         host = parsed.hostname
         port = parsed.port or default_port
         return Endpoint(host, port)
@@ -157,8 +161,8 @@ def endpoint_arg(default_port: Port = None) -> Callable[[str], Endpoint]:
 
 
 def server_host_arg(arg: str) -> ServerHost:
-    if arg == 'None':
+    if arg == "None":
         return None
 
-    hosts = arg.split(',')
+    hosts = arg.split(",")
     return hosts if len(hosts) > 1 else hosts[0]
