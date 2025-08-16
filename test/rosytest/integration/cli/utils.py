@@ -22,8 +22,10 @@ def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
 
 def python_module(module: str, *args: str) -> AbstractContextManager[PopenSpawn]:
     return run(
+        'env',
+        'PYTHONUNBUFFERED=1',
+        'ROSY_DOMAIN_ID=test',
         'python',
-        '-u',
         '-m',
         module,
         *args,
