@@ -26,7 +26,12 @@ from rosy.node.loadbalancing import (
     node_name_group_key,
 )
 from rosy.node.peer import PeerConnectionBuilder, PeerConnectionManager, PeerSelector
-from rosy.node.servers import ServerProvider, ServersManager, TcpServerProvider, TmpUnixServerProvider
+from rosy.node.servers import (
+    ServerProvider,
+    ServersManager,
+    TcpServerProvider,
+    TmpUnixServerProvider,
+)
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.service.codec import ServiceRequestCodec, ServiceResponseCodec
 from rosy.node.service.handlermanager import ServiceHandlerManager
@@ -39,13 +44,13 @@ from rosy.node.topology import MeshTopologyManager
 from rosy.specs import NodeId
 from rosy.types import Data, Host, ServerHost
 
-DataCodecArg = Codec[Data] | Literal['pickle', 'json', 'msgpack']
+DataCodecArg = Codec[Data] | Literal["pickle", "json", "msgpack"]
 
 
 async def build_node_from_args(
-        default_node_name: str = None,
-        args: Namespace = None,
-        **kwargs,
+    default_node_name: str = None,
+    args: Namespace = None,
+    **kwargs,
 ) -> Node:
     """
     Builds a node from command line arguments.
@@ -68,9 +73,9 @@ async def build_node_from_args(
 
     build_args = vars(args)
 
-    if hasattr(args, 'coordinator'):
-        build_args['coordinator_host'] = args.coordinator.host
-        build_args['coordinator_port'] = args.coordinator.port
+    if hasattr(args, "coordinator"):
+        build_args["coordinator_host"] = args.coordinator.host
+        build_args["coordinator_port"] = args.coordinator.port
 
     build_args.update(kwargs)
 
@@ -78,18 +83,18 @@ async def build_node_from_args(
 
 
 async def build_node(
-        name: str,
-        allow_unix_connections: bool = True,
-        allow_tcp_connections: bool = True,
-        node_server_host: ServerHost = None,
-        node_client_host: Host = None,
-        data_codec: DataCodecArg = 'pickle',
-        authkey: bytes = None,
-        authenticator: Authenticator = None,
-        topic_load_balancer: TopicLoadBalancer = None,
-        service_load_balancer: ServiceLoadBalancer = None,
-        start: bool = True,
-        **kwargs,
+    name: str,
+    allow_unix_connections: bool = True,
+    allow_tcp_connections: bool = True,
+    node_server_host: ServerHost = None,
+    node_client_host: Host = None,
+    data_codec: DataCodecArg = "pickle",
+    authkey: bytes = None,
+    authenticator: Authenticator = None,
+    topic_load_balancer: TopicLoadBalancer = None,
+    service_load_balancer: ServiceLoadBalancer = None,
+    start: bool = True,
+    **kwargs,
 ) -> Node:
     """Builds a ROSY node.
 
@@ -186,8 +191,8 @@ async def build_node(
 
 
 def build_node_message_codec(
-        request_id_bytes: int,
-        data_codec: DataCodecArg,
+    request_id_bytes: int,
+    data_codec: DataCodecArg,
 ) -> NodeMessageCodec:
     data_codec = build_data_codec(data_codec)
 
@@ -227,31 +232,31 @@ def build_node_message_codec(
             data_codec=data_codec,
             error_codec=LengthPrefixedStringCodec(
                 len_prefix_codec=FixedLengthIntCodec(length=2),
-            )
+            ),
         ),
     )
 
 
 def build_data_codec(data_codec: DataCodecArg) -> Codec[Data]:
-    if data_codec == 'pickle':
+    if data_codec == "pickle":
         return pickle_codec
-    elif data_codec == 'json':
+    elif data_codec == "json":
         return json_codec
-    elif data_codec == 'msgpack':
+    elif data_codec == "msgpack":
         return msgpack_codec
     else:
         return data_codec
 
 
 def build_servers_manager(
-        allow_unix_connections: bool,
-        allow_tcp_connections: bool,
-        node_server_host: ServerHost,
-        node_client_host: Host | None,
-        authenticator: Authenticator,
-        topic_listener_manager: TopicListenerManager,
-        service_handler_manager: ServiceHandlerManager,
-        node_message_codec: NodeMessageCodec,
+    allow_unix_connections: bool,
+    allow_tcp_connections: bool,
+    node_server_host: ServerHost,
+    node_client_host: Host | None,
+    authenticator: Authenticator,
+    topic_listener_manager: TopicListenerManager,
+    service_handler_manager: ServiceHandlerManager,
+    node_message_codec: NodeMessageCodec,
 ) -> ServersManager:
     topic_message_handler = TopicMessageHandler(topic_listener_manager)
 
@@ -278,10 +283,10 @@ def build_servers_manager(
 
 
 def build_server_providers(
-        allow_unix_connections: bool,
-        allow_tcp_connections: bool,
-        node_server_host: ServerHost | None,
-        node_client_host: Host | None,
+    allow_unix_connections: bool,
+    allow_tcp_connections: bool,
+    node_server_host: ServerHost | None,
+    node_client_host: Host | None,
 ) -> list[ServerProvider]:
     server_providers = []
 
@@ -296,15 +301,15 @@ def build_server_providers(
         server_providers.append(provider)
 
     if not server_providers:
-        raise ValueError('Must allow at least one type of connection')
+        raise ValueError("Must allow at least one type of connection")
 
     return server_providers
 
 
 def build_peer_selector(
-        topology_manager: MeshTopologyManager,
-        topic_load_balancer: TopicLoadBalancer | None,
-        service_load_balancer: ServiceLoadBalancer | None,
+    topology_manager: MeshTopologyManager,
+    topic_load_balancer: TopicLoadBalancer | None,
+    service_load_balancer: ServiceLoadBalancer | None,
 ) -> PeerSelector:
     least_recent_load_balancer = LeastRecentLoadBalancer()
 
