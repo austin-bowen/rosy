@@ -36,9 +36,6 @@ class NodeDiscovery(ABC):
     @abstractmethod
     async def update_node(self, node: MeshNodeSpec) -> None: ...
 
-    @abstractmethod
-    async def unregister_node(self, node: MeshNodeSpec) -> None: ...
-
     async def _call_topology_changed_callback(self) -> None:
         if self.topology_changed_callback is None:
             return

@@ -77,11 +77,6 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         info = self._build_service_info(node)
         await (await self._zc.async_update_service(info))
 
-    async def unregister_node(self, node: MeshNodeSpec) -> None:
-        logger.debug(f"Unregistering node: {node}")
-        info = self._build_service_info(node)
-        await (await self._zc.async_unregister_service(info))
-
     def _build_service_info(self, node: MeshNodeSpec) -> ServiceInfo:
         return ServiceInfo(
             type_=self._service_type,
