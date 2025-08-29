@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.cli.utils import add_log_arg, get_mesh_topology
+from rosy.cli.utils import add_discovery_time_arg, add_log_arg, get_mesh_topology
 
 
 async def list_main(args: Namespace):
@@ -26,4 +26,5 @@ def add_list_command(subparsers) -> None:
         help='list topics being listened to',
     )
 
+    add_discovery_time_arg(parser)
     add_log_arg(parser)

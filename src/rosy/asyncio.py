@@ -1,12 +1,25 @@
 import asyncio
 from asyncio import IncompleteReadError, Lock
 from io import BytesIO
-from typing import Protocol, TypeVar
+from typing import Protocol
 
 from rosy.types import Buffer
 
-T = TypeVar('T')
-E = TypeVar('E', bound=BaseException)
+
+async def cancel_task(task: asyncio.Task, *, timeout: float | None = 10) -> None:
+    """Cancels the task and safely waits for it to complete."""
+
+    if task.done():
+        return
+
+    done = asyncio.Event()
+    cb = lambda _: done.set()
+    task.add_done_callback(cb)
+    try:
+        task.cancel()
+        await asyncio.wait_for(done.wait(), timeout=timeout)
+    finally:
+        task.remove_done_callback(cb)
 
 
 async def close_ignoring_errors(writer: 'Writer') -> None:

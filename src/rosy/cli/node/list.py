@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser, Namespace
 
-from rosy.cli.utils import add_log_arg, get_mesh_topology
+from rosy.cli.utils import add_discovery_time_arg, add_log_arg, get_mesh_topology
 from rosy.specs import MeshNodeSpec
 
 
@@ -57,4 +57,5 @@ def add_list_command(subparsers) -> None:
         help='Print all info about each node, including UUIDs and connection methods.',
     )
 
+    add_discovery_time_arg(parser)
     add_log_arg(parser)

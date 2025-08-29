@@ -6,9 +6,11 @@ import pickle
 import socket
 from abc import ABC, abstractmethod
 from random import Random
+from typing import cast
 
 from zeroconf import ServiceBrowser, ServiceInfo, ServiceStateChange, Zeroconf
 
+from rosy.asyncio import cancel_task
 from rosy.discovery.base import NodeDiscovery, TopologyChangedCallback
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
 from rosy.types import DomainId
@@ -36,9 +38,11 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         self._rng = rng or Random()
 
         self._service_name_to_node: dict[str, MeshNodeSpec] = {}
-        self._node_monitors: dict[str, asyncio.Task] = {}
-        self._service_info_lock = asyncio.Lock()
+        self._topology_changed_caller_task: asyncio.Task | None = None
         self._browser: ServiceBrowser | None = None
+        self._node_monitors: dict[str, asyncio.Task] = {}
+        self._topology_changed = asyncio.Event()
+        self._service_info_lock = asyncio.Lock()
 
     @property
     def topology(self) -> MeshTopologySpec:
@@ -46,17 +50,47 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         return MeshTopologySpec(nodes)
 
     async def start(self) -> None:
+        self._topology_changed_caller_task = asyncio.create_task(
+            self._monitor_for_topology_changes()
+        )
+
         self._browser = ServiceBrowser(
             self._zc,
             self._service_type,
             handlers=[self._on_service_state_change],
         )
 
-    async def stop(self) -> None:
+    async def stop(self, timeout: float | None = 10) -> None:
+        exceptions = []
+
         try:
-            await asyncio.to_thread(self._browser.cancel)
-        finally:
-            await asyncio.to_thread(self._zc.close)
+            await cancel_task(self._topology_changed_caller_task, timeout=timeout)
+        except Exception as e:
+            exceptions.append(e)
+
+        try:
+            await asyncio.wait_for(asyncio.to_thread(self._browser.cancel), timeout)
+        except Exception as e:
+            exceptions.append(e)
+
+        tasks = list(self._node_monitors.values())
+        for task in tasks:
+            try:
+                await cancel_task(task, timeout=timeout)
+            except Exception as e:
+                exceptions.append(e)
+
+        try:
+            await asyncio.wait_for(asyncio.to_thread(self._zc.close), timeout)
+        except Exception as e:
+            exceptions.append(e)
+
+        if exceptions:
+            # TODO Replace with ExceptionGroup when we drop Python 3.10
+            raise Exception(
+                "Exceptions occurred while stopping ZeroconfNodeDiscovery",
+                exceptions,
+            )
 
     async def register_node(self, node: MeshNodeSpec) -> None:
         logger.debug(f"Registering node: {node}")
@@ -78,6 +112,12 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
             host_ttl=self._ttl,
             other_ttl=self._ttl,
         )
+
+    async def _monitor_for_topology_changes(self) -> None:
+        while True:
+            await self._topology_changed.wait()
+            self._topology_changed.clear()
+            await self._call_topology_changed_callback()
 
     def _on_service_state_change(
         self,
@@ -131,26 +171,17 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         self._node_monitors[name] = asyncio.create_task(self._monitor_node(name))
 
     async def _stop_monitoring_node(self, name: str) -> None:
-        existing_monitor = self._node_monitors.pop(name, None)
-        if existing_monitor is None:
-            return
-
-        existing_monitor.cancel()
-        try:
-            await existing_monitor
-        except asyncio.CancelledError:
-            pass
+        if name in self._node_monitors:
+            await cancel_task(self._node_monitors[name])
+            self._node_monitors.pop(name)
 
     async def _monitor_node(self, name: str) -> None:
-        try:
-            while await self._check_node(name):
-                sleep_time = self._ttl + 1 + self._rng.random()
-                await asyncio.sleep(sleep_time)
-        finally:
-            self._node_monitors.pop(name, None)
+        while await self._check_node(name):
+            sleep_time = self._ttl + 1 + self._rng.random()
+            await asyncio.sleep(sleep_time)
 
     async def _check_node(self, name: str) -> bool:
-        assert asyncio.current_task() is self._node_monitors[name]
+        self._check_this_task_is_current_monitor(name)
 
         logger.debug(f"Getting service info for: {name!r}")
         info = await asyncio.shield(self._get_service_info(name))
@@ -160,7 +191,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
             asyncio.create_task(self._remove_node(name))
             return False
 
-        node = self._node_spec_codec.decode(info.text)
+        text = cast(bytes, info.text)
+        node = self._node_spec_codec.decode(text)
 
         existing_node = self._service_name_to_node.get(name)
         if node != existing_node:
@@ -170,9 +202,18 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
                 logger.debug(f"Node updated: {node}")
 
             self._service_name_to_node[name] = node
-            await self._call_topology_changed_callback()
+            self._topology_changed.set()
 
         return True
+
+    def _check_this_task_is_current_monitor(self, name: str) -> None:
+        this_task = asyncio.current_task()
+        monitor_task = self._node_monitors[name]
+        if this_task is not monitor_task:
+            raise RuntimeError(
+                f"This task is not the current node monitor task. "
+                f"this_task={this_task}; monitor_task={monitor_task}"
+            )
 
     async def _get_service_info(self, name: str) -> ServiceInfo | None:
         async with self._service_info_lock:
@@ -184,7 +225,7 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         node = self._service_name_to_node.pop(name, None)
         if node is not None:
             logger.debug(f"Node left mesh: {node.id}")
-            await self._call_topology_changed_callback()
+            self._topology_changed.set()
 
 
 def build_service_type(domain_id: DomainId) -> str:

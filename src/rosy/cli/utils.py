@@ -6,6 +6,15 @@ from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
 from rosy.specs import MeshTopologySpec
 
 
+def add_discovery_time_arg(parser: ArgumentParser) -> None:
+    parser.add_argument(
+        '--discovery-time',
+        type=float,
+        default=5,
+        help='Node discovery time in seconds. Default: %(default)s'
+    )
+
+
 def add_log_arg(parser: ArgumentParser, default: str = 'WARNING') -> None:
     parser.add_argument(
         '--log',
@@ -16,7 +25,7 @@ def add_log_arg(parser: ArgumentParser, default: str = 'WARNING') -> None:
 
 async def get_mesh_topology(args: Namespace) -> MeshTopologySpec:
     async with ZeroconfNodeDiscovery(args.domain_id) as discovery:
-        await asyncio.sleep(1)
+        await asyncio.sleep(args.discovery_time)
         return discovery.topology
 
 

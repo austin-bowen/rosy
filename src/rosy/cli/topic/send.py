@@ -29,26 +29,25 @@ async def _send_main(args: Namespace, node: Node) -> None:
 
     async def send_once():
         if not args.no_wait and not await topic.has_listeners():
-            print(f'Waiting for listeners...')
+            print("Waiting for listeners...")
             await topic.wait_for_listener()
+            print()
 
         topic_args, topic_kwargs = parse_args_and_kwargs(args.args)
 
         now = datetime.now()
-        print(f'[{now}]')
-        print(f'Sending to topic={args.topic!r}')
+        print(f"[{now}]")
+        print(f"Sending to topic={args.topic!r}")
         print_args_and_kwargs(topic_args, topic_kwargs)
-        print()
 
         await topic.send(*topic_args, **topic_kwargs)
 
-    if args.interval < 0:
-        await send_once()
-        return
+    await send_once()
 
-    while True:
-        await send_once()
+    while args.interval >= 0:
         await asyncio.sleep(args.interval)
+        print()
+        await send_once()
 
 
 def parse_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any]]:
