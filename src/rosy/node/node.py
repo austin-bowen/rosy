@@ -4,7 +4,7 @@ from enum import Enum
 from functools import wraps
 from typing import NamedTuple
 
-from rosy.asyncio import forever
+from rosy.asyncio import forever, noop
 from rosy.discovery.base import NodeDiscovery
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
@@ -103,6 +103,7 @@ class Node:
     async def send(self, topic: Topic, *args: Data, **kwargs: Data) -> None:
         """Send a message on a topic, with optional arguments and keyword arguments."""
         await self.topic_sender.send(topic, args, kwargs)
+        await noop()  # Give the event loop a chance to process the send
 
     async def listen(
             self,

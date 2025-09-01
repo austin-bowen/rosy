@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from argparse import ArgumentParser, Namespace
 
@@ -7,10 +8,12 @@ from rosy.types import Topic
 
 
 async def speedtest_main(args: Namespace) -> None:
+    logging.basicConfig(level=logging.WARNING)
+
     load_balancer = 'default' if args.enable_load_balancer else None
 
     node = await build_node(
-        name=f'speed-test/{args.role}',
+        name=f'rosy speedtest {args.role}',
         domain_id=args.domain_id,
         allow_unix_connections=not args.disable_unix,
         allow_tcp_connections=not args.disable_tcp,
@@ -29,12 +32,13 @@ async def speedtest_main(args: Namespace) -> None:
         print('Waiting for listeners...')
         await node.wait_for_listener(topic)
 
-        print(f'Running speed test for {args.seconds}s '
+        print(f'Running speed test for {args.run_time}s '
               f'with message_size={args.message_size}...')
         mps = await speed_tester.measure_mps(
             topic,
             message_size=args.message_size,
-            duration=args.seconds,
+            sleep_time=args.sleep_time,
+            run_time=args.run_time,
         )
         print(f'[{node}] mps={round(mps)}')
     else:
@@ -48,9 +52,10 @@ class SpeedTest:
     async def measure_mps(
             self,
             topic: Topic,
-            message_size: int = 0,
-            duration: float = 10.,
-            warmup: float | None = 1.,
+            message_size: int,
+            sleep_time: float,
+            run_time: float,
+            warmup: float = 1.,
     ) -> float:
         """Measure messages per second."""
 
@@ -61,19 +66,21 @@ class SpeedTest:
 
         dummy_data = 'A' * message_size
 
-        if warmup is not None and warmup > 0.:
+        if warmup > 0.:
             end_time = time.monotonic() + warmup
             while time.monotonic() < end_time:
                 await self.node.send('warmup')
+                await asyncio.sleep(sleep_time)
 
         message_count = 0
         start_time = time.monotonic()
 
-        while (end_time := time.monotonic()) - start_time < duration:
+        while (end_time := time.monotonic()) - start_time < run_time:
             send_time = time.time()
             data = send_time, dummy_data
             await topic_sender.send(data)
             message_count += 1
+            await asyncio.sleep(sleep_time)
 
         true_duration = end_time - start_time
 
@@ -132,16 +139,22 @@ def add_speedtest_command(subparsers) -> None:
         help='Role of the node: sender or receiver.',
     )
     parser.add_argument(
-        '--seconds', type=float, default=10.,
+        '--message-size', type=int, default=0,
+        help='Size of the message to send in bytes. Default: 0 (no data).',
+    )
+    parser.add_argument(
+        '--sleep-time', type=float, default=0.,
+        help='How long to sleep between topic sends. '
+             'If you are getting warnings about dropped messages, '
+             'try increasing this. Default: %(default)s',
+    )
+    parser.add_argument(
+        '--run-time', type=float, default=10.,
         help='How long to run the speed test in seconds. Default: %(default)s',
     )
     parser.add_argument(
         '--topic', default='t',
         help='Topic to send/receive on. Default: %(default)s',
-    )
-    parser.add_argument(
-        '--message-size', type=int, default=0,
-        help='Size of the message to send in bytes. Default: 0 (no data).',
     )
     parser.add_argument(
         '--codec',

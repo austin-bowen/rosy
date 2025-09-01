@@ -11,7 +11,7 @@ from rosy.node.loadbalancing import (
     TopicLoadBalancer,
     node_name_group_key,
 )
-from rosy.specs import MeshNodeSpec, NodeId
+from rosytest.util import mock_node_spec
 
 
 class TopicLoadBalancerTest:
@@ -33,7 +33,7 @@ class TestNoopTopicLoadBalancer(TopicLoadBalancerTest):
         self.load_balancer = NoopTopicLoadBalancer()
 
     def test_choose_nodes_returns_all_nodes(self):
-        nodes = [mock_node(), mock_node(), mock_node()]
+        nodes = [mock_node_spec(), mock_node_spec(), mock_node_spec()]
 
         assert self.load_balancer.choose_nodes(nodes, 'any_topic') is nodes
 
@@ -53,10 +53,10 @@ class TestGroupingTopicLoadBalancer(TopicLoadBalancerTest):
         )
 
         nodes = [
-            mock_node('a'),
-            mock_node('a'),
-            mock_node('b'),
-            mock_node('b'),
+            mock_node_spec('a'),
+            mock_node_spec('a'),
+            mock_node_spec('b'),
+            mock_node_spec('b'),
         ]
 
         result = self.load_balancer.choose_nodes(nodes, 'any_topic')
@@ -76,7 +76,7 @@ class TestRandomLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
     load_balancer: RandomLoadBalancer
 
     def setup_method(self):
-        self.nodes = [mock_node(), mock_node(), mock_node()]
+        self.nodes = [mock_node_spec(), mock_node_spec(), mock_node_spec()]
         self.expected_node = self.nodes[1]
 
         # RNG that "randomly" picks the second item from the list
@@ -103,9 +103,9 @@ class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest
 
     def setup_method(self):
         self.nodes = [
-            mock_node('node0'),
-            mock_node('node1'),
-            mock_node('node2'),
+            mock_node_spec('node0'),
+            mock_node_spec('node1'),
+            mock_node_spec('node2'),
         ]
 
         self.load_balancer = LeastRecentLoadBalancer()
@@ -131,12 +131,3 @@ class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest
         assert self.load_balancer.choose_node(self.nodes, 'any_service') == node0
         assert self.load_balancer.choose_nodes(self.nodes, 'any_topic') == [node1]
         assert self.load_balancer.choose_node(self.nodes, 'any_service') == node2
-
-
-def mock_node(name: str = None):
-    node = create_autospec(MeshNodeSpec)
-
-    if name is not None:
-        node.id = NodeId(name)
-
-    return node

@@ -5,7 +5,8 @@ import pytest
 
 from rosy.asyncio import LockableWriter, Reader, Writer
 from rosy.node.peer.connection import PeerConnection, PeerConnectionBuilder, PeerConnectionManager
-from rosy.specs import IpConnectionSpec, MeshNodeSpec, NodeId, UnixConnectionSpec
+from rosy.specs import IpConnectionSpec, UnixConnectionSpec
+from rosytest.util import mock_node_spec
 
 
 class TestPeerConnection:
@@ -157,7 +158,7 @@ class TestPeerConnectionManager:
 
     @pytest.mark.asyncio
     async def test_get_connection_returns_new_connection_on_first_call(self):
-        node = mock_node('node')
+        node = mock_node_spec('node')
 
         connection = await self.manager.get_connection(node)
 
@@ -169,7 +170,7 @@ class TestPeerConnectionManager:
 
     @pytest.mark.asyncio
     async def test_get_connection_returns_cached_connection_on_second_call(self):
-        node = mock_node('node')
+        node = mock_node_spec('node')
 
         connection1 = await self.manager.get_connection(node)
 
@@ -183,7 +184,7 @@ class TestPeerConnectionManager:
 
     @pytest.mark.asyncio
     async def test_get_connection_returns_new_connection_on_second_call_when_cached_connection_closed(self):
-        node = mock_node('node')
+        node = mock_node_spec('node')
 
         connection1 = await self.manager.get_connection(node)
 
@@ -197,12 +198,3 @@ class TestPeerConnectionManager:
             call(node.connection_specs),
             call(node.connection_specs),
         ]
-
-
-def mock_node(name: str):
-    node = create_autospec(MeshNodeSpec)
-
-    node.id = NodeId(name)
-    node.connection_specs = [create_autospec(IpConnectionSpec)]
-
-    return node

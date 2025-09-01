@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 
 from rosy.node.peer.connection import PeerConnectionManager
+from rosy.node.topic.outbox import NodeOutboxManager
 from rosy.specs import MeshNodeSpec, MeshTopologySpec
 from rosy.types import Service, Topic
 
@@ -68,9 +69,11 @@ class TopologyChangedHandler:
         self,
         topology_manager: MeshTopologyManager,
         connection_manager: PeerConnectionManager,
+        outbox_manager: NodeOutboxManager,
     ):
         self.topology_manager = topology_manager
         self.connection_manager = connection_manager
+        self.outbox_manager = outbox_manager
 
     async def __call__(self, new_topology: MeshTopologySpec) -> None:
         logger.debug(
@@ -87,4 +90,7 @@ class TopologyChangedHandler:
         self.topology_manager.set_topology(new_topology)
 
         for node in removed_nodes:
-            await self.connection_manager.close_connection(node)
+            try:
+                await self.outbox_manager.stop_outbox(node)
+            finally:
+                await self.connection_manager.close_connection(node)

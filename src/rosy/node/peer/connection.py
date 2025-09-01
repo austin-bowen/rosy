@@ -1,10 +1,12 @@
 import logging
 from asyncio import Lock, open_connection, open_unix_connection
+from collections import defaultdict
 from collections.abc import Iterable
 from typing import NamedTuple
 
 from rosy.asyncio import LockableWriter, Reader, Writer, close_ignoring_errors
 from rosy.network import get_hostname
+from rosy.socket import setup_socket
 from rosy.specs import (
     ConnectionSpec,
     IpConnectionSpec,
@@ -55,11 +57,16 @@ class PeerConnectionBuilder:
         self, conn_spec: ConnectionSpec
     ) -> tuple[Reader, Writer] | None:
         if isinstance(conn_spec, IpConnectionSpec):
-            return await open_connection(
+            reader, writer = await open_connection(
                 host=conn_spec.host,
                 port=conn_spec.port,
                 family=conn_spec.family,
             )
+
+            sock = writer.get_extra_info("socket")
+            setup_socket(sock)
+
+            return reader, writer
         elif isinstance(conn_spec, UnixConnectionSpec):
             if conn_spec.host != self.host:
                 return None
@@ -74,10 +81,10 @@ class PeerConnectionManager:
         self.conn_builder = conn_builder
 
         self._connections: dict[NodeId, PeerConnection] = {}
-        self._connections_lock = Lock()
+        self._connections_locks: dict[NodeId, Lock] = defaultdict(Lock)
 
     async def get_connection(self, node: MeshNodeSpec) -> PeerConnection:
-        async with self._connections_lock:
+        async with self._connections_locks[node.id]:
             connection = await self._get_cached_connection(node)
             if connection:
                 return connection

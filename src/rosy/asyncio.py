@@ -36,6 +36,10 @@ async def forever():
     await asyncio.Future()  # pragma: no cover
 
 
+def loop_time() -> float:
+    return asyncio.get_running_loop().time()
+
+
 def noop():
     """Does nothing. Use to return control to the event loop."""
     return asyncio.sleep(0)

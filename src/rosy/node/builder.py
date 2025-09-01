@@ -39,6 +39,7 @@ from rosy.node.service.requesthandler import ServiceRequestHandler
 from rosy.node.topic.codec import TopicMessageCodec
 from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.messagehandler import TopicMessageHandler
+from rosy.node.topic.outbox import NodeOutboxManager
 from rosy.node.topic.sender import TopicSender
 from rosy.node.topology import MeshTopologyManager, TopologyChangedHandler
 from rosy.specs import NodeId
@@ -146,9 +147,12 @@ async def build_node(
         PeerConnectionBuilder(),
     )
 
+    outbox_manager = NodeOutboxManager(connection_manager)
+
     discovery.topology_changed_callback = TopologyChangedHandler(
         topology_manager,
         connection_manager,
+        outbox_manager,
     )
 
     peer_selector = build_peer_selector(
@@ -157,7 +161,7 @@ async def build_node(
         service_load_balancer,
     )
 
-    topic_sender = TopicSender(peer_selector, connection_manager, node_message_codec)
+    topic_sender = TopicSender(peer_selector, node_message_codec, outbox_manager)
 
     service_caller = ServiceCaller(
         peer_selector,
