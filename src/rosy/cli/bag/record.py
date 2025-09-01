@@ -20,7 +20,7 @@ async def record(args: Namespace) -> None:
 async def _record_main(args: Namespace, node: Node) -> None:
     bag_file_path = args.output or get_bag_file_path()
 
-    with open(bag_file_path, 'wb') as bag_file:
+    with open(bag_file_path, "wb") as bag_file:
         message_counter = 0
 
         async def callback(topic, *args_, **kwargs_) -> None:
@@ -31,53 +31,54 @@ async def _record_main(args: Namespace, node: Node) -> None:
 
             message_counter += 1
             if not args.no_dots:
-                print('.', end='', flush=True)
+                print(".", end="", flush=True)
 
         for topic in args.topics:
             await node.listen(topic, callback)
 
         print(f'Recording topics to "{bag_file_path}":')
         for topic in args.topics:
-            print(f'- {topic}')
+            print(f"- {topic}")
 
         try:
             await node.forever()
         except asyncio.CancelledError:
-            print('\nRecording stopped.')
+            print("\nRecording stopped.")
 
     if message_counter == 0:
-        print('No messages recorded.')
+        print("No messages recorded.")
         bag_file_path.unlink()
     else:
         print(f'Recorded {message_counter} messages to "{bag_file_path}".')
 
 
 def add_record_args(subparsers) -> None:
-    parser = subparsers.add_parser('record', help='Record messages to file')
+    parser = subparsers.add_parser("record", help="Record messages to file")
 
     parser.add_argument(
-        '--output', '-o',
+        "--output",
+        "-o",
         type=Path,
-        help='Output file path. Default: record_<YYYY-MM-DD>-<HH-MM-SS>.bag',
+        help="Output file path. Default: record_<YYYY-MM-DD>-<HH-MM-SS>.bag",
     )
 
     parser.add_argument(
-        '--no-dots',
-        action='store_true',
-        help='Disable logging of "." when a new message is received.'
+        "--no-dots",
+        action="store_true",
+        help='Disable logging of "." when a new message is received.',
     )
 
     add_log_arg(parser)
-    add_node_name_arg(parser, default='rosy bag record')
+    add_node_name_arg(parser, default="rosy bag record")
 
     parser.add_argument(
-        'topics',
-        nargs='+',
-        help='Topics to record.',
+        "topics",
+        nargs="+",
+        help="Topics to record.",
     )
 
 
 def get_bag_file_path() -> Path:
     now = datetime.now()
     now = now.strftime("%Y-%m-%d-%H-%M-%S")
-    return Path(f'record_{now}.bag')
+    return Path(f"record_{now}.bag")

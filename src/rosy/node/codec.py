@@ -8,15 +8,20 @@ from rosy.utils import require
 
 class NodeMessageCodec:
     def __init__(
-            self,
-            topic_message_codec: Codec[TopicMessage],
-            service_request_codec: Codec[ServiceRequest],
-            service_response_codec: Codec[ServiceResponse],
-            topic_message_prefix: bytes = b't',
-            service_request_prefix: bytes = b's',
+        self,
+        topic_message_codec: Codec[TopicMessage],
+        service_request_codec: Codec[ServiceRequest],
+        service_response_codec: Codec[ServiceResponse],
+        topic_message_prefix: bytes = b"t",
+        service_request_prefix: bytes = b"s",
     ):
-        require(len(topic_message_prefix) == 1, 'Topic message prefix must be a single byte')
-        require(len(service_request_prefix) == 1, 'Service request prefix must be a single byte')
+        require(
+            len(topic_message_prefix) == 1, "Topic message prefix must be a single byte"
+        )
+        require(
+            len(service_request_prefix) == 1,
+            "Service request prefix must be a single byte",
+        )
 
         self.topic_message_codec = topic_message_codec
         self.service_request_codec = service_request_codec
@@ -37,13 +42,15 @@ class NodeMessageCodec:
         return buffer
 
     async def encode_service_response(
-            self,
-            writer: Writer,
-            response: ServiceResponse,
+        self,
+        writer: Writer,
+        response: ServiceResponse,
     ) -> None:
         await self.service_response_codec.encode(writer, response)
 
-    async def decode_topic_message_or_service_request(self, reader: Reader) -> TopicMessage | ServiceRequest:
+    async def decode_topic_message_or_service_request(
+        self, reader: Reader
+    ) -> TopicMessage | ServiceRequest:
         prefix = await reader.readexactly(1)
 
         if prefix == self.topic_message_prefix:
@@ -51,7 +58,7 @@ class NodeMessageCodec:
         elif prefix == self.service_request_prefix:
             return await self.service_request_codec.decode(reader)
         else:
-            raise ValueError(f'Unknown prefix={prefix!r}')
+            raise ValueError(f"Unknown prefix={prefix!r}")
 
     async def decode_service_response(self, reader: Reader) -> ServiceResponse:
         return await self.service_response_codec.decode(reader)

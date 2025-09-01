@@ -9,42 +9,42 @@ import orjson
 from rosy.asyncio import BufferWriter, Reader, Writer
 from rosy.utils import require
 
-T = TypeVar('T')
-K = TypeVar('K')
-V = TypeVar('V')
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
 
-ByteOrder = Literal['big', 'little']
-DEFAULT_BYTE_ORDER: ByteOrder = 'little'
+ByteOrder = Literal["big", "little"]
+DEFAULT_BYTE_ORDER: ByteOrder = "little"
 
 DEFAULT_MAX_BYTE_LENGTH: int = 8
 
 DEFAULT_MAX_TOPIC_LENGTH: int = 256
-DEFAULT_TOPIC_ENCODING: str = 'utf-8'
+DEFAULT_TOPIC_ENCODING: str = "utf-8"
 
 
 class Codec(Generic[T], ABC):
     @abstractmethod
-    async def encode(self, writer: Writer, obj: T) -> None:
-        ...  # pragma: no cover
+    async def encode(self, writer: Writer, obj: T) -> None: ...  # pragma: no cover
 
     @abstractmethod
-    async def decode(self, reader: Reader) -> T:
-        ...  # pragma: no cover
+    async def decode(self, reader: Reader) -> T: ...  # pragma: no cover
 
 
 class FixedLengthIntCodec(Codec[int]):
     def __init__(
-            self,
-            length: int,
-            byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
-            signed: bool = False,
+        self,
+        length: int,
+        byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+        signed: bool = False,
     ):
         self.length = length
         self.byte_order = byte_order
         self.signed = signed
 
     async def encode(self, writer: Writer, value: int) -> None:
-        data = value.to_bytes(self.length, byteorder=self.byte_order, signed=self.signed)
+        data = value.to_bytes(
+            self.length, byteorder=self.byte_order, signed=self.signed
+        )
         writer.write(data)
 
     async def decode(self, reader: Reader) -> int:
@@ -54,14 +54,14 @@ class FixedLengthIntCodec(Codec[int]):
 
 class VariableLengthIntCodec(Codec[int]):
     def __init__(
-            self,
-            max_byte_length: int = DEFAULT_MAX_BYTE_LENGTH,
-            byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
-            signed: bool = False,
+        self,
+        max_byte_length: int = DEFAULT_MAX_BYTE_LENGTH,
+        byte_order: ByteOrder = DEFAULT_BYTE_ORDER,
+        signed: bool = False,
     ):
         require(
             0 < max_byte_length <= 255,
-            f'max_byte_length must be in range (0, 255]; got {max_byte_length}.',
+            f"max_byte_length must be in range (0, 255]; got {max_byte_length}.",
         )
 
         self.max_byte_length = max_byte_length
@@ -73,14 +73,16 @@ class VariableLengthIntCodec(Codec[int]):
 
         if int_byte_length > self.max_byte_length:
             raise OverflowError(
-                f'Computed byte_length={int_byte_length} is greater than '
-                f'max_byte_length={self.max_byte_length}'
+                f"Computed byte_length={int_byte_length} is greater than "
+                f"max_byte_length={self.max_byte_length}"
             )
 
         header = bytes([int_byte_length])
 
         if int_byte_length > 0:
-            data = value.to_bytes(int_byte_length, byteorder=self.byte_order, signed=self.signed)
+            data = value.to_bytes(
+                int_byte_length, byteorder=self.byte_order, signed=self.signed
+            )
         else:
             data = None
 
@@ -97,7 +99,7 @@ class VariableLengthIntCodec(Codec[int]):
 
         require(
             int_byte_length <= self.max_byte_length,
-            f'Received byte_length={int_byte_length} > max_byte_length={self.max_byte_length}',
+            f"Received byte_length={int_byte_length} > max_byte_length={self.max_byte_length}",
         )
 
         data = await reader.readexactly(int_byte_length)
@@ -106,9 +108,9 @@ class VariableLengthIntCodec(Codec[int]):
 
 class LengthPrefixedStringCodec(Codec[str]):
     def __init__(
-            self,
-            len_prefix_codec: Codec[int],
-            encoding: str = 'utf-8',
+        self,
+        len_prefix_codec: Codec[int],
+        encoding: str = "utf-8",
     ):
         self.len_prefix_codec = len_prefix_codec
         self.encoding = encoding
@@ -122,7 +124,7 @@ class LengthPrefixedStringCodec(Codec[str]):
     async def decode(self, reader: Reader) -> str:
         length = await self.len_prefix_codec.decode(reader)
         if length == 0:
-            return ''
+            return ""
 
         data = await reader.readexactly(length)
         return data.decode(encoding=self.encoding)
@@ -135,9 +137,9 @@ def byte_length(value: int) -> int:
 
 class SequenceCodec(Generic[T], Codec[Sequence[T]]):
     def __init__(
-            self,
-            len_header_codec: Codec[int],
-            item_codec: Codec[T],
+        self,
+        len_header_codec: Codec[int],
+        item_codec: Codec[T],
     ):
         self.len_header_codec = len_header_codec
         self.item_codec = item_codec
@@ -151,18 +153,15 @@ class SequenceCodec(Generic[T], Codec[Sequence[T]]):
     async def decode(self, reader: Reader) -> Sequence[T]:
         length = await self.len_header_codec.decode(reader)
 
-        return [
-            await self.item_codec.decode(reader)
-            for _ in range(length)
-        ]
+        return [await self.item_codec.decode(reader) for _ in range(length)]
 
 
 class DictCodec(Generic[K, V], Codec[dict[K, V]]):
     def __init__(
-            self,
-            len_header_codec: Codec[int],
-            key_codec: Codec[K],
-            value_codec: Codec[V],
+        self,
+        len_header_codec: Codec[int],
+        key_codec: Codec[K],
+        value_codec: Codec[V],
     ):
         self.len_header_codec = len_header_codec
         self.key_codec = key_codec
@@ -189,17 +188,19 @@ class DictCodec(Generic[K, V], Codec[dict[K, V]]):
 
 class PickleCodec(Codec[Any]):
     def __init__(
-            self,
-            protocol: int = pickle.HIGHEST_PROTOCOL,
-            dump_kwargs: dict[str, Any] = None,
-            load_kwargs: dict[str, Any] = None,
-            len_header_bytes: int = 4,
-            len_header_codec: Codec[int] = None,
+        self,
+        protocol: int = pickle.HIGHEST_PROTOCOL,
+        dump_kwargs: dict[str, Any] = None,
+        load_kwargs: dict[str, Any] = None,
+        len_header_bytes: int = 4,
+        len_header_codec: Codec[int] = None,
     ):
         self.protocol = protocol
         self.dump_kwargs = dump_kwargs or {}
         self.load_kwargs = load_kwargs or {}
-        self.len_header_codec = len_header_codec or FixedLengthIntCodec(len_header_bytes)
+        self.len_header_codec = len_header_codec or FixedLengthIntCodec(
+            len_header_bytes
+        )
 
     async def encode(self, writer: Writer, obj: Any) -> None:
         buffer = BufferWriter()
@@ -220,13 +221,15 @@ pickle_codec = PickleCodec()
 
 class JsonCodec(Codec[Any]):
     def __init__(
-            self,
-            dumps_kwargs: dict[str, Any] = None,
-            len_header_bytes: int = 4,
-            len_header_codec: Codec[int] = None,
+        self,
+        dumps_kwargs: dict[str, Any] = None,
+        len_header_bytes: int = 4,
+        len_header_codec: Codec[int] = None,
     ):
         self.dumps_kwargs = dumps_kwargs or {}
-        self.len_header_codec = len_header_codec or FixedLengthIntCodec(len_header_bytes)
+        self.len_header_codec = len_header_codec or FixedLengthIntCodec(
+            len_header_bytes
+        )
 
     async def encode(self, writer: Writer, obj: T) -> None:
         data = orjson.dumps(obj, **self.dumps_kwargs)
@@ -247,15 +250,17 @@ MsgpackTypes = None | bool | int | float | str | bytes | bytearray | list | tupl
 
 class MsgpackCodec(Codec[MsgpackTypes]):
     def __init__(
-            self,
-            pack_kwargs: dict[str, Any] = None,
-            unpack_kwargs: dict[str, Any] = None,
-            len_header_bytes: int = 4,
-            len_header_codec: Codec[int] = None,
+        self,
+        pack_kwargs: dict[str, Any] = None,
+        unpack_kwargs: dict[str, Any] = None,
+        len_header_bytes: int = 4,
+        len_header_codec: Codec[int] = None,
     ):
         self.pack_kwargs = pack_kwargs or {}
         self.unpack_kwargs = unpack_kwargs or {}
-        self.len_header_codec = len_header_codec or FixedLengthIntCodec(len_header_bytes)
+        self.len_header_codec = len_header_codec or FixedLengthIntCodec(
+            len_header_bytes
+        )
 
     async def encode(self, writer: Writer, obj: MsgpackTypes) -> None:
         data = msgpack.packb(obj, **self.pack_kwargs)

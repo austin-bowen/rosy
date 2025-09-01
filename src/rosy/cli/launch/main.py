@@ -16,13 +16,13 @@ async def launch_main(args: Namespace) -> None:
     if args.exclude:
         _print(f"Excluding nodes: {args.exclude}")
 
-    _print('Press Ctrl+C to stop all nodes.')
+    _print("Press Ctrl+C to stop all nodes.")
 
     with ProcessManager() as pm:
-        domain_id = config.get('domain_id')
+        domain_id = config.get("domain_id")
         node_env = get_node_env(domain_id)
 
-        nodes = config['nodes']
+        nodes = config["nodes"]
         for node_name, node_config in nodes.items():
             if node_name in args.exclude:
                 continue
@@ -37,24 +37,25 @@ async def launch_main(args: Namespace) -> None:
 
 def add_launch_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
-        'launch',
+        "launch",
         description="Launch rosy nodes together.",
         help="Launch rosy nodes together",
     )
 
     parser.add_argument(
-        'config',
-        nargs='?',
-        default=Path('launch.yaml'),
+        "config",
+        nargs="?",
+        default=Path("launch.yaml"),
         type=Path,
         help="Path to the configuration file. Default: %(default)s",
     )
 
     parser.add_argument(
-        '-e', '--exclude',
-        nargs='+',
+        "-e",
+        "--exclude",
+        nargs="+",
         default=[],
-        help='Nodes to exclude from starting',
+        help="Nodes to exclude from starting",
     )
 
 
@@ -68,33 +69,33 @@ def get_node_env(domain_id: DomainId | None) -> dict[str, str]:
 
 
 def start_node(
-        name: str,
-        config: dict,
-        env: dict[str, str],
-        pm: ProcessManager,
+    name: str,
+    config: dict,
+    env: dict[str, str],
+    pm: ProcessManager,
 ) -> None:
     if not is_enabled(config):
         return
 
-    delay = config.get('pre_delay', 0)
+    delay = config.get("pre_delay", 0)
     sleep(delay)
 
-    command = config['command']
+    command = config["command"]
     command = ProcessArgs(command)
-    command.extend(['--name', name])
+    command.extend(["--name", name])
     command = command.args
 
     default_shell = isinstance(command, str)
-    shell = config.get('shell', default_shell)
+    shell = config.get("shell", default_shell)
 
-    number = config.get('number', 1)
+    number = config.get("number", 1)
     for i in range(number):
-        _print(f'Starting node {name!r} ({i + 1}/{number}): {command}')
+        _print(f"Starting node {name!r} ({i + 1}/{number}): {command}")
         pm.popen(command, shell=shell, env=env)
 
-    delay = config.get('post_delay', 0)
+    delay = config.get("post_delay", 0)
     sleep(delay)
 
 
 def _print(*args, **kwargs) -> None:
-    print('[rosy launch]', *args, **kwargs)
+    print("[rosy launch]", *args, **kwargs)

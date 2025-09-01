@@ -12,21 +12,21 @@ def rosy_cli(*args: str) -> AbstractContextManager[PopenSpawn]:
     """
 
     return run(
-        'env',
-        'PYTHONUNBUFFERED=1',
-        'ROSY_DOMAIN_ID=test',
-        'rosy',
+        "env",
+        "PYTHONUNBUFFERED=1",
+        "ROSY_DOMAIN_ID=test",
+        "rosy",
         *args,
     )
 
 
 def python_module(module: str, *args: str) -> AbstractContextManager[PopenSpawn]:
     return run(
-        'env',
-        'PYTHONUNBUFFERED=1',
-        'ROSY_DOMAIN_ID=test',
-        'python',
-        '-m',
+        "env",
+        "PYTHONUNBUFFERED=1",
+        "ROSY_DOMAIN_ID=test",
+        "python",
+        "-m",
         module,
         *args,
     )
@@ -44,7 +44,7 @@ def run(cmd: str, *args: str) -> Generator[PopenSpawn]:
     process = PopenSpawn(
         [cmd, *args],
         timeout=10,
-        encoding='utf-8',
+        encoding="utf-8",
     )
 
     try:

@@ -21,14 +21,14 @@ from rosy.specs import IpConnectionSpec, UnixConnectionSpec
 class TestTcpServerProvider:
     def setup_method(self):
         self.provider = TcpServerProvider(
-            server_host='server-host',
-            client_host='client-host',
+            server_host="server-host",
+            client_host="client-host",
         )
 
     def test_default_port_is_0(self):
         assert self.provider.port == 0
 
-    @patch('rosy.node.servers.asyncio.start_server')
+    @patch("rosy.node.servers.asyncio.start_server")
     @pytest.mark.asyncio
     async def test_start_server(self, start_server_mock):
         expected_server = create_autospec(Server)
@@ -46,13 +46,13 @@ class TestTcpServerProvider:
 
         assert server is expected_server
         assert conn_specs == [
-            IpConnectionSpec('client-host', 1234, family=socket.AF_INET),
-            IpConnectionSpec('client-host', 5678, family=socket.AF_INET6),
+            IpConnectionSpec("client-host", 1234, family=socket.AF_INET),
+            IpConnectionSpec("client-host", 5678, family=socket.AF_INET6),
         ]
 
         start_server_mock.assert_awaited_once_with(
             client_connected_cb,
-            host='server-host',
+            host="server-host",
             port=0,
         )
 
@@ -68,7 +68,7 @@ class TestTmpUnixServerProvider:
     def setup_method(self):
         self.provider = TmpUnixServerProvider()
 
-    @patch('rosy.node.servers.asyncio.start_unix_server')
+    @patch("rosy.node.servers.asyncio.start_unix_server")
     @pytest.mark.asyncio
     async def test_start_server(self, start_unix_server_mock):
         expected_server = create_autospec(Server)
@@ -82,15 +82,17 @@ class TestTmpUnixServerProvider:
             client_connected_cb,
             path=ANY,
         )
-        sock_path = start_unix_server_mock.call_args[1]['path']
+        sock_path = start_unix_server_mock.call_args[1]["path"]
 
         assert isinstance(server, _UnixServer)
         assert server.server is expected_server
         assert conn_specs == [UnixConnectionSpec(sock_path)]
 
-    @patch('rosy.node.servers.asyncio.start_unix_server')
+    @patch("rosy.node.servers.asyncio.start_unix_server")
     @pytest.mark.asyncio
-    async def test_start_server_raises_UnsupportedProviderError(self, start_unix_server_mock):
+    async def test_start_server_raises_UnsupportedProviderError(
+        self, start_unix_server_mock
+    ):
         start_unix_server_mock.side_effect = NotImplementedError()
 
         client_connected_cb = create_autospec(Callable)
@@ -117,7 +119,7 @@ class TestServersManager:
         ]
 
         for provider, server, conn_spec in zip(
-                self.server_providers, servers, self.conn_specs
+            self.server_providers, servers, self.conn_specs
         ):
             provider.start_server.return_value = (server, [conn_spec])
 
@@ -131,7 +133,7 @@ class TestServersManager:
     def test_connection_specs_initially_empty(self):
         assert self.manager.connection_specs == []
 
-    @patch('rosy.node.servers._close_on_return')
+    @patch("rosy.node.servers._close_on_return")
     @pytest.mark.asyncio
     async def test_start_servers(self, close_on_return_mock):
         wrapper_cb = create_autospec(Callable)
@@ -150,15 +152,22 @@ class TestServersManager:
     async def test_start_servers_raises_RuntimeError_when_already_started(self):
         await self.manager.start_servers()
 
-        with pytest.raises(RuntimeError, match='Servers have already been started.'):
+        with pytest.raises(RuntimeError, match="Servers have already been started."):
             await self.manager.start_servers()
 
     @pytest.mark.asyncio
-    async def test_start_servers_raises_RuntimeError_when_no_servers_started(self, logger_mock):
+    async def test_start_servers_raises_RuntimeError_when_no_servers_started(
+        self, logger_mock
+    ):
         for provider in self.server_providers:
-            provider.start_server.side_effect = UnsupportedProviderError(provider, 'Unsupported')
+            provider.start_server.side_effect = UnsupportedProviderError(
+                provider, "Unsupported"
+            )
 
-        with pytest.raises(RuntimeError, match='Unable to start any server with the given server providers.'):
+        with pytest.raises(
+            RuntimeError,
+            match="Unable to start any server with the given server providers.",
+        ):
             await self.manager.start_servers()
 
         assert logger_mock.exception.call_count == len(self.server_providers)
@@ -190,7 +199,7 @@ class TestCloseOnReturn:
         self.callback.assert_awaited_once_with(self.reader, self.writer)
 
         logger_mock.exception.assert_called_once_with(
-            'Error in client connected callback',
+            "Error in client connected callback",
             exc_info=error,
         )
 
@@ -200,5 +209,5 @@ class TestCloseOnReturn:
 
 @pytest.fixture
 def logger_mock():
-    with patch('rosy.node.servers.logger') as mock:
+    with patch("rosy.node.servers.logger") as mock:
         yield mock

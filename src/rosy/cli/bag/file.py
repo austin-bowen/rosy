@@ -10,7 +10,7 @@ Message = tuple[datetime, Topic, Args, KWArgs]
 
 
 def get_bag_file_messages(bag_file_path: Path) -> Iterable[Message]:
-    with open(bag_file_path, 'rb') as bag_file:
+    with open(bag_file_path, "rb") as bag_file:
         while True:
             try:
                 yield pickle.load(bag_file)
@@ -19,14 +19,12 @@ def get_bag_file_messages(bag_file_path: Path) -> Iterable[Message]:
 
 
 def get_most_recent_bag_file_path() -> Path:
-    matching_files = Path('.').glob(
-        'record_????-??-??-??-??-??.bag'
-    )
+    matching_files = Path(".").glob("record_????-??-??-??-??-??.bag")
 
     try:
         return max(matching_files)
     except ValueError:
         raise FileNotFoundError(
-            'No bag files found in the current directory. '
-            'Use --input to specify a file.'
+            "No bag files found in the current directory. "
+            "Use --input to specify a file."
         )

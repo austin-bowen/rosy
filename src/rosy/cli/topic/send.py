@@ -60,8 +60,8 @@ def parse_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any
         if key is None:
             if topic_kwargs:
                 raise ValueError(
-                    f'Positional argument {arg!r} must come '
-                    f'before the keyword arguments.'
+                    f"Positional argument {arg!r} must come "
+                    f"before the keyword arguments."
                 )
 
             topic_args.append(value)
@@ -73,7 +73,7 @@ def parse_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any
 
 def key_value_from_str(value: str) -> tuple[str | None, Any]:
     match = re.match(
-        r'^([A-Za-z_][\w_]*)=(.*)$',
+        r"^([A-Za-z_][\w_]*)=(.*)$",
         value,
     )
 
@@ -87,15 +87,14 @@ def key_value_from_str(value: str) -> tuple[str | None, Any]:
 def value_from_str(value: str) -> Any:
     match = re.match(
         # prefix
-        r'^call:'
+        r"^call:"
         # module name
-        r'([\w.]+)\.'
+        r"([\w.]+)\."
         # callable name
-        r'(\w+)'
+        r"(\w+)"
         # args
-        r'\((.*)\)'
-        r'$',
-        value
+        r"\((.*)\)" r"$",
+        value,
     )
 
     if not match:
@@ -104,14 +103,14 @@ def value_from_str(value: str) -> Any:
     module, callable_, args = match.groups()
     module = importlib.import_module(module)
     callable_ = getattr(module, callable_)
-    result = eval(f'callable({args})', {}, dict(callable=callable_))
+    result = eval(f"callable({args})", {}, dict(callable=callable_))
     return result
 
 
 def add_send_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
-        'send',
-        description='''
+        "send",
+        description="""
 Start a node that sends messages to a topic.
 
 ---
@@ -136,45 +135,46 @@ Advanced example:
 This will call the specified class/function to populate the arguments.
 
 ---
-'''.strip(),
-        help='send messages to a topic',
+""".strip(),
+        help="send messages to a topic",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
     parser.add_argument(
-        'topic',
-        help='The topic to send to.',
+        "topic",
+        help="The topic to send to.",
     )
 
     parser.add_argument(
-        'args',
-        nargs='*',
-        metavar='arg/kwarg',
-        help='''
+        "args",
+        nargs="*",
+        metavar="arg/kwarg",
+        help="""
 Arg(s) and/or kwarg(s) to send to the topic.
 Each arg must be a valid Python expression,
 or follow the format:
 `call:module.callable(*args, **kwargs)`
-'''.strip(),
+""".strip(),
     )
 
     parser.add_argument(
-        '--interval', '-i',
+        "--interval",
+        "-i",
         default=-1,
         type=float,
-        help='The interval in seconds to send messages. A value < 0 will '
-             'cause the message to be sent only once. Default: %(default)s',
+        help="The interval in seconds to send messages. A value < 0 will "
+        "cause the message to be sent only once. Default: %(default)s",
     )
 
     parser.add_argument(
-        '--no-wait',
-        action='store_true',
-        help='Send the message without waiting for any listeners',
+        "--no-wait",
+        action="store_true",
+        help="Send the message without waiting for any listeners",
     )
 
     add_log_arg(parser)
 
     add_node_name_arg(
         parser,
-        default='rosy topic send',
+        default="rosy topic send",
     )

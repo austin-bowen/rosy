@@ -8,10 +8,10 @@ class CallTracker:
         self.calls = []
 
     def track(
-            self,
-            mock: Mock,
-            return_value=None,
-            side_effect=None,
+        self,
+        mock: Mock,
+        return_value=None,
+        side_effect=None,
     ) -> None:
         def side_effect_(*args, **kwargs):
             self.calls.append((mock, call(*args, **kwargs)))
@@ -21,7 +21,9 @@ class CallTracker:
 
     def assert_calls(self, *expected: tuple[Mock, call]) -> None:
         expected = list(expected)
-        assert self.calls == expected, f'''
+        assert (
+            self.calls == expected
+        ), f"""
 Expected calls do not match actual calls.
 
 Expected calls:
@@ -29,8 +31,8 @@ Expected calls:
 
 Actual calls:
 {format_calls_(self.calls)}
-        '''.strip()
+        """.strip()
 
 
 def format_calls_(calls) -> str:
-    return '\n'.join(f'{i}: {c}' for i, c in enumerate(calls)) or '[None]'
+    return "\n".join(f"{i}: {c}" for i, c in enumerate(calls)) or "[None]"

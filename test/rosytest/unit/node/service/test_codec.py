@@ -18,9 +18,9 @@ class TestServiceRequestCodec(CodecTest):
 
         self.request = ServiceRequest(
             id=1,
-            service='service',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            service="service",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         self.codec = ServiceRequestCodec(
@@ -66,8 +66,8 @@ class TestServiceResponseCodec(CodecTest):
     def setup_method(self):
         super().setup_method()
 
-        self.success_response = ServiceResponse(id=1, result='data')
-        self.failure_response = ServiceResponse(id=1, error='error')
+        self.success_response = ServiceResponse(id=1, result="data")
+        self.failure_response = ServiceResponse(id=1, error="error")
 
         self.id_codec = self.add_tracked_codec_mock()
         self.data_codec = self.add_tracked_codec_mock()
@@ -87,7 +87,7 @@ class TestServiceResponseCodec(CodecTest):
 
         self.call_tracker.assert_calls(
             (self.id_codec.encode, call(writer, response.id)),
-            (writer.write, call(b'\x00')),  # success status code
+            (writer.write, call(b"\x00")),  # success status code
             (self.data_codec.encode, call(writer, response.result)),
         )
 
@@ -96,7 +96,7 @@ class TestServiceResponseCodec(CodecTest):
         reader, response = self.reader, self.success_response
 
         self.call_tracker.track(self.id_codec.decode, return_value=response.id)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'\x00')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"\x00")
         self.call_tracker.track(self.data_codec.decode, return_value=response.result)
         self.call_tracker.track(self.error_codec.decode)
 
@@ -116,7 +116,7 @@ class TestServiceResponseCodec(CodecTest):
 
         self.call_tracker.assert_calls(
             (self.id_codec.encode, call(writer, response.id)),
-            (self.writer.write, call(b'\xEE')),  # failure status code
+            (self.writer.write, call(b"\xee")),  # failure status code
             (self.error_codec.encode, call(writer, response.error)),
         )
 
@@ -125,7 +125,7 @@ class TestServiceResponseCodec(CodecTest):
         reader, response = self.reader, self.failure_response
 
         self.call_tracker.track(self.id_codec.decode, return_value=response.id)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'\xEE')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"\xee")
         self.call_tracker.track(self.error_codec.decode, return_value=response.error)
         self.call_tracker.track(self.data_codec.decode)
 
@@ -140,9 +140,9 @@ class TestServiceResponseCodec(CodecTest):
     @pytest.mark.asyncio
     async def test_decode_unknown_status_code_raises_ValueError(self):
         self.call_tracker.track(self.id_codec.decode, return_value=1)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'?')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"?")
 
-        with pytest.raises(ValueError, match=f'Received unknown status code='):
+        with pytest.raises(ValueError, match=f"Received unknown status code="):
             await self.codec.decode(self.reader)
 
         self.call_tracker.assert_calls(

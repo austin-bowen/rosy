@@ -22,7 +22,7 @@ async def cancel_task(task: asyncio.Task, *, timeout: float | None = 10) -> None
         task.remove_done_callback(cb)
 
 
-async def close_ignoring_errors(writer: 'Writer') -> None:
+async def close_ignoring_errors(writer: "Writer") -> None:
     """Closes the writer ignoring any ConnectionErrors."""
     try:
         writer.close()
@@ -46,31 +46,23 @@ def noop():
 
 
 class Reader(Protocol):
-    async def readexactly(self, n: int) -> bytes:
-        ...
+    async def readexactly(self, n: int) -> bytes: ...
 
-    async def readuntil(self, separator: bytes) -> bytes:
-        ...
+    async def readuntil(self, separator: bytes) -> bytes: ...
 
 
 class Writer(Protocol):
-    def write(self, data: bytes) -> None:
-        ...
+    def write(self, data: bytes) -> None: ...
 
-    async def drain(self) -> None:
-        ...
+    async def drain(self) -> None: ...
 
-    def close(self) -> None:
-        ...
+    def close(self) -> None: ...
 
-    def is_closing(self) -> bool:
-        ...
+    def is_closing(self) -> bool: ...
 
-    async def wait_closed(self) -> None:
-        ...
+    async def wait_closed(self) -> None: ...
 
-    def get_extra_info(self, name: str, default=None):
-        ...
+    def get_extra_info(self, name: str, default=None): ...
 
 
 class LockableWriter(Writer):
@@ -82,7 +74,7 @@ class LockableWriter(Writer):
     def lock(self) -> Lock:
         return self._lock
 
-    async def __aenter__(self) -> 'LockableWriter':
+    async def __aenter__(self) -> "LockableWriter":
         await self.lock.acquire()
         return self
 
@@ -110,7 +102,7 @@ class LockableWriter(Writer):
 
     def require_locked(self) -> None:
         if not self._lock.locked():
-            raise RuntimeError('Writer must be locked before writing')
+            raise RuntimeError("Writer must be locked before writing")
 
 
 class BufferReader(Reader):

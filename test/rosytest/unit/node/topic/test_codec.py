@@ -12,9 +12,9 @@ class TestTopicMessageCodec(CodecTest):
         super().setup_method()
 
         self.message = TopicMessage(
-            topic='topic',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            topic="topic",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         self.topic_codec = self.add_tracked_codec_mock()
@@ -41,9 +41,9 @@ class TestTopicMessageCodec(CodecTest):
 
     @pytest.mark.asyncio
     async def test_decode(self):
-        self.call_tracker.track(self.topic_codec.decode, return_value='topic')
-        self.call_tracker.track(self.args_codec.decode, return_value=['arg'])
-        self.call_tracker.track(self.kwargs_codec.decode, return_value={'key': 'value'})
+        self.call_tracker.track(self.topic_codec.decode, return_value="topic")
+        self.call_tracker.track(self.args_codec.decode, return_value=["arg"])
+        self.call_tracker.track(self.kwargs_codec.decode, return_value={"key": "value"})
 
         reader, message = self.reader, self.message
 

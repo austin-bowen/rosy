@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 class TopicMessageHandler:
     def __init__(
-            self,
-            listener_manager: TopicListenerManager,
+        self,
+        listener_manager: TopicListenerManager,
     ):
         self.listener_manager = listener_manager
 
@@ -19,8 +19,8 @@ class TopicMessageHandler:
 
         if not callback:
             logger.warning(
-                f'Received message for topic={message.topic!r} '
-                f'but no listener is registered.'
+                f"Received message for topic={message.topic!r} "
+                f"but no listener is registered."
             )
 
         try:
@@ -29,9 +29,9 @@ class TopicMessageHandler:
             raise
         except Exception as e:
             logger.exception(
-                f'Error calling callback={callback} '
-                f'for topic={message.topic!r} '
-                f'with args={message.args!r} '
-                f'and kwargs={message.kwargs!r}',
+                f"Error calling callback={callback} "
+                f"for topic={message.topic!r} "
+                f"with args={message.args!r} "
+                f"and kwargs={message.kwargs!r}",
                 exc_info=e,
             )

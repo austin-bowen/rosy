@@ -7,10 +7,10 @@ from rosy.types import Topic
 
 class TopicMessageCodec(Codec[TopicMessage]):
     def __init__(
-            self,
-            topic_codec: Codec[Topic],
-            args_codec: Codec[Args],
-            kwargs_codec: Codec[KWArgs],
+        self,
+        topic_codec: Codec[Topic],
+        args_codec: Codec[Args],
+        kwargs_codec: Codec[KWArgs],
     ):
         self.topic_codec = topic_codec
         self.args_codec = args_codec

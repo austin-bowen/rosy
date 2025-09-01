@@ -9,36 +9,33 @@ from rosy.node.topic.types import TopicMessage
 
 class TestNodeMessageCodec:
     def setup_method(self):
-        self.topic_message = TopicMessage('topic', ['arg'], {'key': 'value'})
-        self.encoded_topic_message = b't\x05topic\x01\x03arg\x01\x03key\x05value'
+        self.topic_message = TopicMessage("topic", ["arg"], {"key": "value"})
+        self.encoded_topic_message = b"t\x05topic\x01\x03arg\x01\x03key\x05value"
 
         self.service_request = ServiceRequest(
-            id=1,
-            service='service',
-            args=['arg'],
-            kwargs={'key': 'value'}
+            id=1, service="service", args=["arg"], kwargs={"key": "value"}
         )
         self.encoded_service_request = (
             # Prefix for service request
-            b's'
+            b"s"
             # ID
-            b'\x01\x00'
+            b"\x01\x00"
             # Service
-            b'\x07service'
+            b"\x07service"
             # Args
-            b'\x01\x03arg'
+            b"\x01\x03arg"
             # KWArgs
-            b'\x01\x03key\x05value'
+            b"\x01\x03key\x05value"
         )
 
-        self.service_response = ServiceResponse(id=1, result='result', error=None)
+        self.service_response = ServiceResponse(id=1, result="result", error=None)
         self.encoded_service_response = (
             # ID
-            b'\x01\x00'
+            b"\x01\x00"
             # Success
-            b'\x00'
+            b"\x00"
             # Result
-            b'\x06result'
+            b"\x06result"
         )
 
         self.codec = build_node_message_codec(
@@ -65,9 +62,9 @@ class TestNodeMessageCodec:
     @pytest.mark.asyncio
     async def test_decode_topic_message_or_service_request(self):
         reader = BufferReader(
-            self.encoded_topic_message +
-            self.encoded_service_request +
-            b'?'  # Unrecognized prefix to test error handling
+            self.encoded_topic_message
+            + self.encoded_service_request
+            + b"?"  # Unrecognized prefix to test error handling
         )
 
         message = await self.codec.decode_topic_message_or_service_request(reader)
@@ -76,7 +73,7 @@ class TestNodeMessageCodec:
         request = await self.codec.decode_topic_message_or_service_request(reader)
         assert request == self.service_request
 
-        with pytest.raises(ValueError, match='Unknown prefix='):
+        with pytest.raises(ValueError, match="Unknown prefix="):
             await self.codec.decode_topic_message_or_service_request(reader)
 
     @pytest.mark.asyncio

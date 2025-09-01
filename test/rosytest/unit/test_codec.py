@@ -6,11 +6,15 @@ import pytest
 from rosy.asyncio import Reader, Writer
 from rosy.codec import (
     Codec,
-    DictCodec, FixedLengthIntCodec,
-    JsonCodec, LengthPrefixedStringCodec,
+    DictCodec,
+    FixedLengthIntCodec,
+    JsonCodec,
+    LengthPrefixedStringCodec,
     MsgpackCodec,
     PickleCodec,
-    SequenceCodec, VariableLengthIntCodec, )
+    SequenceCodec,
+    VariableLengthIntCodec,
+)
 from rosytest.unit.calltracker import CallTracker
 
 
@@ -64,16 +68,19 @@ class TestFixedLengthIntCodec(CodecTest):
 
     def test_constructor_defaults(self):
         assert self.codec.length == 2
-        assert self.codec.byte_order == 'little'
+        assert self.codec.byte_order == "little"
         assert self.codec.signed is False
 
-    @pytest.mark.parametrize('value, expected', [
-        (0, b'\x00\x00'),
-        (1, b'\x01\x00'),
-        (255, b'\xFF\x00'),
-        (256, b'\x00\x01'),
-        (65535, b'\xFF\xFF'),
-    ])
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            (0, b"\x00\x00"),
+            (1, b"\x01\x00"),
+            (255, b"\xff\x00"),
+            (256, b"\x00\x01"),
+            (65535, b"\xff\xff"),
+        ],
+    )
     @pytest.mark.asyncio
     async def test_encode(self, value: int, expected: bytes):
         await self.assert_encode_returns_None(value)
@@ -82,7 +89,7 @@ class TestFixedLengthIntCodec(CodecTest):
             (self.writer.write, call(expected)),
         )
 
-    @pytest.mark.parametrize('value', [-1, 65536])
+    @pytest.mark.parametrize("value", [-1, 65536])
     @pytest.mark.asyncio
     async def test_encode_with_invalid_value_raises_OverflowError(self, value: int):
         with pytest.raises(OverflowError):
@@ -90,13 +97,16 @@ class TestFixedLengthIntCodec(CodecTest):
 
         self.call_tracker.assert_calls()
 
-    @pytest.mark.parametrize('data, expected', [
-        (b'\x00\x00', 0),
-        (b'\x01\x00', 1),
-        (b'\xFF\x00', 255),
-        (b'\x00\x01', 256),
-        (b'\xFF\xFF', 65535),
-    ])
+    @pytest.mark.parametrize(
+        "data, expected",
+        [
+            (b"\x00\x00", 0),
+            (b"\x01\x00", 1),
+            (b"\xff\x00", 255),
+            (b"\x00\x01", 256),
+            (b"\xff\xff", 65535),
+        ],
+    )
     @pytest.mark.asyncio
     async def test_decode(self, data: bytes, expected: int):
         self.call_tracker.track(self.reader.readexactly, return_value=data)
@@ -121,16 +131,19 @@ class TestVariableLengthIntCodec(CodecTest):
     def test_constructor_defaults(self):
         codec = VariableLengthIntCodec()
         assert codec.max_byte_length == 8
-        assert codec.byte_order == 'little'
+        assert codec.byte_order == "little"
         assert codec.signed is False
 
-    @pytest.mark.parametrize('value, len_byte, encoded_bytes', [
-        (0, b'\x00', b''),
-        (1, b'\x01', b'\x01'),
-        (255, b'\x01', b'\xFF'),
-        (256, b'\x02', b'\x00\x01'),
-        (65535, b'\x02', b'\xFF\xFF'),
-    ])
+    @pytest.mark.parametrize(
+        "value, len_byte, encoded_bytes",
+        [
+            (0, b"\x00", b""),
+            (1, b"\x01", b"\x01"),
+            (255, b"\x01", b"\xff"),
+            (256, b"\x02", b"\x00\x01"),
+            (65535, b"\x02", b"\xff\xff"),
+        ],
+    )
     @pytest.mark.asyncio
     async def test_encode(self, value: int, len_byte: bytes, encoded_bytes: bytes):
         await self.assert_encode_returns_None(value)
@@ -143,7 +156,7 @@ class TestVariableLengthIntCodec(CodecTest):
 
         self.call_tracker.assert_calls(*expected_calls)
 
-    @pytest.mark.parametrize('value', [-1, 65536])
+    @pytest.mark.parametrize("value", [-1, 65536])
     @pytest.mark.asyncio
     async def test_encode_with_invalid_value_raises_OverflowError(self, value: int):
         with pytest.raises(OverflowError):
@@ -151,13 +164,16 @@ class TestVariableLengthIntCodec(CodecTest):
 
         self.call_tracker.assert_calls()
 
-    @pytest.mark.parametrize('len_byte, encoded_bytes, expected', [
-        (b'\x00', b'', 0),
-        (b'\x01', b'\x01', 1),
-        (b'\x01', b'\xFF', 255),
-        (b'\x02', b'\x00\x01', 256),
-        (b'\x02', b'\xFF\xFF', 65535),
-    ])
+    @pytest.mark.parametrize(
+        "len_byte, encoded_bytes, expected",
+        [
+            (b"\x00", b"", 0),
+            (b"\x01", b"\x01", 1),
+            (b"\x01", b"\xff", 255),
+            (b"\x02", b"\x00\x01", 256),
+            (b"\x02", b"\xff\xff", 65535),
+        ],
+    )
     @pytest.mark.asyncio
     async def test_decode(self, len_byte: bytes, encoded_bytes: bytes, expected: int):
         self.setup_reader(len_byte, encoded_bytes)
@@ -177,20 +193,20 @@ class TestLengthPrefixedStringCodec(CodecTest):
 
     def test_constructor_defaults(self):
         assert self.codec.len_prefix_codec is self.len_prefix_codec
-        assert self.codec.encoding == 'utf-8'
+        assert self.codec.encoding == "utf-8"
 
     @pytest.mark.asyncio
     async def test_encode(self):
-        await self.assert_encode_returns_None('hello world')
+        await self.assert_encode_returns_None("hello world")
 
         self.call_tracker.assert_calls(
             (self.len_prefix_codec.encode, call(self.writer, 11)),
-            (self.writer.write, call(b'hello world')),
+            (self.writer.write, call(b"hello world")),
         )
 
     @pytest.mark.asyncio
     async def test_encode_empty_string(self):
-        await self.assert_encode_returns_None('')
+        await self.assert_encode_returns_None("")
 
         self.call_tracker.assert_calls(
             (self.len_prefix_codec.encode, call(self.writer, 0)),
@@ -199,9 +215,9 @@ class TestLengthPrefixedStringCodec(CodecTest):
     @pytest.mark.asyncio
     async def test_decode(self):
         self.call_tracker.track(self.len_prefix_codec.decode, return_value=11)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'hello world')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"hello world")
 
-        await self.assert_decode_returns('hello world')
+        await self.assert_decode_returns("hello world")
 
         self.call_tracker.assert_calls(
             (self.len_prefix_codec.decode, call(self.reader)),
@@ -212,7 +228,7 @@ class TestLengthPrefixedStringCodec(CodecTest):
     async def test_decode_empty_string(self):
         self.call_tracker.track(self.len_prefix_codec.decode, return_value=0)
 
-        await self.assert_decode_returns('')
+        await self.assert_decode_returns("")
 
         self.call_tracker.assert_calls(
             (self.len_prefix_codec.decode, call(self.reader)),
@@ -295,14 +311,14 @@ class TestDictCodec(CodecTest):
 
     @pytest.mark.asyncio
     async def test_encode(self):
-        await self.assert_encode_returns_None({'key1': 'value1', 'key2': 'value2'})
+        await self.assert_encode_returns_None({"key1": "value1", "key2": "value2"})
 
         self.call_tracker.assert_calls(
             (self.len_header_codec.encode, call(self.writer, 2)),
-            (self.key_codec.encode, call(self.writer, 'key1')),
-            (self.value_codec.encode, call(self.writer, 'value1')),
-            (self.key_codec.encode, call(self.writer, 'key2')),
-            (self.value_codec.encode, call(self.writer, 'value2')),
+            (self.key_codec.encode, call(self.writer, "key1")),
+            (self.value_codec.encode, call(self.writer, "value1")),
+            (self.key_codec.encode, call(self.writer, "key2")),
+            (self.value_codec.encode, call(self.writer, "value2")),
         )
 
     @pytest.mark.asyncio
@@ -315,8 +331,8 @@ class TestDictCodec(CodecTest):
 
     @pytest.mark.asyncio
     async def test_decode(self):
-        key_results = ['key1', 'key2']
-        value_results = ['value1', 'value2']
+        key_results = ["key1", "key2"]
+        value_results = ["value1", "value2"]
         self.call_tracker.track(self.len_header_codec.decode, return_value=2)
         self.call_tracker.track(
             self.key_codec.decode,
@@ -327,7 +343,7 @@ class TestDictCodec(CodecTest):
             side_effect=lambda reader: value_results.pop(0),
         )
 
-        await self.assert_decode_returns({'key1': 'value1', 'key2': 'value2'})
+        await self.assert_decode_returns({"key1": "value1", "key2": "value2"})
 
         self.call_tracker.assert_calls(
             (self.len_header_codec.decode, call(self.reader)),
@@ -358,35 +374,35 @@ class TestPickleCodec(CodecTest):
             len_header_codec=self.len_header_codec,
         )
 
-    @patch('rosy.codec.pickle.dump')
+    @patch("rosy.codec.pickle.dump")
     @pytest.mark.asyncio
     async def test_encode(self, dump):
         def dump_side_effect(obj, file, protocol):
-            file.write(b'data')
+            file.write(b"data")
 
         self.call_tracker.track(dump, side_effect=dump_side_effect)
 
-        await self.assert_encode_returns_None('data')
+        await self.assert_encode_returns_None("data")
 
         self.call_tracker.assert_calls(
-            (dump, call('data', ANY, protocol=pickle.HIGHEST_PROTOCOL)),
+            (dump, call("data", ANY, protocol=pickle.HIGHEST_PROTOCOL)),
             (self.len_header_codec.encode, call(self.writer, 4)),
-            (self.writer.write, call(b'data')),
+            (self.writer.write, call(b"data")),
         )
 
-    @patch('rosy.codec.pickle.loads')
+    @patch("rosy.codec.pickle.loads")
     @pytest.mark.asyncio
     async def test_decode(self, loads):
         self.call_tracker.track(self.len_header_codec.decode, return_value=4)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'data')
-        self.call_tracker.track(loads, return_value='data')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"data")
+        self.call_tracker.track(loads, return_value="data")
 
-        await self.assert_decode_returns('data')
+        await self.assert_decode_returns("data")
 
         self.call_tracker.assert_calls(
             (self.len_header_codec.decode, call(self.reader)),
             (self.reader.readexactly, call(4)),
-            (loads, call(b'data')),
+            (loads, call(b"data")),
         )
 
 
@@ -400,32 +416,32 @@ class TestJsonCodec(CodecTest):
             len_header_codec=self.len_header_codec,
         )
 
-    @patch('rosy.codec.orjson.dumps')
+    @patch("rosy.codec.orjson.dumps")
     @pytest.mark.asyncio
     async def test_encode(self, dumps):
-        self.call_tracker.track(dumps, return_value=b'data')
+        self.call_tracker.track(dumps, return_value=b"data")
 
-        await self.assert_encode_returns_None('data')
+        await self.assert_encode_returns_None("data")
 
         self.call_tracker.assert_calls(
-            (dumps, call('data')),
+            (dumps, call("data")),
             (self.len_header_codec.encode, call(self.writer, 4)),
-            (self.writer.write, call(b'data')),
+            (self.writer.write, call(b"data")),
         )
 
-    @patch('rosy.codec.orjson.loads')
+    @patch("rosy.codec.orjson.loads")
     @pytest.mark.asyncio
     async def test_decode(self, loads):
         self.call_tracker.track(self.len_header_codec.decode, return_value=4)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'data')
-        self.call_tracker.track(loads, return_value='data')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"data")
+        self.call_tracker.track(loads, return_value="data")
 
-        await self.assert_decode_returns('data')
+        await self.assert_decode_returns("data")
 
         self.call_tracker.assert_calls(
             (self.len_header_codec.decode, call(self.reader)),
             (self.reader.readexactly, call(4)),
-            (loads, call(b'data')),
+            (loads, call(b"data")),
         )
 
 
@@ -439,30 +455,30 @@ class TestMsgpackCodec(CodecTest):
             len_header_codec=self.len_header_codec,
         )
 
-    @patch('rosy.codec.msgpack.packb')
+    @patch("rosy.codec.msgpack.packb")
     @pytest.mark.asyncio
     async def test_encode(self, packb):
-        self.call_tracker.track(packb, return_value=b'data')
+        self.call_tracker.track(packb, return_value=b"data")
 
-        await self.assert_encode_returns_None('data')
+        await self.assert_encode_returns_None("data")
 
         self.call_tracker.assert_calls(
-            (packb, call('data')),
+            (packb, call("data")),
             (self.len_header_codec.encode, call(self.writer, 4)),
-            (self.writer.write, call(b'data')),
+            (self.writer.write, call(b"data")),
         )
 
-    @patch('rosy.codec.msgpack.unpackb')
+    @patch("rosy.codec.msgpack.unpackb")
     @pytest.mark.asyncio
     async def test_decode(self, unpackb):
         self.call_tracker.track(self.len_header_codec.decode, return_value=4)
-        self.call_tracker.track(self.reader.readexactly, return_value=b'data')
-        self.call_tracker.track(unpackb, return_value='data')
+        self.call_tracker.track(self.reader.readexactly, return_value=b"data")
+        self.call_tracker.track(unpackb, return_value="data")
 
-        await self.assert_decode_returns('data')
+        await self.assert_decode_returns("data")
 
         self.call_tracker.assert_calls(
             (self.len_header_codec.decode, call(self.reader)),
             (self.reader.readexactly, call(4)),
-            (unpackb, call(b'data')),
+            (unpackb, call(b"data")),
         )

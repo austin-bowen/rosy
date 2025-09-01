@@ -1,7 +1,7 @@
 from typing import Callable, Generic, TypeVar
 
-K = TypeVar('K')
-C = TypeVar('C', bound=Callable)
+K = TypeVar("K")
+C = TypeVar("C", bound=Callable)
 
 
 class CallbackManager(Generic[K, C]):

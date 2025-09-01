@@ -15,7 +15,7 @@ from rosy.specs import IpConnectionSpec, MeshNodeSpec, NodeId
 
 class TestNode:
     def setup_method(self):
-        self.id = NodeId('node')
+        self.id = NodeId("node")
         self.discovery = create_autospec(NodeDiscovery)
         self.servers_manager = create_autospec(ServersManager)
         self.topology_manager = create_autospec(MeshTopologyManager)
@@ -40,7 +40,7 @@ class TestNode:
 
         with pytest.raises(AttributeError):
             # noinspection PyPropertyAccess
-            self.node.id = NodeId('new_node')
+            self.node.id = NodeId("new_node")
 
     def test_str(self):
         assert str(self.node) == str(self.id)
@@ -57,26 +57,28 @@ class TestNode:
     async def test_start_on_started_node_raises_RuntimeError(self):
         await self.node.start()
 
-        with pytest.raises(RuntimeError, match='Node was already started.'):
+        with pytest.raises(RuntimeError, match="Node was already started."):
             await self.node.start()
 
     @pytest.mark.asyncio
     async def test_send(self):
-        await self.node.send('topic', 'arg', key='value')
+        await self.node.send("topic", "arg", key="value")
 
         self.topic_sender.send.assert_awaited_once_with(
-            'topic',
-            ('arg',),
-            {'key': 'value'},
+            "topic",
+            ("arg",),
+            {"key": "value"},
         )
 
     @pytest.mark.asyncio
     async def test_listen(self):
         callback = AsyncMock()
 
-        await self.node.listen('topic', callback)
+        await self.node.listen("topic", callback)
 
-        self.topic_listener_manager.set_callback.assert_called_once_with('topic', callback)
+        self.topic_listener_manager.set_callback.assert_called_once_with(
+            "topic", callback
+        )
         self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -84,18 +86,18 @@ class TestNode:
         callback = AsyncMock()
         self.topic_listener_manager.remove_callback.return_value = callback
 
-        assert await self.node.stop_listening('topic') is None
+        assert await self.node.stop_listening("topic") is None
 
-        self.topic_listener_manager.remove_callback.assert_called_once_with('topic')
+        self.topic_listener_manager.remove_callback.assert_called_once_with("topic")
         self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_stop_listening_to_invalid_topic_does_not_register_node(self):
         self.topic_listener_manager.remove_callback.return_value = None
 
-        assert await self.node.stop_listening('topic') is None
+        assert await self.node.stop_listening("topic") is None
 
-        self.topic_listener_manager.remove_callback.assert_called_once_with('topic')
+        self.topic_listener_manager.remove_callback.assert_called_once_with("topic")
         self.discovery.update_node.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -104,13 +106,13 @@ class TestNode:
             create_autospec(MeshNodeSpec),
         ]
 
-        assert await self.node.topic_has_listeners('topic') is True
+        assert await self.node.topic_has_listeners("topic") is True
 
     @pytest.mark.asyncio
     async def test_topic_has_listeners_returns_False(self):
         self.topology_manager.get_nodes_listening_to_topic.return_value = []
 
-        assert await self.node.topic_has_listeners('topic') is False
+        assert await self.node.topic_has_listeners("topic") is False
 
     @pytest.mark.asyncio
     async def test_wait_for_listener(self):
@@ -119,37 +121,42 @@ class TestNode:
             [create_autospec(MeshNodeSpec)],  # Second call, listener found
         ]
 
-        assert await self.node.wait_for_listener(
-            'topic',
-            poll_interval=0.,
-        ) is None
+        assert (
+            await self.node.wait_for_listener(
+                "topic",
+                poll_interval=0.0,
+            )
+            is None
+        )
 
         assert self.topology_manager.get_nodes_listening_to_topic.call_count == 2
 
     def test_get_topic(self):
-        topic = self.node.get_topic('topic')
+        topic = self.node.get_topic("topic")
 
         assert isinstance(topic, TopicProxy)
         assert topic.node is self.node
-        assert topic.topic == 'topic'
+        assert topic.topic == "topic"
 
     @pytest.mark.asyncio
     async def test_call(self):
-        await self.node.call('service', 'arg', key='value')
+        await self.node.call("service", "arg", key="value")
 
         self.service_caller.call.assert_awaited_once_with(
-            'service',
-            ('arg',),
-            {'key': 'value'},
+            "service",
+            ("arg",),
+            {"key": "value"},
         )
 
     @pytest.mark.asyncio
     async def test_add_service(self):
         callback = AsyncMock()
 
-        assert await self.node.add_service('service', callback) is None
+        assert await self.node.add_service("service", callback) is None
 
-        self.service_handler_manager.set_callback.assert_called_once_with('service', callback)
+        self.service_handler_manager.set_callback.assert_called_once_with(
+            "service", callback
+        )
         self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -157,18 +164,18 @@ class TestNode:
         callback = AsyncMock()
         self.service_handler_manager.remove_callback.return_value = callback
 
-        assert await self.node.remove_service('service') is None
+        assert await self.node.remove_service("service") is None
 
-        self.service_handler_manager.remove_callback.assert_called_once_with('service')
+        self.service_handler_manager.remove_callback.assert_called_once_with("service")
         self.discovery.update_node.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_remove_service_does_not_register_when_invalid_service(self):
         self.service_handler_manager.remove_callback.return_value = None
 
-        assert await self.node.remove_service('service') is None
+        assert await self.node.remove_service("service") is None
 
-        self.service_handler_manager.remove_callback.assert_called_once_with('service')
+        self.service_handler_manager.remove_callback.assert_called_once_with("service")
         self.discovery.update_node.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -177,13 +184,13 @@ class TestNode:
             create_autospec(MeshNodeSpec),
         ]
 
-        assert await self.node.service_has_providers('service') is True
+        assert await self.node.service_has_providers("service") is True
 
     @pytest.mark.asyncio
     async def test_service_has_providers_returns_False(self):
         self.topology_manager.get_nodes_providing_service.return_value = []
 
-        assert await self.node.service_has_providers('service') is False
+        assert await self.node.service_has_providers("service") is False
 
     @pytest.mark.asyncio
     async def test_wait_for_service_provider(self):
@@ -192,29 +199,32 @@ class TestNode:
             [create_autospec(MeshNodeSpec)],  # Second call, provider found
         ]
 
-        assert await self.node.wait_for_service_provider(
-            'service',
-            poll_interval=0.,
-        ) is None
+        assert (
+            await self.node.wait_for_service_provider(
+                "service",
+                poll_interval=0.0,
+            )
+            is None
+        )
 
         assert self.topology_manager.get_nodes_providing_service.call_count == 2
 
     def test_get_service(self):
-        service = self.node.get_service('service')
+        service = self.node.get_service("service")
 
         assert isinstance(service, ServiceProxy)
         assert service.node is self.node
-        assert service.service == 'service'
+        assert service.service == "service"
 
     @pytest.mark.asyncio
     async def test_register(self):
-        connection_specs = [IpConnectionSpec('host', 1234, family=socket.AF_INET)]
+        connection_specs = [IpConnectionSpec("host", 1234, family=socket.AF_INET)]
         self.servers_manager.connection_specs = connection_specs
 
-        topics = {'topic1', 'topic2'}
+        topics = {"topic1", "topic2"}
         self.topic_listener_manager.keys = topics
 
-        services = {'service1', 'service2'}
+        services = {"service1", "service2"}
         self.service_handler_manager.keys = services
 
         assert await self.node.register() is None
@@ -232,16 +242,16 @@ class TestNode:
 class TestTopicProxy:
     def setup_method(self):
         self.node = create_autospec(Node)
-        self.topic = TopicProxy(self.node, 'topic')
+        self.topic = TopicProxy(self.node, "topic")
 
     def test_str(self):
         assert str(self.topic) == "TopicProxy(topic='topic')"
 
     @pytest.mark.asyncio
     async def test_send(self):
-        await self.topic.send('arg', key='value')
+        await self.topic.send("arg", key="value")
 
-        self.node.send.assert_called_once_with(self.topic.topic, 'arg', key='value')
+        self.node.send.assert_called_once_with(self.topic.topic, "arg", key="value")
 
     @pytest.mark.asyncio
     async def test_has_listeners(self):
@@ -277,22 +287,24 @@ class TestTopicProxy:
 class TestServiceProxy:
     def setup_method(self):
         self.node = create_autospec(Node)
-        self.service = ServiceProxy(self.node, 'service')
+        self.service = ServiceProxy(self.node, "service")
 
     def test_str(self):
         assert str(self.service) == "ServiceProxy(service='service')"
 
     @pytest.mark.asyncio
     async def test_magic_call(self):
-        await self.service('arg', key='value')
+        await self.service("arg", key="value")
 
-        self.node.call.assert_called_once_with(self.service.service, 'arg', key='value')
+        self.node.call.assert_called_once_with(self.service.service, "arg", key="value")
 
     @pytest.mark.asyncio
     async def test_call(self):
-        await self.service.call('arg', key='value')
+        await self.service.call("arg", key="value")
 
-        self.node.call.assert_awaited_once_with(self.service.service, 'arg', key='value')
+        self.node.call.assert_awaited_once_with(
+            self.service.service, "arg", key="value"
+        )
 
     @pytest.mark.asyncio
     async def test_has_providers(self):

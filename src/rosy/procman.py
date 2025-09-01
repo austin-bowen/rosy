@@ -14,9 +14,9 @@ class ProcessManager:
     """Default timeout when stopping processes."""
 
     def __init__(
-            self,
-            options: dict[str, Any] = None,
-            timeout: float | None = 10.,
+        self,
+        options: dict[str, Any] = None,
+        timeout: float | None = 10.0,
     ):
         """
         ProcessManager makes it easy to start and stop numerous processes
@@ -67,9 +67,9 @@ class ProcessManager:
         return process
 
     def stop(
-            self,
-            process: Popen | None = None,
-            timeout: float | None = None,
+        self,
+        process: Popen | None = None,
+        timeout: float | None = None,
     ):
         """
         Stop one or all processes managed by this manager.
@@ -95,7 +95,7 @@ class ProcessManager:
         if timeout is None:
             timeout = self.timeout
 
-        print(f'Stopping {len(processes)} processes...')
+        print(f"Stopping {len(processes)} processes...")
         for process in processes:
             process.send_signal(signal.SIGTERM)
 
@@ -104,18 +104,18 @@ class ProcessManager:
             try:
                 process.wait(timeout)
             except TimeoutExpired:
-                print(f'Process {process.pid} did not stop in time.')
+                print(f"Process {process.pid} did not stop in time.")
                 procs_to_kill.append(process)
 
         for process in procs_to_kill:
-            print(f'Killing process {process.pid}')
+            print(f"Killing process {process.pid}")
             process.kill()
 
         for process in procs_to_kill:
             try:
                 process.wait(timeout)
             except TimeoutExpired:
-                print(f'Failed to kill process {process.pid}.')
+                print(f"Failed to kill process {process.pid}.")
 
     def wait(self, timeout: float = None) -> None:
         """

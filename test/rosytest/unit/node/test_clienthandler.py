@@ -31,7 +31,7 @@ class TestClientHandler:
 
     @pytest.mark.asyncio
     async def test_receive_topic_message_calls_topic_message_handler(self):
-        message = TopicMessage(topic='topic', args=['arg'], kwargs={'key': 'value'})
+        message = TopicMessage(topic="topic", args=["arg"], kwargs={"key": "value"})
 
         self.node_message_codec.decode_topic_message_or_service_request.side_effect = [
             message,
@@ -40,7 +40,9 @@ class TestClientHandler:
 
         assert await self.handler.handle_client(self.reader, self.writer) is None
 
-        self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(self.reader)
+        self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(
+            self.reader
+        )
         self.topic_message_handler.handle_message.assert_awaited_once_with(message)
         self.service_request_handler.handle_request.assert_not_awaited()
 
@@ -48,9 +50,9 @@ class TestClientHandler:
     async def test_receive_service_request_calls_service_request_handler(self):
         message = ServiceRequest(
             id=0,
-            service='service',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            service="service",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         self.node_message_codec.decode_topic_message_or_service_request.side_effect = [
@@ -64,8 +66,12 @@ class TestClientHandler:
         # yield to allow the task to run.
         await asyncio.sleep(0)
 
-        self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(self.reader)
-        self.service_request_handler.handle_request.assert_awaited_once_with(message, ANY)
+        self.node_message_codec.decode_topic_message_or_service_request.assert_called_with(
+            self.reader
+        )
+        self.service_request_handler.handle_request.assert_awaited_once_with(
+            message, ANY
+        )
         self.topic_message_handler.handle_message.assert_not_awaited()
 
         actual_writer = self.service_request_handler.handle_request.call_args[0][1]
@@ -81,9 +87,11 @@ class TestClientHandler:
             EOFError(),
         ]
 
-        with pytest.raises(RuntimeError, match='Unreachable code'):
+        with pytest.raises(RuntimeError, match="Unreachable code"):
             await self.handler.handle_client(self.reader, self.writer)
 
-        self.node_message_codec.decode_topic_message_or_service_request.assert_called_once_with(self.reader)
+        self.node_message_codec.decode_topic_message_or_service_request.assert_called_once_with(
+            self.reader
+        )
         self.service_request_handler.handle_request.assert_not_awaited()
         self.topic_message_handler.handle_message.assert_not_awaited()

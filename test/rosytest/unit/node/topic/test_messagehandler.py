@@ -10,7 +10,7 @@ from rosy.types import TopicCallback
 
 class TestTopicMessageHandler:
     def setup_method(self):
-        self.message = TopicMessage('topic', args=['arg'], kwargs={'key': 'value'})
+        self.message = TopicMessage("topic", args=["arg"], kwargs={"key": "value"})
 
         self.listener_manager = Mock(TopicListenerManager)
 
@@ -23,7 +23,7 @@ class TestTopicMessageHandler:
 
         assert await self.handler.handle_message(self.message) is None
 
-        callback.assert_awaited_once_with('topic', 'arg', key='value')
+        callback.assert_awaited_once_with("topic", "arg", key="value")
 
     @pytest.mark.asyncio
     async def test_handle_message_without_callback(self):

@@ -3,7 +3,14 @@ from unittest.mock import create_autospec
 
 import pytest
 
-from rosy.asyncio import BufferReader, BufferWriter, LockableWriter, Writer, close_ignoring_errors, noop
+from rosy.asyncio import (
+    BufferReader,
+    BufferWriter,
+    LockableWriter,
+    Writer,
+    close_ignoring_errors,
+    noop,
+)
 
 
 class TestCloseIgnoringErrors:
@@ -50,17 +57,17 @@ class TestLockableWriter:
     @pytest.mark.asyncio
     async def test_write_succeeds_when_locked(self):
         async with self.lockable_writer:
-            self.lockable_writer.write(b'test')
+            self.lockable_writer.write(b"test")
 
-        self.writer.write.assert_called_once_with(b'test')
+        self.writer.write.assert_called_once_with(b"test")
 
     @pytest.mark.asyncio
     async def test_write_fails_when_not_locked(self):
         with pytest.raises(
-                RuntimeError,
-                match="Writer must be locked before writing",
+            RuntimeError,
+            match="Writer must be locked before writing",
         ):
-            self.lockable_writer.write(b'test')
+            self.lockable_writer.write(b"test")
 
         self.writer.write.assert_not_called()
 
@@ -84,30 +91,30 @@ class TestLockableWriter:
         self.writer.wait_closed.assert_awaited_once()
 
     def test_get_extra_info(self):
-        self.writer.get_extra_info.return_value = 'info'
-        assert self.lockable_writer.get_extra_info('name') == 'info'
-        self.writer.get_extra_info.assert_called_once_with('name', None)
+        self.writer.get_extra_info.return_value = "info"
+        assert self.lockable_writer.get_extra_info("name") == "info"
+        self.writer.get_extra_info.assert_called_once_with("name", None)
 
 
 class TestBufferReader:
     def setup_method(self):
-        self.reader = BufferReader(b'test data')
+        self.reader = BufferReader(b"test data")
 
     @pytest.mark.asyncio
     async def test_readexactly(self):
-        assert await self.reader.readexactly(4) == b'test'
-        assert await self.reader.readexactly(4) == b' dat'
+        assert await self.reader.readexactly(4) == b"test"
+        assert await self.reader.readexactly(4) == b" dat"
 
         with pytest.raises(IncompleteReadError) as exc:
             await self.reader.readexactly(10)
 
-        assert exc.value.partial == b'a'
+        assert exc.value.partial == b"a"
         assert exc.value.expected == 10
 
     @pytest.mark.asyncio
     async def test_readuntil_is_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            await self.reader.readuntil(b' ')
+            await self.reader.readuntil(b" ")
 
 
 class TestBufferWriter:
@@ -115,9 +122,9 @@ class TestBufferWriter:
         self.writer = BufferWriter()
 
     def test_write(self):
-        self.writer.write(b'test')
-        self.writer.write(b' data')
-        assert bytes(self.writer) == b'test data'
+        self.writer.write(b"test")
+        self.writer.write(b" data")
+        assert bytes(self.writer) == b"test data"
 
     @pytest.mark.asyncio
     async def test_drain_is_noop(self):
@@ -138,4 +145,4 @@ class TestBufferWriter:
 
     def test_get_extra_info_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            self.writer.get_extra_info('name')
+            self.writer.get_extra_info("name")

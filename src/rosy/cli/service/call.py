@@ -25,18 +25,18 @@ async def _call_main(args: Namespace, node: Node) -> None:
 
     async def call_once():
         if not args.no_wait and not await service.has_providers():
-            print(f'Waiting for providers...')
+            print(f"Waiting for providers...")
             await service.wait_for_provider()
 
         service_args, service_kwargs = parse_args_and_kwargs(args.args)
 
         now = datetime.now()
-        print(f'[{now}]')
-        print(f'Calling service={args.service!r}')
+        print(f"[{now}]")
+        print(f"Calling service={args.service!r}")
         print_args_and_kwargs(service_args, service_kwargs)
 
         response = await service.call(*service_args, **service_kwargs)
-        print(f'Response: {response!r}')
+        print(f"Response: {response!r}")
         print()
 
     if args.interval < 0:
@@ -50,8 +50,8 @@ async def _call_main(args: Namespace, node: Node) -> None:
 
 def add_call_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
-        'call',
-        description='''
+        "call",
+        description="""
 Start a node that calls a service with the given arguments.
 
 ---
@@ -76,45 +76,46 @@ Advanced example:
 This will call the specified class/function to populate the arguments.
 
 ---
-'''.strip(),
-        help='call a service',
+""".strip(),
+        help="call a service",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
     parser.add_argument(
-        'service',
-        help='The service to call.',
+        "service",
+        help="The service to call.",
     )
 
     parser.add_argument(
-        'args',
-        nargs='*',
-        metavar='arg/kwarg',
-        help='''
+        "args",
+        nargs="*",
+        metavar="arg/kwarg",
+        help="""
 Arg(s) and/or kwarg(s) to call the service with.
 Each arg must be a valid Python expression,
 or follow the format:
 `call:module.callable(*args, **kwargs)`
-'''.strip(),
+""".strip(),
     )
 
     parser.add_argument(
-        '--interval', '-i',
+        "--interval",
+        "-i",
         default=-1,
         type=float,
-        help='The interval in seconds to make calls. A value < 0 will '
-             'cause the call to be made only once. Default: %(default)s',
+        help="The interval in seconds to make calls. A value < 0 will "
+        "cause the call to be made only once. Default: %(default)s",
     )
 
     parser.add_argument(
-        '--no-wait',
-        action='store_true',
-        help='Send the message without waiting for any listeners',
+        "--no-wait",
+        action="store_true",
+        help="Send the message without waiting for any listeners",
     )
 
     add_log_arg(parser)
 
     add_node_name_arg(
         parser,
-        default='rosy service call',
+        default="rosy service call",
     )

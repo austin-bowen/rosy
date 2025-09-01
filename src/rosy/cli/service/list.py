@@ -9,11 +9,7 @@ async def list_main(args: Namespace):
 
     topology = await get_mesh_topology(args)
 
-    services = sorted({
-        service
-        for node in topology.nodes
-        for service in node.services
-    })
+    services = sorted({service for node in topology.nodes for service in node.services})
 
     for service in services:
         print(service)
@@ -21,9 +17,9 @@ async def list_main(args: Namespace):
 
 def add_list_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
-        'list',
-        description='List all services currently being provided by nodes.',
-        help='list services being provided',
+        "list",
+        description="List all services currently being provided by nodes.",
+        help="list services being provided",
     )
 
     add_discovery_time_arg(parser)

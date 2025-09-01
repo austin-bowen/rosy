@@ -12,12 +12,12 @@ from rosy.cli.topic.main import add_topic_command, topic_main
 from rosy.version import __version__
 
 _command_to_main = {
-    'bag': bag_main,
-    'launch': launch_main,
-    'node': node_main,
-    'topic': topic_main,
-    'service': service_main,
-    'speedtest': speedtest_main,
+    "bag": bag_main,
+    "launch": launch_main,
+    "node": node_main,
+    "topic": topic_main,
+    "service": service_main,
+    "speedtest": speedtest_main,
 }
 
 _add_command_functions = [
@@ -52,20 +52,21 @@ async def _main():
 
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='rosy CLI',
+        description="rosy CLI",
     )
 
     add_domain_id_arg(parser)
 
     parser.add_argument(
-        '-v', '--version',
-        action='version',
-        version=f'%(prog)s {__version__}',
+        "-v",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     subparsers = parser.add_subparsers(
-        title='commands',
-        dest='command',
+        title="commands",
+        dest="command",
         required=True,
     )
 

@@ -8,7 +8,7 @@ class ProcessArgs:
     def append(self, arg: str) -> None:
         if isinstance(self.args, str):
             arg = quote_arg(arg)
-            self.args = f'{self.args} {arg}'
+            self.args = f"{self.args} {arg}"
         else:
             self.args.append(arg)
 
@@ -22,7 +22,7 @@ def quote_arg(arg: str) -> str:
 
     if not arg:
         return '""'
-    elif ' ' in arg and not (arg[0] == arg[-1] == '"'):
+    elif " " in arg and not (arg[0] == arg[-1] == '"'):
         return f'"{arg}"'
     else:
         return arg

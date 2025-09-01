@@ -12,7 +12,7 @@ async def echo_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
     async with await build_node_from_args(args=args) as node:
-        print(f'Listening to topics: {args.topics}')
+        print(f"Listening to topics: {args.topics}")
 
         for topic in args.topics:
             await node.listen(topic, handle_message)
@@ -22,29 +22,29 @@ async def echo_main(args: Namespace):
 
 async def handle_message(topic: Topic, *args, **kwargs):
     now = datetime.now()
-    print(f'\n[{now}]')
+    print(f"\n[{now}]")
 
-    print(f'topic={topic!r}')
+    print(f"topic={topic!r}")
     print_args_and_kwargs(args, kwargs)
 
 
 def add_echo_command(subparsers) -> None:
     parser: ArgumentParser = subparsers.add_parser(
-        'echo',
-        description='Start a node that listens to topics and prints received messages.',
-        help='listen to topics',
+        "echo",
+        description="Start a node that listens to topics and prints received messages.",
+        help="listen to topics",
     )
 
     parser.add_argument(
-        'topics',
-        nargs='+',
-        metavar='topic',
-        help='The topic(s) to listen to.',
+        "topics",
+        nargs="+",
+        metavar="topic",
+        help="The topic(s) to listen to.",
     )
 
     add_log_arg(parser)
 
     add_node_name_arg(
         parser,
-        default='rosy topic echo',
+        default="rosy topic echo",
     )

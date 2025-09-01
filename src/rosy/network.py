@@ -8,7 +8,7 @@ def get_hostname() -> Host:
     return socket.gethostname()
 
 
-def get_lan_hostname(suffix: str = '.local') -> Host:
+def get_lan_hostname(suffix: str = ".local") -> Host:
     """
     Return the mDNS hostname of this machine as seen on the local network,
     e.g. "<hostname>.local".

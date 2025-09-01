@@ -12,36 +12,41 @@ async def display_info(args: Namespace) -> None:
 
     info = get_info(bag_file_path)
 
-    print(f'''
+    print(
+        f"""
 path:     {info.path}
 duration: {info.duration}
 start:    {info.start}
 end:      {info.end}
 size:     {info.size} {info.size_unit}
 messages: {info.messages}
-'''.strip())
+""".strip()
+    )
 
     if info.topics:
-        print('topics:')
+        print("topics:")
         for topic, count in info.topics.items():
             pct = round(100 * count / info.messages)
-            print(f'- {topic!r}:\t{count} ({pct}%)')
+            print(f"- {topic!r}:\t{count} ({pct}%)")
     else:
-        print('topics:   None')
+        print("topics:   None")
 
 
 def add_info_args(subparsers) -> None:
-    parser = subparsers.add_parser('info', help='Get info about recorded messages in a file')
+    parser = subparsers.add_parser(
+        "info", help="Get info about recorded messages in a file"
+    )
 
     parser.add_argument(
-        '--input', '-i',
+        "--input",
+        "-i",
         type=Path,
-        help='Input file path. Default: The most recent '
-             'record_*.bag file in the current directory.',
+        help="Input file path. Default: The most recent "
+        "record_*.bag file in the current directory.",
     )
 
 
-def get_info(bag_file_path: Path) -> 'BagInfo':
+def get_info(bag_file_path: Path) -> "BagInfo":
     size = bag_file_path.stat().st_size
     size, size_unit = get_human_readable_size(size)
 
@@ -69,12 +74,12 @@ def get_info(bag_file_path: Path) -> 'BagInfo':
 
 
 def get_human_readable_size(size: int) -> tuple[int, str]:
-    for unit in ['B', 'KB', 'MB']:
+    for unit in ["B", "KB", "MB"]:
         if size < 1024:
             return round(size), unit
         size /= 1024
 
-    return round(size), 'GB'
+    return round(size), "GB"
 
 
 @dataclass

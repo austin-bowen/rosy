@@ -18,14 +18,14 @@ class TopicLoadBalancerTest:
     load_balancer: TopicLoadBalancer
 
     def test_choose_nodes_empty(self):
-        assert self.load_balancer.choose_nodes([], 'any_topic') == []
+        assert self.load_balancer.choose_nodes([], "any_topic") == []
 
 
 class ServiceLoadBalancerTest:
     load_balancer: ServiceLoadBalancer
 
     def test_choose_node_empty(self):
-        assert self.load_balancer.choose_node([], 'any_topic') is None
+        assert self.load_balancer.choose_node([], "any_topic") is None
 
 
 class TestNoopTopicLoadBalancer(TopicLoadBalancerTest):
@@ -35,7 +35,7 @@ class TestNoopTopicLoadBalancer(TopicLoadBalancerTest):
     def test_choose_nodes_returns_all_nodes(self):
         nodes = [mock_node_spec(), mock_node_spec(), mock_node_spec()]
 
-        assert self.load_balancer.choose_nodes(nodes, 'any_topic') is nodes
+        assert self.load_balancer.choose_nodes(nodes, "any_topic") is nodes
 
 
 class TestGroupingTopicLoadBalancer(TopicLoadBalancerTest):
@@ -48,28 +48,30 @@ class TestGroupingTopicLoadBalancer(TopicLoadBalancerTest):
         )
 
     def test_choose_nodes_picks_from_groups(self):
-        self.wrapped_load_balancer.choose_nodes.side_effect = (
-            lambda nodes_, topic_: [nodes_[0]]
-        )
-
-        nodes = [
-            mock_node_spec('a'),
-            mock_node_spec('a'),
-            mock_node_spec('b'),
-            mock_node_spec('b'),
+        self.wrapped_load_balancer.choose_nodes.side_effect = lambda nodes_, topic_: [
+            nodes_[0]
         ]
 
-        result = self.load_balancer.choose_nodes(nodes, 'any_topic')
+        nodes = [
+            mock_node_spec("a"),
+            mock_node_spec("a"),
+            mock_node_spec("b"),
+            mock_node_spec("b"),
+        ]
+
+        result = self.load_balancer.choose_nodes(nodes, "any_topic")
 
         assert result == [
             nodes[0],
             nodes[2],
         ]
 
-        self.wrapped_load_balancer.choose_nodes.assert_has_calls([
-            call(nodes[:2], 'any_topic'),
-            call(nodes[2:], 'any_topic'),
-        ])
+        self.wrapped_load_balancer.choose_nodes.assert_has_calls(
+            [
+                call(nodes[:2], "any_topic"),
+                call(nodes[2:], "any_topic"),
+            ]
+        )
 
 
 class TestRandomLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
@@ -88,14 +90,17 @@ class TestRandomLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
     def test_choose_nodes_returns_random_node(self):
         assert self.load_balancer.choose_nodes(
             self.nodes,
-            'any_topic',
+            "any_topic",
         ) == [self.expected_node]
 
     def test_choose_node_returns_random_node(self):
-        assert self.load_balancer.choose_node(
-            self.nodes,
-            'any_service',
-        ) is self.expected_node
+        assert (
+            self.load_balancer.choose_node(
+                self.nodes,
+                "any_service",
+            )
+            is self.expected_node
+        )
 
 
 class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest):
@@ -103,9 +108,9 @@ class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest
 
     def setup_method(self):
         self.nodes = [
-            mock_node_spec('node0'),
-            mock_node_spec('node1'),
-            mock_node_spec('node2'),
+            mock_node_spec("node0"),
+            mock_node_spec("node1"),
+            mock_node_spec("node2"),
         ]
 
         self.load_balancer = LeastRecentLoadBalancer()
@@ -115,19 +120,19 @@ class TestLeastRecentLoadBalancer(TopicLoadBalancerTest, ServiceLoadBalancerTest
         assert load_balancer.time_func is time.monotonic_ns
 
     def test_choose_methods_pick_least_recent(self):
-        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        nodes = self.load_balancer.choose_nodes(self.nodes, "any_topic")
         assert len(nodes) == 1
         node0 = nodes[0]
 
-        node1 = self.load_balancer.choose_node(self.nodes, 'any_service')
+        node1 = self.load_balancer.choose_node(self.nodes, "any_service")
 
-        nodes = self.load_balancer.choose_nodes(self.nodes, 'any_topic')
+        nodes = self.load_balancer.choose_nodes(self.nodes, "any_topic")
         assert len(nodes) == 1
         node2 = nodes[0]
 
         selected_nodes = {node0, node1, node2}
         assert selected_nodes == set(self.nodes)
 
-        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node0
-        assert self.load_balancer.choose_nodes(self.nodes, 'any_topic') == [node1]
-        assert self.load_balancer.choose_node(self.nodes, 'any_service') == node2
+        assert self.load_balancer.choose_node(self.nodes, "any_service") == node0
+        assert self.load_balancer.choose_nodes(self.nodes, "any_topic") == [node1]
+        assert self.load_balancer.choose_node(self.nodes, "any_service") == node2

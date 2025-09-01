@@ -7,11 +7,11 @@ from rosy.types import Data, Service
 
 class ServiceRequestCodec(Codec[ServiceRequest]):
     def __init__(
-            self,
-            id_codec: Codec[RequestId],
-            service_codec: Codec[Service],
-            args_codec: Codec[Args],
-            kwargs_codec: Codec[KWArgs],
+        self,
+        id_codec: Codec[RequestId],
+        service_codec: Codec[Service],
+        args_codec: Codec[Args],
+        kwargs_codec: Codec[KWArgs],
     ):
         self.id_codec = id_codec
         self.service_codec = service_codec
@@ -34,12 +34,12 @@ class ServiceRequestCodec(Codec[ServiceRequest]):
 
 class ServiceResponseCodec(Codec[ServiceResponse]):
     def __init__(
-            self,
-            id_codec: Codec[RequestId],
-            data_codec: Codec[Data],
-            error_codec: Codec[str],
-            success_status_code: bytes = b'\x00',
-            error_status_code: bytes = b'\xEE',
+        self,
+        id_codec: Codec[RequestId],
+        data_codec: Codec[Data],
+        error_codec: Codec[str],
+        success_status_code: bytes = b"\x00",
+        error_status_code: bytes = b"\xee",
     ):
         self.id_codec = id_codec
         self.data_codec = data_codec
@@ -68,6 +68,6 @@ class ServiceResponseCodec(Codec[ServiceResponse]):
             data = None
             error = await self.error_codec.decode(reader)
         else:
-            raise ValueError(f'Received unknown status code={status_code!r}')
+            raise ValueError(f"Received unknown status code={status_code!r}")
 
         return ServiceResponse(id, data, error)

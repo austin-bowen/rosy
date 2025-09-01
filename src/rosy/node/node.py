@@ -19,22 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 class State(Enum):
-    INITD = 'initialized'
-    STARTED = 'started'
-    STOPPED = 'stopped'
+    INITD = "initialized"
+    STARTED = "started"
+    STOPPED = "stopped"
 
 
 class Node:
     def __init__(
-            self,
-            id: NodeId,
-            discovery: NodeDiscovery,
-            servers_manager: ServersManager,
-            topology_manager: MeshTopologyManager,
-            topic_sender: TopicSender,
-            topic_listener_manager: TopicListenerManager,
-            service_caller: ServiceCaller,
-            service_handler_manager: ServiceHandlerManager,
+        self,
+        id: NodeId,
+        discovery: NodeDiscovery,
+        servers_manager: ServersManager,
+        topology_manager: MeshTopologyManager,
+        topic_sender: TopicSender,
+        topic_listener_manager: TopicListenerManager,
+        service_caller: ServiceCaller,
+        service_handler_manager: ServiceHandlerManager,
     ):
         """
         This is a node on the mesh. It is responsible for sending and receiving
@@ -62,7 +62,7 @@ class Node:
     def __str__(self) -> str:
         return str(self.id)
 
-    async def __aenter__(self) -> 'Node':
+    async def __aenter__(self) -> "Node":
         if self._state is State.INITD:
             await self.start()
 
@@ -78,10 +78,10 @@ class Node:
         """
 
         if self._state is not State.INITD:
-            raise RuntimeError('Node was already started.')
+            raise RuntimeError("Node was already started.")
 
         self._state = State.STARTED
-        logger.info(f'Starting node {self.id}')
+        logger.info(f"Starting node {self.id}")
 
         await self.discovery.start()
         await self.servers_manager.start_servers()
@@ -89,11 +89,13 @@ class Node:
 
     async def stop(self) -> None:
         if self._state is State.STOPPED:
-            logger.warning(f'Attempted to stop node {self.id}, but it is already stopped.')
+            logger.warning(
+                f"Attempted to stop node {self.id}, but it is already stopped."
+            )
             return
 
         self._state = State.STOPPED
-        logger.info(f'Stopping node {self.id}')
+        logger.info(f"Stopping node {self.id}")
 
         try:
             await self.discovery.stop()
@@ -106,9 +108,9 @@ class Node:
         await noop()  # Give the event loop a chance to process the send
 
     async def listen(
-            self,
-            topic: Topic,
-            callback: TopicCallback,
+        self,
+        topic: Topic,
+        callback: TopicCallback,
     ) -> None:
         """Start listening to a topic with a callback function."""
         self.topic_listener_manager.set_callback(topic, callback)
@@ -122,14 +124,16 @@ class Node:
         if callback is not None:
             await self.register()
         else:
-            logger.warning(f"Attempted to remove non-existing listener for topic={topic!r}")
+            logger.warning(
+                f"Attempted to remove non-existing listener for topic={topic!r}"
+            )
 
     async def topic_has_listeners(self, topic: Topic) -> bool:
         """Check if there are any listeners for a topic."""
         listeners = self.topology_manager.get_nodes_listening_to_topic(topic)
         return bool(listeners)
 
-    async def wait_for_listener(self, topic: Topic, poll_interval: float = 1.) -> None:
+    async def wait_for_listener(self, topic: Topic, poll_interval: float = 1.0) -> None:
         """
         Wait until there is a listener for a topic.
 
@@ -143,7 +147,7 @@ class Node:
         while not await self.topic_has_listeners(topic):
             await asyncio.sleep(poll_interval)
 
-    def depends_on_listener(self, downstream_topic: Topic, poll_interval: float = 1.):
+    def depends_on_listener(self, downstream_topic: Topic, poll_interval: float = 1.0):
         """
         Decorator for callback functions that send messages to a downstream
         topic. If there is no listener for the downstream topic, then the node
@@ -184,7 +188,7 @@ class Node:
 
         return decorator
 
-    def get_topic(self, topic: Topic) -> 'TopicProxy':
+    def get_topic(self, topic: Topic) -> "TopicProxy":
         """
         Returns a topic proxy that can be used to interact with a topic (e.g.
         send messages) without needing to pass the topic name each time.
@@ -220,12 +224,14 @@ class Node:
         providers = self.topology_manager.get_nodes_providing_service(service)
         return bool(providers)
 
-    async def wait_for_service_provider(self, service: Service, poll_interval: float = 1.) -> None:
+    async def wait_for_service_provider(
+        self, service: Service, poll_interval: float = 1.0
+    ) -> None:
         """Wait until there is a provider for a service."""
         while not await self.service_has_providers(service):
             await asyncio.sleep(poll_interval)
 
-    def get_service(self, service: Service) -> 'ServiceProxy':
+    def get_service(self, service: Service) -> "ServiceProxy":
         """
         Returns a convenient way to call a service if used more than once.
 
@@ -248,8 +254,8 @@ class Node:
         """
 
         node_spec = self._build_node_spec()
-        logger.info('Registering node with mesh')
-        logger.debug(f'node_spec={node_spec}')
+        logger.info("Registering node with mesh")
+        logger.debug(f"node_spec={node_spec}")
 
         if first_time:
             await self.discovery.register_node(node_spec)
@@ -278,7 +284,7 @@ class TopicProxy(NamedTuple):
 
     def __str__(self):
         name = self.__class__.__name__
-        return f'{name}(topic={self.topic!r})'
+        return f"{name}(topic={self.topic!r})"
 
     async def send(self, *args: Data, **kwargs: Data) -> None:
         await self.node.send(self.topic, *args, **kwargs)
@@ -286,10 +292,10 @@ class TopicProxy(NamedTuple):
     async def has_listeners(self) -> bool:
         return await self.node.topic_has_listeners(self.topic)
 
-    async def wait_for_listener(self, poll_interval: float = 1.) -> None:
+    async def wait_for_listener(self, poll_interval: float = 1.0) -> None:
         await self.node.wait_for_listener(self.topic, poll_interval)
 
-    def depends_on_listener(self, poll_interval: float = 1.):
+    def depends_on_listener(self, poll_interval: float = 1.0):
         return self.node.depends_on_listener(self.topic, poll_interval)
 
 
@@ -299,7 +305,7 @@ class ServiceProxy(NamedTuple):
 
     def __str__(self) -> str:
         name = self.__class__.__name__
-        return f'{name}(service={self.service!r})'
+        return f"{name}(service={self.service!r})"
 
     async def __call__(self, *args: Data, **kwargs: Data) -> Data:
         return await self.call(*args, **kwargs)
@@ -310,5 +316,5 @@ class ServiceProxy(NamedTuple):
     async def has_providers(self) -> bool:
         return await self.node.service_has_providers(self.service)
 
-    async def wait_for_provider(self, poll_interval: float = 1.) -> None:
+    async def wait_for_provider(self, poll_interval: float = 1.0) -> None:
         await self.node.wait_for_service_provider(self.service, poll_interval)

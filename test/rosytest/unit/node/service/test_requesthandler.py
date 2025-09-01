@@ -23,25 +23,25 @@ class TestServiceRequestHandler:
 
     @pytest.mark.asyncio
     async def test_handle_request_sends_result_on_success(self):
-        handler = AsyncMock(return_value='result')
+        handler = AsyncMock(return_value="result")
         self.service_handler_manager.get_callback.return_value = handler
 
         request = ServiceRequest(
             id=0,
-            service='service',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            service="service",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         assert await self.handler.handle_request(request, self.writer) is None
 
-        expected_response = ServiceResponse(id=0, result='result', error=None)
+        expected_response = ServiceResponse(id=0, result="result", error=None)
 
-        self.service_handler_manager.get_callback.assert_called_once_with('service')
+        self.service_handler_manager.get_callback.assert_called_once_with("service")
         handler.assert_awaited_once_with(
-            'service',
-            'arg',
-            key='value',
+            "service",
+            "arg",
+            key="value",
         )
         self.node_message_codec.encode_service_response.assert_awaited_once_with(
             self.writer,
@@ -50,14 +50,14 @@ class TestServiceRequestHandler:
 
     @pytest.mark.asyncio
     async def test_handle_request_sends_error_if_exception_occurs_in_handler(self):
-        handler = AsyncMock(side_effect=ValueError('error occurred'))
+        handler = AsyncMock(side_effect=ValueError("error occurred"))
         self.service_handler_manager.get_callback.return_value = handler
 
         request = ServiceRequest(
             id=0,
-            service='service',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            service="service",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         assert await self.handler.handle_request(request, self.writer) is None
@@ -68,11 +68,11 @@ class TestServiceRequestHandler:
             error="ValueError('error occurred')",
         )
 
-        self.service_handler_manager.get_callback.assert_called_once_with('service')
+        self.service_handler_manager.get_callback.assert_called_once_with("service")
         handler.assert_awaited_once_with(
-            'service',
-            'arg',
-            key='value',
+            "service",
+            "arg",
+            key="value",
         )
         self.node_message_codec.encode_service_response.assert_awaited_once_with(
             self.writer,
@@ -85,9 +85,9 @@ class TestServiceRequestHandler:
 
         request = ServiceRequest(
             id=0,
-            service='unknown_service',
-            args=['arg'],
-            kwargs={'key': 'value'},
+            service="unknown_service",
+            args=["arg"],
+            kwargs={"key": "value"},
         )
 
         assert await self.handler.handle_request(request, self.writer) is None
@@ -98,7 +98,9 @@ class TestServiceRequestHandler:
             error="service='unknown_service' is not provided by this node",
         )
 
-        self.service_handler_manager.get_callback.assert_called_once_with('unknown_service')
+        self.service_handler_manager.get_callback.assert_called_once_with(
+            "unknown_service"
+        )
         self.node_message_codec.encode_service_response.assert_awaited_once_with(
             self.writer,
             expected_response,
