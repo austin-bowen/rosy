@@ -33,12 +33,12 @@ async def _record_main(args: Namespace, node: Node) -> None:
             if not args.no_dots:
                 print(".", end="", flush=True)
 
-        for topic in args.topics:
-            await node.listen(topic, callback)
-
         print(f'Recording topics to "{bag_file_path}":')
         for topic in args.topics:
-            print(f"- {topic}")
+            print(f"- {topic!r}")
+
+        for topic in args.topics:
+            await node.listen(topic, callback)
 
         try:
             await node.forever()

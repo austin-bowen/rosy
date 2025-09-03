@@ -11,9 +11,9 @@ async def bag_main(args: Namespace):
     elif args.bag_command == "play":
         await play(args)
     elif args.bag_command == "info":
-        await display_info(args)
+        display_info(args)
     else:
-        raise ValueError(f"Unknown command: {args.bag_command}")
+        raise ValueError(f"Unknown command: {args.bag_command}")  # pragma: no cover
 
 
 def add_bag_command(subparsers) -> None:

@@ -3,24 +3,27 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from textwrap import dedent
 
 from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 
 
-async def display_info(args: Namespace) -> None:
+def display_info(args: Namespace) -> None:
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
     info = get_info(bag_file_path)
 
     print(
-        f"""
-path:     {info.path}
-duration: {info.duration}
-start:    {info.start}
-end:      {info.end}
-size:     {info.size} {info.size_unit}
-messages: {info.messages}
-""".strip()
+        dedent(
+            f"""
+            path:     {info.path}
+            duration: {info.duration}
+            start:    {info.start}
+            end:      {info.end}
+            size:     {info.size} {info.size_unit}
+            messages: {info.messages}
+            """
+        ).strip()
     )
 
     if info.topics:
@@ -29,7 +32,7 @@ messages: {info.messages}
             pct = round(100 * count / info.messages)
             print(f"- {topic!r}:\t{count} ({pct}%)")
     else:
-        print("topics:   None")
+        print("topics:   none")
 
 
 def add_info_args(subparsers) -> None:
