@@ -144,16 +144,16 @@ Tool for recording and playing back messages. The options are:
 
 Performs a speed test sending and receiving topic messages.
 
-Some results:
+Some results sending messages between two nodes on the same machine:
 
 | Hardware    | Message size | Messages/s | Latency (ms) | Bandwidth (MB/s) |
 |-------------|--------------|------------|--------------|------------------|
-| Laptop*     | 0            | 116000     | 0.023        | N/A              |
-| Laptop*     | 1 kB         | 115000     | 0.028        | 115              |
-| Laptop*     | 1 MB         | 1300       | 1.2          | 1300             |
-| Orin Nano** | 0            | 29000      | 0.13         | N/A              |
-| Orin Nano** | 1 kB         | 28000      | 0.15         | 28               |
-| Orin Nano** | 1 MB         | 363        | 3.6          | 363              |
+| Laptop*     | 0            | 52000      | 0.026        | N/A              |
+| Laptop*     | 1 kB         | 50000      | 0.027        | 50               |
+| Laptop*     | 1 MB         | 580        | 1.0          | 580              |
+| Orin Nano** | 0            | 13000      | 0.11         | N/A              |
+| Orin Nano** | 1 kB         | 13000      | 0.11         | 13               |
+| Orin Nano** | 1 MB         | 250        | 3.2          | 250              |
 
 \* Dell XPS 17 9730 with an Intel Core i9-13900H CPU and 64 GB DDR5 RAM running Ubuntu 24.04 and Python 3.10.\
 \** [NVIDIA Jetson Orin Nano](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
