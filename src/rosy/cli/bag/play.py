@@ -1,8 +1,8 @@
-import asyncio
 import logging
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 
 from rosy import AsyncNode, build_node_from_args
 from rosy.argparse import add_node_name_arg
@@ -11,14 +11,14 @@ from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 from rosy.utils import require
 
 
-async def play(args: Namespace) -> None:
+def play(args: Namespace) -> None:
     logging.basicConfig(level=args.log)
 
-    async with await build_node_from_args(args=args) as node:
-        await _play_main(args, node)
+    with build_node_from_args(args=args) as node:
+        _play_main(args, node)
 
 
-async def _play_main(args: Namespace, node: AsyncNode) -> None:
+def _play_main(args: Namespace, node: AsyncNode) -> None:
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
     print(f'Playing back messages from "{bag_file_path}"...')
@@ -30,14 +30,14 @@ async def _play_main(args: Namespace, node: AsyncNode) -> None:
         if not first_instant:
             first_instant = instant
         elif not args.immediate:
-            await _wait_for_next_send(
+            _wait_for_next_send(
                 first_instant,
                 first_sent_instant,
                 instant,
                 args.rate,
             )
 
-        await node.send(topic, *args_, **kwargs_)
+        node.send(topic, *args_, **kwargs_)
 
         if not args.no_log:
             print(f"[{instant}] topic={topic!r}")
@@ -87,7 +87,7 @@ def add_play_args(subparsers) -> None:
     add_node_name_arg(parser, default="rosy bag play")
 
 
-async def _wait_for_next_send(
+def _wait_for_next_send(
     first_instant: datetime,
     first_sent_instant: datetime,
     instant: datetime,
@@ -100,4 +100,4 @@ async def _wait_for_next_send(
     now = datetime.now()
     wait_time = (send_instant - now).total_seconds()
 
-    await asyncio.sleep(wait_time)
+    sleep(wait_time)

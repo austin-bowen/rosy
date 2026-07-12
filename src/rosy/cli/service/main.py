@@ -8,7 +8,7 @@ async def service_main(args: Namespace) -> None:
     if args.service_command == "list":
         await list_main(args)
     elif args.service_command == "call":
-        await call_main(args)
+        call_main(args)
     else:
         raise ValueError(f"Unknown service command: {args.service_command}")
 

@@ -78,9 +78,9 @@ class TestRosyBag:
             echo_proc.expect_exact("Listening to topics: ['bag-test']\n")
 
             with rosy_cli("bag", "play", "--input", bag_file) as bag_proc:
-                bag_proc.expect('Playing back messages from ".*"\.\.\.\n')
-                bag_proc.expect(r"\[.*\] topic='bag-test'\n")
-                bag_proc.expect(r"\[.*\] topic='bag-test'\n")
+                bag_proc.expect(r'Playing back messages from ".*"\.\.\.\n')
+                bag_proc.expect(r"\[.*\] topic='bag-test'\n\n")
+                bag_proc.expect(r"\[.*\] topic='bag-test'\n\n")
                 bag_proc.expect_exact(EOF)
 
             echo_proc.expect_exact("topic='bag-test'\n")

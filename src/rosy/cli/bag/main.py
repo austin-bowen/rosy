@@ -9,7 +9,7 @@ async def bag_main(args: Namespace):
     if args.bag_command == "record":
         record(args)
     elif args.bag_command == "play":
-        await play(args)
+        play(args)
     elif args.bag_command == "info":
         display_info(args)
     else:

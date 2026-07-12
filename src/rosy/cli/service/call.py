@@ -1,8 +1,8 @@
 import argparse
-import asyncio
 import logging
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
+from time import sleep
 
 from rosy import AsyncNode, build_node_from_args
 from rosy.argparse import add_node_name_arg
@@ -10,23 +10,23 @@ from rosy.cli.topic.send import parse_args_and_kwargs
 from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 
 
-async def call_main(args: Namespace):
+def call_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
     # Sanity check
     parse_args_and_kwargs(args.args)
 
-    async with await build_node_from_args(args=args) as node:
-        await _call_main(args, node)
+    with build_node_from_args(args=args) as node:
+        _call_main(args, node)
 
 
-async def _call_main(args: Namespace, node: AsyncNode) -> None:
+def _call_main(args: Namespace, node: AsyncNode) -> None:
     service = node.get_service(args.service)
 
-    async def call_once():
-        if not args.no_wait and not await service.has_providers():
+    def call_once():
+        if not args.no_wait and not service.has_providers():
             print(f"Waiting for providers...")
-            await service.wait_for_provider()
+            service.wait_for_provider()
 
         service_args, service_kwargs = parse_args_and_kwargs(args.args)
 
@@ -35,17 +35,17 @@ async def _call_main(args: Namespace, node: AsyncNode) -> None:
         print(f"Calling service={args.service!r}")
         print_args_and_kwargs(service_args, service_kwargs)
 
-        response = await service.call(*service_args, **service_kwargs)
+        response = service.call(*service_args, **service_kwargs)
         print(f"Response: {response!r}")
         print()
 
     if args.interval < 0:
-        await call_once()
+        call_once()
         return
 
     while True:
-        await call_once()
-        await asyncio.sleep(args.interval)
+        call_once()
+        sleep(args.interval)
 
 
 def add_call_command(subparsers) -> None:
