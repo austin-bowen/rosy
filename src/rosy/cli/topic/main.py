@@ -9,9 +9,9 @@ async def topic_main(args: Namespace) -> None:
     if args.topic_command == "list":
         await list_main(args)
     elif args.topic_command == "echo":
-        await echo_main(args)
+        echo_main(args)
     elif args.topic_command == "send":
-        await send_main(args)
+        send_main(args)
     else:
         raise ValueError(f"Unknown topic command: {args.topic_command}")
 

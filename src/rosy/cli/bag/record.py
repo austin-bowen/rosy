@@ -1,29 +1,28 @@
-import asyncio
 import logging
 import pickle
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
-from rosy import AsyncNode, build_node_from_args
+from rosy import Node, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.utils import add_log_arg
 
 
-async def record(args: Namespace) -> None:
+def record(args: Namespace) -> None:
     logging.basicConfig(level=args.log)
 
-    async with await build_node_from_args(args=args) as node:
-        await _record_main(args, node)
+    with build_node_from_args(args=args) as node:
+        _record_main(args, node)
 
 
-def _record_main(args: Namespace, node: AsyncNode) -> None:
+def _record_main(args: Namespace, node: Node) -> None:
     bag_file_path = args.output or get_bag_file_path()
 
     with open(bag_file_path, "wb") as bag_file:
         message_counter = 0
 
-        async def callback(topic, *args_, **kwargs_) -> None:
+        def callback(topic, *args_, **kwargs_) -> None:
             nonlocal message_counter
 
             now = datetime.now()
@@ -38,11 +37,11 @@ def _record_main(args: Namespace, node: AsyncNode) -> None:
             print(f"- {topic!r}")
 
         for topic in args.topics:
-            await node.listen(topic, callback)
+            node.listen(topic, callback)
 
         try:
-            await node.forever()
-        except asyncio.CancelledError:
+            node.forever()
+        except KeyboardInterrupt:
             print("\nRecording stopped.")
 
     if message_counter == 0:

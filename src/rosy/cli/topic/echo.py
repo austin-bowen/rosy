@@ -8,19 +8,19 @@ from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 from rosy.types import Topic
 
 
-async def echo_main(args: Namespace):
+def echo_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
-    async with await build_node_from_args(args=args) as node:
+    with build_node_from_args(args=args) as node:
         print(f"Listening to topics: {args.topics}")
 
         for topic in args.topics:
-            await node.listen(topic, handle_message)
+            node.listen(topic, handle_message)
 
-        await node.forever()
+        node.forever()
 
 
-async def handle_message(topic: Topic, *args, **kwargs):
+def handle_message(topic: Topic, *args, **kwargs):
     now = datetime.now()
     print(f"\n[{now}]")
 

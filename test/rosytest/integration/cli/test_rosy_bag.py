@@ -59,7 +59,7 @@ class TestRosyBag:
                 send_proc1.wait()
                 send_proc2.wait()
 
-            bag_proc.expect("\.\.")
+            bag_proc.expect(r"\.\.")
 
     def test_info(self, bag_file: str) -> None:
         with rosy_cli("bag", "info", "--input", bag_file) as bag_proc:

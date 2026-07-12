@@ -1,5 +1,4 @@
 import argparse
-import asyncio
 import importlib
 import logging
 import re
@@ -7,30 +6,31 @@ from argparse import ArgumentParser, Namespace
 from ast import literal_eval
 from collections.abc import Iterable
 from datetime import datetime
+from time import sleep
 from typing import Any
 
-from rosy import AsyncNode, build_node_from_args
+from rosy import Node, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 
 
-async def send_main(args: Namespace):
+def send_main(args: Namespace):
     logging.basicConfig(level=args.log)
 
     # Sanity check
     parse_args_and_kwargs(args.args)
 
-    async with await build_node_from_args(args=args) as node:
-        await _send_main(args, node)
+    with build_node_from_args(args=args) as node:
+        _send_main(args, node)
 
 
-async def _send_main(args: Namespace, node: AsyncNode) -> None:
+def _send_main(args: Namespace, node: Node) -> None:
     topic = node.get_topic(args.topic)
 
-    async def send_once():
-        if not args.no_wait and not await topic.has_listeners():
+    def send_once():
+        if not args.no_wait and not topic.has_listeners():
             print("Waiting for listeners...")
-            await topic.wait_for_listener()
+            topic.wait_for_listener()
             print()
 
         topic_args, topic_kwargs = parse_args_and_kwargs(args.args)
@@ -40,14 +40,14 @@ async def _send_main(args: Namespace, node: AsyncNode) -> None:
         print(f"Sending to topic={args.topic!r}")
         print_args_and_kwargs(topic_args, topic_kwargs)
 
-        await topic.send(*topic_args, **topic_kwargs)
+        topic.send(*topic_args, **topic_kwargs)
 
-    await send_once()
+    send_once()
 
     while args.interval >= 0:
-        await asyncio.sleep(args.interval)
+        sleep(args.interval)
         print()
-        await send_once()
+        send_once()
 
 
 def parse_args_and_kwargs(args: Iterable[str]) -> tuple[list[Any], dict[str, Any]]:

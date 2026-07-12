@@ -5,7 +5,7 @@ import pytest
 
 from rosy.discovery.base import NodeDiscovery
 from rosy.node.callbackmanager import CallbackManager
-from rosy.node.node import AsyncNode, ServiceProxy, TopicProxy
+from rosy.node.node import AsyncNode, AsyncServiceProxy, AsyncTopicProxy
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.topic.sender import TopicSender
@@ -134,7 +134,7 @@ class TestNode:
     def test_get_topic(self):
         topic = self.node.get_topic("topic")
 
-        assert isinstance(topic, TopicProxy)
+        assert isinstance(topic, AsyncTopicProxy)
         assert topic.node is self.node
         assert topic.topic == "topic"
 
@@ -212,7 +212,7 @@ class TestNode:
     def test_get_service(self):
         service = self.node.get_service("service")
 
-        assert isinstance(service, ServiceProxy)
+        assert isinstance(service, AsyncServiceProxy)
         assert service.node is self.node
         assert service.service == "service"
 
@@ -242,7 +242,7 @@ class TestNode:
 class TestTopicProxy:
     def setup_method(self):
         self.node = create_autospec(AsyncNode)
-        self.topic = TopicProxy(self.node, "topic")
+        self.topic = AsyncTopicProxy(self.node, "topic")
 
     def test_str(self):
         assert str(self.topic) == "TopicProxy(topic='topic')"
@@ -287,7 +287,7 @@ class TestTopicProxy:
 class TestServiceProxy:
     def setup_method(self):
         self.node = create_autospec(AsyncNode)
-        self.service = ServiceProxy(self.node, "service")
+        self.service = AsyncServiceProxy(self.node, "service")
 
     def test_str(self):
         assert str(self.service) == "ServiceProxy(service='service')"

@@ -189,7 +189,7 @@ class AsyncNode:
 
         return decorator
 
-    def get_topic(self, topic: Topic) -> "TopicProxy":
+    def get_topic(self, topic: Topic) -> "AsyncTopicProxy":
         """
         Returns a topic proxy that can be used to interact with a topic (e.g.
         send messages) without needing to pass the topic name each time.
@@ -200,7 +200,7 @@ class AsyncNode:
             >>> # ... is equivalent to ...
             >>> await node.send('my_topic', 'Hello, world!')
         """
-        return TopicProxy(self, topic)
+        return AsyncTopicProxy(self, topic)
 
     async def call(self, service: Service, *args, **kwargs) -> Data:
         """Call a service and return the result."""
@@ -232,7 +232,7 @@ class AsyncNode:
         while not await self.service_has_providers(service):
             await asyncio.sleep(poll_interval)
 
-    def get_service(self, service: Service) -> "ServiceProxy":
+    def get_service(self, service: Service) -> "AsyncServiceProxy":
         """
         Returns a convenient way to call a service if used more than once.
 
@@ -243,7 +243,7 @@ class AsyncNode:
             >>> result = await node.call('math', '2 + 2')
         """
 
-        return ServiceProxy(self, service)
+        return AsyncServiceProxy(self, service)
 
     async def register(self, first_time: bool = False) -> None:
         """
@@ -280,6 +280,27 @@ class AsyncNode:
 
 
 class TopicProxy(NamedTuple):
+    node: "Node"
+    topic: Topic
+
+    def __str__(self):
+        name = self.__class__.__name__
+        return f"{name}(topic={self.topic!r})"
+
+    def send(self, *args: Data, **kwargs: Data) -> None:
+        self.node.send(self.topic, *args, **kwargs)
+
+    def has_listeners(self) -> bool:
+        return self.node.topic_has_listeners(self.topic)
+
+    def wait_for_listener(self, poll_interval: float = 1.0) -> None:
+        self.node.wait_for_listener(self.topic, poll_interval)
+
+    def depends_on_listener(self, poll_interval: float = 1.0):
+        return self.node.depends_on_listener(self.topic, poll_interval)
+
+
+class AsyncTopicProxy(NamedTuple):
     node: AsyncNode
     topic: Topic
 
@@ -301,6 +322,27 @@ class TopicProxy(NamedTuple):
 
 
 class ServiceProxy(NamedTuple):
+    node: "Node"
+    service: Service
+
+    def __str__(self) -> str:
+        name = self.__class__.__name__
+        return f"{name}(service={self.service!r})"
+
+    def __call__(self, *args: Data, **kwargs: Data) -> Data:
+        return self.call(*args, **kwargs)
+
+    def call(self, *args: Data, **kwargs: Data) -> Data:
+        return self.node.call(self.service, *args, **kwargs)
+
+    def has_providers(self) -> bool:
+        return self.node.service_has_providers(self.service)
+
+    def wait_for_provider(self, poll_interval: float = 1.0) -> None:
+        self.node.wait_for_service_provider(self.service, poll_interval)
+
+
+class AsyncServiceProxy(NamedTuple):
     node: AsyncNode
     service: Service
 
@@ -385,7 +427,7 @@ class Node:
 
     @wraps(AsyncNode.get_topic)
     def get_topic(self, topic: Topic) -> "TopicProxy":
-        raise NotImplementedError()
+        return TopicProxy(self, topic)
 
     @wraps(AsyncNode.call)
     def call(self, service: Service, *args, **kwargs) -> Data:
@@ -413,7 +455,7 @@ class Node:
 
     @wraps(AsyncNode.get_service)
     def get_service(self, service: Service) -> "ServiceProxy":
-        raise NotImplementedError()
+        return ServiceProxy(self, service)
 
     @wraps(AsyncNode.register)
     def register(self, first_time: bool = False) -> None:
