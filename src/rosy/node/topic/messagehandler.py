@@ -38,6 +38,7 @@ class TopicMessageHandler:
             )
 
         try:
+            # TODO what if we want to use async callbacks???
             callback(message.topic, *message.args, **message.kwargs)
         except ALLOWED_EXCEPTIONS:
             raise

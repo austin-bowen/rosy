@@ -35,7 +35,8 @@ class ServiceRequestHandler:
             error = f"service={request.service!r} is not provided by this node"
         else:
             try:
-                result = await handler(request.service, *request.args, **request.kwargs)
+                # TODO what if we want to use async handlers???
+                result = handler(request.service, *request.args, **request.kwargs)
             except Exception as e:
                 logger.exception(
                     f"Error handling service request={request}",
