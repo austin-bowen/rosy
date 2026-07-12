@@ -3,7 +3,7 @@ import logging
 import time
 from argparse import ArgumentParser, Namespace
 
-from rosy import Node, build_node
+from rosy import AsyncNode, build_node
 from rosy.types import Topic
 
 
@@ -48,7 +48,7 @@ async def speedtest_main(args: Namespace) -> None:
 
 
 class SpeedTest:
-    def __init__(self, node: Node):
+    def __init__(self, node: AsyncNode):
         self.node = node
 
     async def measure_mps(

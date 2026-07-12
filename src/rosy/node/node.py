@@ -4,7 +4,7 @@ from enum import Enum
 from functools import wraps
 from typing import NamedTuple
 
-from rosy.asyncio import forever, noop
+from rosy.asyncio import LoopRunner, forever, noop
 from rosy.discovery.base import NodeDiscovery
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
@@ -24,9 +24,10 @@ class State(Enum):
     STOPPED = "stopped"
 
 
-class Node:
+class AsyncNode:
     def __init__(
         self,
+        *,
         id: NodeId,
         discovery: NodeDiscovery,
         servers_manager: ServersManager,
@@ -62,7 +63,7 @@ class Node:
     def __str__(self) -> str:
         return str(self.id)
 
-    async def __aenter__(self) -> "Node":
+    async def __aenter__(self) -> "AsyncNode":
         if self._state is State.INITD:
             await self.start()
 
@@ -279,7 +280,7 @@ class Node:
 
 
 class TopicProxy(NamedTuple):
-    node: Node
+    node: AsyncNode
     topic: Topic
 
     def __str__(self):
@@ -300,7 +301,7 @@ class TopicProxy(NamedTuple):
 
 
 class ServiceProxy(NamedTuple):
-    node: Node
+    node: AsyncNode
     service: Service
 
     def __str__(self) -> str:
@@ -318,3 +319,111 @@ class ServiceProxy(NamedTuple):
 
     async def wait_for_provider(self, poll_interval: float = 1.0) -> None:
         await self.node.wait_for_service_provider(self.service, poll_interval)
+
+
+class Node:
+    def __init__(self, async_node: AsyncNode, loop_runner: LoopRunner):
+        self.async_node = async_node
+        self.loop_runner = loop_runner
+
+    @property
+    def _state(self) -> State:
+        return self.async_node._state
+
+    @property
+    def id(self) -> NodeId:
+        return self.async_node.id
+
+    def __str__(self) -> str:
+        return str(self.id)
+
+    def __enter__(self) -> "Node":
+        if self._state is State.INITD:
+            self.start()
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._state is State.STARTED:
+            self.stop()
+
+    def start(self) -> None:
+        self.loop_runner.start()
+        self._call_async(self.async_node.start())
+
+    def stop(self) -> None:
+        self._call_async(self.async_node.stop())
+        self.loop_runner.stop()
+
+    @wraps(AsyncNode.send)
+    def send(self, topic: Topic, *args: Data, **kwargs: Data) -> None:
+        self._call_async(self.async_node.send(topic, *args, **kwargs))
+
+    @wraps(AsyncNode.listen)
+    def listen(
+        self,
+        topic: Topic,
+        callback: TopicCallback,
+    ) -> None:
+        self._call_async(self.async_node.listen(topic, callback))
+
+    @wraps(AsyncNode.stop_listening)
+    def stop_listening(self, topic: Topic) -> None:
+        self._call_async(self.async_node.stop_listening(topic))
+
+    @wraps(AsyncNode.topic_has_listeners)
+    def topic_has_listeners(self, topic: Topic) -> bool:
+        return self._call_async(self.async_node.topic_has_listeners(topic))
+
+    @wraps(AsyncNode.wait_for_listener)
+    def wait_for_listener(self, topic: Topic, poll_interval: float = 1.0) -> None:
+        self._call_async(self.async_node.wait_for_listener(topic, poll_interval))
+
+    @wraps(AsyncNode.depends_on_listener)
+    def depends_on_listener(self, downstream_topic: Topic, poll_interval: float = 1.0):
+        raise NotImplementedError()
+
+    @wraps(AsyncNode.get_topic)
+    def get_topic(self, topic: Topic) -> "TopicProxy":
+        raise NotImplementedError()
+
+    @wraps(AsyncNode.call)
+    def call(self, service: Service, *args, **kwargs) -> Data:
+        return self._call_async(self.async_node.call(service, *args, **kwargs))
+
+    @wraps(AsyncNode.add_service)
+    def add_service(self, service: Service, handler: ServiceCallback) -> None:
+        self._call_async(self.async_node.add_service(service, handler))
+
+    @wraps(AsyncNode.remove_service)
+    def remove_service(self, service: Service) -> None:
+        self._call_async(self.async_node.remove_service(service))
+
+    @wraps(AsyncNode.service_has_providers)
+    def service_has_providers(self, service: Service) -> bool:
+        return self._call_async(self.async_node.service_has_providers(service))
+
+    @wraps(AsyncNode.wait_for_service_provider)
+    def wait_for_service_provider(
+        self, service: Service, poll_interval: float = 1.0
+    ) -> None:
+        self._call_async(
+            self.async_node.wait_for_service_provider(service, poll_interval)
+        )
+
+    @wraps(AsyncNode.get_service)
+    def get_service(self, service: Service) -> "ServiceProxy":
+        raise NotImplementedError()
+
+    @wraps(AsyncNode.register)
+    def register(self, first_time: bool = False) -> None:
+        self._call_async(self.async_node.register(first_time))
+
+    @wraps(AsyncNode.forever)
+    def forever(self) -> None:
+        self._call_async(self.async_node.forever())
+
+    def _call_async(self, coro, timeout: float | None = None):
+        loop = self.loop_runner.loop
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result(timeout)

@@ -32,7 +32,7 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
     ) -> None:
         self._service_type = build_service_type(domain_id)
         self.topology_changed_callback = topology_changed_callback
-        self._zc = zc or Zeroconf()
+        self._zc = zc
         self._node_spec_codec = node_spec_codec or GzipPickleNodeSpecCodec()
         self._ttl = ttl
         self._rng = rng or Random()
@@ -50,6 +50,8 @@ class ZeroconfNodeDiscovery(NodeDiscovery):
         return MeshTopologySpec(nodes)
 
     async def start(self) -> None:
+        self._zc = self._zc or Zeroconf()
+
         self._topology_changed_caller_task = asyncio.create_task(
             self._monitor_for_topology_changes()
         )

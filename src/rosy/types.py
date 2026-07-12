@@ -4,14 +4,18 @@ from typing import Any, Awaitable, Callable, Protocol
 Data = Any
 
 Topic = str
-TopicCallback = (
-    Callable[[Topic], Awaitable[None]] | Callable[[Topic, ...], Awaitable[None]]
-)
+
+
+class TopicCallback(Protocol):
+    def __call__(self, topic: Topic, *args, **kwargs) -> None: ...
+
 
 Service = str
-ServiceCallback = (
-    Callable[[Service], Awaitable[Data]] | Callable[[Service, ...], Awaitable[Data]]
-)
+
+
+class ServiceCallback(Protocol):
+    def __call__(self, service: Service, *args, **kwargs) -> Data: ...
+
 
 Host = str
 ServerHost = Host | Sequence[Host] | None

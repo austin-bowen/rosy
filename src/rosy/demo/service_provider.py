@@ -8,10 +8,10 @@ from rosy.types import Service
 async def main():
     logging.basicConfig(level="WARNING")
 
-    async with await build_node("service_provider") as node:
-        await node.add_service("multiply", multiply)
+    with build_node("service_provider") as node:
+        node.add_service("multiply", multiply)
         print("Started service...")
-        await node.forever()
+        node.forever()
 
 
 async def multiply(service: Service, a: int, b: int) -> int:

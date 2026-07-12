@@ -1,4 +1,6 @@
 import logging
+import queue
+import threading
 
 from rosy.node.topic.listenermanager import TopicListenerManager
 from rosy.node.topic.types import TopicMessage
@@ -14,7 +16,19 @@ class TopicMessageHandler:
     ):
         self.listener_manager = listener_manager
 
+        self._queue = queue.SimpleQueue()
+        self._thread = threading.Thread(target=self._handle_messages, daemon=True)
+        self._thread.start()
+
     async def handle_message(self, message: TopicMessage) -> None:
+        self._queue.put(message)
+
+    def _handle_messages(self) -> None:
+        while True:
+            message = self._queue.get()
+            self._handle_message(message)
+
+    def _handle_message(self, message: TopicMessage) -> None:
         callback = self.listener_manager.get_callback(message.topic)
 
         if not callback:
@@ -24,7 +38,7 @@ class TopicMessageHandler:
             )
 
         try:
-            await callback(message.topic, *message.args, **message.kwargs)
+            callback(message.topic, *message.args, **message.kwargs)
         except ALLOWED_EXCEPTIONS:
             raise
         except Exception as e:

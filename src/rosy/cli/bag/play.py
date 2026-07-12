@@ -4,7 +4,7 @@ from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 
-from rosy import Node, build_node_from_args
+from rosy import AsyncNode, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.bag.file import get_bag_file_messages, get_most_recent_bag_file_path
 from rosy.cli.utils import add_log_arg, print_args_and_kwargs
@@ -18,7 +18,7 @@ async def play(args: Namespace) -> None:
         await _play_main(args, node)
 
 
-async def _play_main(args: Namespace, node: Node) -> None:
+async def _play_main(args: Namespace, node: AsyncNode) -> None:
     bag_file_path = args.input or get_most_recent_bag_file_path()
 
     print(f'Playing back messages from "{bag_file_path}"...')

@@ -5,7 +5,7 @@ import pytest
 
 from rosy.discovery.base import NodeDiscovery
 from rosy.node.callbackmanager import CallbackManager
-from rosy.node.node import Node, ServiceProxy, TopicProxy
+from rosy.node.node import AsyncNode, ServiceProxy, TopicProxy
 from rosy.node.servers import ServersManager
 from rosy.node.service.caller import ServiceCaller
 from rosy.node.topic.sender import TopicSender
@@ -24,7 +24,7 @@ class TestNode:
         self.service_caller = create_autospec(ServiceCaller)
         self.service_handler_manager = create_autospec(CallbackManager)
 
-        self.node = Node(
+        self.node = AsyncNode(
             id=self.id,
             discovery=self.discovery,
             servers_manager=self.servers_manager,
@@ -241,7 +241,7 @@ class TestNode:
 
 class TestTopicProxy:
     def setup_method(self):
-        self.node = create_autospec(Node)
+        self.node = create_autospec(AsyncNode)
         self.topic = TopicProxy(self.node, "topic")
 
     def test_str(self):
@@ -286,7 +286,7 @@ class TestTopicProxy:
 
 class TestServiceProxy:
     def setup_method(self):
-        self.node = create_autospec(Node)
+        self.node = create_autospec(AsyncNode)
         self.service = ServiceProxy(self.node, "service")
 
     def test_str(self):

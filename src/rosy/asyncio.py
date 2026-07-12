@@ -1,6 +1,10 @@
 import asyncio
+import threading
+from abc import ABC, abstractmethod
 from asyncio import IncompleteReadError, Lock
+from asyncio.runners import _cancel_all_tasks
 from io import BytesIO
+from threading import Thread
 from typing import Protocol
 
 from rosy.types import Buffer
@@ -139,3 +143,63 @@ class BufferWriter(bytearray, Buffer, Writer):
 
     def get_extra_info(self, name: str, default=None):
         raise NotImplementedError()
+
+
+class LoopRunner(ABC):
+    @property
+    @abstractmethod
+    def loop(self) -> asyncio.AbstractEventLoop: ...
+
+    @abstractmethod
+    def start(self) -> None: ...
+
+    @abstractmethod
+    def stop(self) -> None: ...
+
+
+class NewThreadLoopRunner(Thread, LoopRunner):
+    """Runs an event loop in a new thread."""
+
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop | None = None,
+        name: str | None = "NewThreadLoopRunner",
+        daemon: bool = True,
+    ):
+        Thread.__init__(self, name=name, daemon=daemon)
+
+        self._loop = loop or asyncio.new_event_loop()
+        self._started = threading.Event()
+
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        return self._loop
+
+    def start(self, timeout: float | None = None) -> None:
+        Thread.start(self)
+        self._started.wait(timeout)
+
+    def run(self) -> None:
+        loop = self.loop
+        asyncio.set_event_loop(loop)
+
+        # Based on the implementation of `asyncio.run()`
+        try:
+            loop.call_soon(self._started.set)
+            loop.run_forever()
+        finally:
+            self._shutdown()
+
+    def _shutdown(self) -> None:
+        loop = self.loop
+
+        try:
+            _cancel_all_tasks(loop)
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+        finally:
+            loop.close()
+
+    def stop(self, timeout: float | None = None) -> None:
+        self.loop.call_soon_threadsafe(self.loop.stop)
+        self.join(timeout=timeout)

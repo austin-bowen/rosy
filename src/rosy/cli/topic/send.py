@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
-from rosy import Node, build_node_from_args
+from rosy import AsyncNode, build_node_from_args
 from rosy.argparse import add_node_name_arg
 from rosy.cli.utils import add_log_arg, print_args_and_kwargs
 
@@ -24,7 +24,7 @@ async def send_main(args: Namespace):
         await _send_main(args, node)
 
 
-async def _send_main(args: Namespace, node: Node) -> None:
+async def _send_main(args: Namespace, node: AsyncNode) -> None:
     topic = node.get_topic(args.topic)
 
     async def send_once():

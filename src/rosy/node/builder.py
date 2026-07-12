@@ -1,8 +1,11 @@
+import logging
 from argparse import Namespace
+from collections.abc import Callable
 from typing import Literal
 
-from rosy import Node
+from rosy import AsyncNode
 from rosy.argparse import get_node_arg_parser
+from rosy.asyncio import NewThreadLoopRunner
 from rosy.codec import (
     Codec,
     DictCodec,
@@ -13,6 +16,7 @@ from rosy.codec import (
     msgpack_codec,
     pickle_codec,
 )
+from rosy.discovery.base import NodeDiscovery
 from rosy.discovery.zeroconf import ZeroconfNodeDiscovery
 from rosy.network import get_lan_hostname
 from rosy.node.clienthandler import ClientHandler
@@ -24,6 +28,7 @@ from rosy.node.loadbalancing import (
     TopicLoadBalancer,
     node_name_group_key,
 )
+from rosy.node.node import Node
 from rosy.node.peer.connection import PeerConnectionBuilder, PeerConnectionManager
 from rosy.node.peer.selector import PeerSelector
 from rosy.node.servers import (
@@ -48,10 +53,12 @@ from rosy.utils import get_domain_id
 
 DataCodecArg = Codec[Data] | Literal["pickle", "json", "msgpack"]
 
+logger = logging.getLogger(__name__)
 
-async def build_node_from_args(
-    default_node_name: str = None,
-    args: Namespace = None,
+
+def build_node_from_args(
+    default_node_name: str | None = None,
+    args: Namespace | None = None,
     **kwargs,
 ) -> Node:
     """
@@ -70,26 +77,66 @@ async def build_node_from_args(
             These will override anything specified in `args`.
     """
 
+    kwargs = _get_build_node_kwargs_from_args(default_node_name, args, kwargs)
+
+    return build_node(**kwargs)
+
+
+def build_async_node_from_args(
+    default_node_name: str | None = None,
+    args: Namespace | None = None,
+    **kwargs,
+) -> AsyncNode:
+    """
+    Builds a node from command line arguments.
+
+    Args:
+        default_node_name:
+            Default node name. If not given, the argument is required.
+            Ignored if `args` is given.
+        args:
+            Arguments from an argument parser. If not given, an argument parser
+            is created using `get_node_arg_parser` and is used to parse args.
+            This is useful if you create your own argument parser.
+        kwargs:
+            Additional keyword arguments to pass to `build_node`.
+            These will override anything specified in `args`.
+    """
+
+    kwargs = _get_build_node_kwargs_from_args(default_node_name, args, kwargs)
+
+    return build_async_node(**kwargs)
+
+
+def _get_build_node_kwargs_from_args(
+    default_node_name: str | None,
+    args: Namespace | None,
+    kwargs: dict,
+) -> dict:
     if args is None:
         args = get_node_arg_parser(default_node_name).parse_args()
 
-    return await build_node(**vars(args))
+    return {**vars(args), **kwargs}
 
 
-async def build_node(
+def build_node(
     name: str,
-    domain_id: DomainId = None,
+    *,
+    domain_id: DomainId | None = None,
+    discovery_builder: Callable[[DomainId], NodeDiscovery] | None = None,
     allow_unix_connections: bool = True,
     allow_tcp_connections: bool = True,
     node_server_host: ServerHost = None,
-    node_client_host: Host = None,
+    node_client_host: Host | None = None,
     data_codec: DataCodecArg = "pickle",
-    topic_load_balancer: TopicLoadBalancer = None,
-    service_load_balancer: ServiceLoadBalancer = None,
-    start: bool = True,
+    topic_load_balancer: TopicLoadBalancer | None = None,
+    service_load_balancer: ServiceLoadBalancer | None = None,
     **kwargs,
 ) -> Node:
-    """Builds a ROSY node.
+    """Builds a rosy node.
+
+    Before using the node, it must be started, either by calling `node.start()`
+    or by using it as a context manager, e.g. `with build_node(...) as node: ...`
 
     Args:
         name: Name of the node. Does not need to be unique; multiple nodes
@@ -98,6 +145,9 @@ async def build_node(
             by default, according to the value of `topic_load_balancer`.
             This makes horizontal scaling easy; just start the same node
             multiple times.
+        discovery_builder: Optional callable that takes a `domain_id` argument
+            and returns a `NodeDiscovery` instance. If not given, defaults to
+            a zeroconf discovery instance.
         domain_id: Domain ID of the node. Nodes must be in the same domain
             to connect to each other. If not given, defaults to the
             `ROSY_DOMAIN_ID` environment variable, or 'default' if not set.
@@ -117,13 +167,60 @@ async def build_node(
             messages. Defaults to a least-recently-used load balancer.
         service_load_balancer: A load balancer to use for distributing service
             requests. Defaults to a least-recently-used load balancer.
-        start: Whether to start the node immediately. Defaults to True.
-            If False, the user must call `await node.start()` before the node
-            will be ready to use.
     """
 
+    async_node = build_async_node(
+        name,
+        domain_id=domain_id,
+        discovery_builder=discovery_builder,
+        allow_unix_connections=allow_unix_connections,
+        allow_tcp_connections=allow_tcp_connections,
+        node_server_host=node_server_host,
+        node_client_host=node_client_host,
+        data_codec=data_codec,
+        topic_load_balancer=topic_load_balancer,
+        service_load_balancer=service_load_balancer,
+        **kwargs,
+    )
+
+    loop_runner = NewThreadLoopRunner()
+    return Node(async_node, loop_runner)
+
+
+def build_async_node(
+    name: str,
+    *,
+    domain_id: DomainId | None = None,
+    discovery_builder: Callable[[DomainId], NodeDiscovery] | None = None,
+    allow_unix_connections: bool = True,
+    allow_tcp_connections: bool = True,
+    node_server_host: ServerHost = None,
+    node_client_host: Host | None = None,
+    data_codec: DataCodecArg = "pickle",
+    topic_load_balancer: TopicLoadBalancer | None = None,
+    service_load_balancer: ServiceLoadBalancer | None = None,
+    **kwargs,
+) -> AsyncNode:
+    """
+    Builds an async rosy node.
+
+    Like `build_node`, but returns an `AsyncNode` instead of a `Node`.
+
+    See `build_node` for argument documentation.
+    """
+
+    if kwargs:
+        logger.warning(
+            "build_async_node() received unexpected keyword arguments: %s",
+            kwargs.keys(),
+        )
+
     domain_id = domain_id or get_domain_id()
-    discovery = ZeroconfNodeDiscovery(domain_id=domain_id)
+    discovery = (
+        ZeroconfNodeDiscovery(domain_id)
+        if discovery_builder is None
+        else discovery_builder(domain_id)
+    )
 
     topic_listener_manager = TopicListenerManager()
     service_handler_manager = ServiceHandlerManager()
@@ -170,7 +267,7 @@ async def build_node(
         max_request_ids=2 ** (8 * request_id_bytes),
     )
 
-    node = Node(
+    return AsyncNode(
         id=NodeId(name),
         discovery=discovery,
         servers_manager=servers_manager,
@@ -180,11 +277,6 @@ async def build_node(
         service_caller=service_caller,
         service_handler_manager=service_handler_manager,
     )
-
-    if start:
-        await node.start()
-
-    return node
 
 
 def build_node_message_codec(
