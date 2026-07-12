@@ -1,10 +1,9 @@
-import asyncio
 import logging
 
 from rosy import build_node
 
 
-async def main():
+def main():
     logging.basicConfig(level="WARNING")
 
     with build_node(name="service_caller") as node:
@@ -16,4 +15,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

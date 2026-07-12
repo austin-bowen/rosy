@@ -1,11 +1,10 @@
-import asyncio
 import logging
 
 from rosy import build_node
 from rosy.types import Service
 
 
-async def main():
+def main():
     logging.basicConfig(level="WARNING")
 
     with build_node("service_provider") as node:
@@ -14,9 +13,9 @@ async def main():
         node.forever()
 
 
-async def multiply(service: Service, a: int, b: int) -> int:
+def multiply(service: Service, a: int, b: int) -> int:
     return a * b
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
